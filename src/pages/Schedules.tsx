@@ -383,7 +383,7 @@ export default function Schedules() {
   const [doctorSchedules, setDoctorSchedules] = useState<DoctorSchedule[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [selectedDoctor, setSelectedDoctor] = useState('')
-  const [, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [showClinicForm, setShowClinicForm] = useState(false)
   const [showDoctorForm, setShowDoctorForm] = useState(false)
   const [error, setError] = useState('')

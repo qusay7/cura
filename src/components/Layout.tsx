@@ -517,6 +517,8 @@ const allMenuItems = [
   { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage' },
   { path: '/permissions', labelAr: 'الصلاحيات', labelEn: 'Permissions',icon: 'ti-shield-lock', permission: 'settings.view' },
   { path: '/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: 'ti-chart-bar', permission: 'reports.view' },
+  // Layout.tsx — في allMenuItems
+{ path: '/superadmin/clinics', labelAr: 'العيادات', labelEn: 'Clinics', icon: 'ti-building-hospital', permission: null, superAdminOnly: true },
 ]
 
 // في Sidebar Component أضف هذا الفلتر

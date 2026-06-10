@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import type { Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -218,7 +219,7 @@ const DoctorsLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) 
   </div>
 )
 
-// ─── Doctor Card Component ───────────────────────────────────────────────────
+ // ─── Doctor Card Component ───────────────────────────────────────────────────
 const DoctorCard = ({ doctor, lang, onClick, onEdit }: { 
   doctor: Doctor; 
   lang: 'ar' | 'en'; 
@@ -228,7 +229,6 @@ const DoctorCard = ({ doctor, lang, onClick, onEdit }: {
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  // Get translated specialty
   const getSpecialtyTranslation = (specialty: string) => {
     const specialtyMap = T[lang].specializations
     const key = Object.keys(specialtyMap).find(
@@ -254,53 +254,29 @@ const DoctorCard = ({ doctor, lang, onClick, onEdit }: {
     >
       {/* Top gradient border */}
       <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '3px',
+        position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
         background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
         backgroundSize: '200% auto',
         animation: 'shimmer 3s linear infinite',
       }} />
 
       {/* Avatar Section */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 16,
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <div style={{
-          width: 56,
-          height: 56,
-          borderRadius: 20,
+          width: 56, height: 56, borderRadius: 20,
           background: PRIMARY_SOFT,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 28,
-          transition: 'transform 0.2s ease',
         }}>
           {doctor.gender === 'female' ? '👩‍⚕️' : '👨‍⚕️'}
         </div>
         <div>
-          <p style={{
-            fontSize: 16,
-            fontWeight: 600,
-            color: TEXT_DARK,
-            margin: 0,
-            marginBottom: 4,
-          }}>
+          <p style={{ fontSize: 16, fontWeight: 600, color: TEXT_DARK, margin: 0, marginBottom: 4 }}>
             {doctor.fullName}
           </p>
           <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            background: `${PRIMARY}15`,
-            borderRadius: 100,
-            padding: '2px 8px',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            background: `${PRIMARY}15`, borderRadius: 100, padding: '2px 8px',
           }}>
             <span style={{ fontSize: 10, color: PRIMARY }}>🏥</span>
             <span style={{ fontSize: 11, color: PRIMARY, fontWeight: 500 }}>
@@ -311,54 +287,28 @@ const DoctorCard = ({ doctor, lang, onClick, onEdit }: {
       </div>
 
       {/* Info Section */}
-      <div style={{
-        borderTop: `1px solid ${BORDER}`,
-        paddingTop: 12,
-        marginTop: 4,
-      }}>
-        {/* Phone */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 10,
-        }}>
+      <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12, marginTop: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <span style={{ fontSize: 14 }}>📞</span>
           <span style={{ fontSize: 13, color: TEXT_MUTED }}>
             {doctor.phone || (isAr ? 'غير متوفر' : 'Not available')}
           </span>
         </div>
 
-        {/* Email */}
         {doctor.email && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 10,
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 14 }}>✉️</span>
-            <span style={{ fontSize: 13, color: TEXT_MUTED }}>
-              {doctor.email}
-            </span>
+            <span style={{ fontSize: 13, color: TEXT_MUTED }}>{doctor.email}</span>
           </div>
         )}
 
-        {/* Status */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 8,
-          paddingTop: 8,
-          borderTop: `1px solid ${BORDER}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}`,
         }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED }}>{t.status}</span>
           <span style={{
-            fontSize: 12,
-            fontWeight: 500,
-            padding: '2px 10px',
-            borderRadius: 100,
+            fontSize: 12, fontWeight: 500, padding: '2px 10px', borderRadius: 100,
             background: doctor.isActive ? `${SUCCESS}15` : `${WARNING}15`,
             color: doctor.isActive ? SUCCESS : WARNING,
           }}>
@@ -367,41 +317,39 @@ const DoctorCard = ({ doctor, lang, onClick, onEdit }: {
         </div>
       </div>
 
-      {/* Edit Button */}
-      <div style={{
-        marginTop: 12,
-        paddingTop: 12,
-        borderTop: `1px solid ${BORDER}`,
-      }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onEdit) onEdit()
-          }}
-          style={{
-            width: '100%',
-            background: PRIMARY_SOFT,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 10,
-            padding: '8px 12px',
-            fontSize: 12,
-            fontWeight: 500,
-            color: PRIMARY,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = PRIMARY
-            e.currentTarget.style.color = '#FFFFFF'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = PRIMARY_SOFT
-            e.currentTarget.style.color = PRIMARY
-          }}
-        >
-          ✏️ {isAr ? 'تعديل' : 'Edit'}
-        </button>
-      </div>
+      {/* ✅ زر التعديل — بدون div مكرر */}
+      {hasPermission('doctors.edit') && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onEdit) onEdit()
+            }}
+            style={{
+              width: '100%',
+              background: PRIMARY_SOFT,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 10,
+              padding: '8px 12px',
+              fontSize: 12,
+              fontWeight: 500,
+              color: PRIMARY,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = PRIMARY
+              e.currentTarget.style.color = '#FFFFFF'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = PRIMARY_SOFT
+              e.currentTarget.style.color = PRIMARY
+            }}
+          >
+            ✏️ {isAr ? 'تعديل' : 'Edit'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -539,6 +487,7 @@ export default function Doctors() {
               {isAr ? `📊 ${doctors.length} طبيب مسجل` : `📊 ${doctors.length} registered doctors`}
             </p>
           </div>
+{hasPermission('doctors.create') && (
 
           <button
             onClick={() => navigate('/doctors/add')}
@@ -566,9 +515,11 @@ export default function Doctors() {
               e.currentTarget.style.transform = 'translateY(0)'
             }}
           >
+            
             <span style={{ fontSize: 16 }}>+</span>
             {t.addDoctor}
           </button>
+)}
         </div>
 
         {/* ── Search Bar ── */}
@@ -669,7 +620,8 @@ export default function Doctors() {
                 doctor={doctor}
                 lang={lang}
                 onClick={() => navigate(`/doctors/${doctor.id}`)}
-                onEdit={() => navigate(`/doctors/${doctor.id}/edit`)}
+                    onEdit={() => navigate(`/doctors/${doctor.id}/edit`)}  // ← أضف هذا السطر فقط
+
               />
             ))}
           </div>

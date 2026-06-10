@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import type { DashboardData } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
-
+import { hasPermission } from '../utils/permissions'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -549,69 +549,8 @@ interface DoctorTodayAppointment {
   }>
 }
 
-// ─── Counter hook ─────────────────────────────────────────────────────────
-function useAnimatedCount(target: number, dur = 800) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (target === undefined) return
-    let start = 0
-    const step = target / 40
-    const interval = setInterval(() => {
-      start = Math.min(start + step, target)
-      setVal(Math.floor(start))
-      if (start >= target) clearInterval(interval)
-    }, dur / 40)
-    return () => clearInterval(interval)
-  }, [target, dur])
-  return val
-}
-
-// ─── Stat Card ───────────────────────────────────────────────────
-const StatCard = ({ label, value, icon, delay = 0 }: {
-  label: string; value: number; icon: string; delay?: number
-}) => {
-  const count = useAnimatedCount(value)
-  return (
-    <div className="stat-card" style={{
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`,
-      borderRadius: 20,
-      padding: '20px',
-      position: 'relative',
-      overflow: 'hidden',
-      animationDelay: `${delay}s`,
-    }}>
-      <div style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0, height: '3px',
-        background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
-        backgroundSize: '200% auto',
-        animation: 'shimmer 3s linear infinite',
-      }} />
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 16,
-          background: PRIMARY_SOFT,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22,
-        }}>{icon}</div>
-        <div style={{
-          fontSize: 32, fontWeight: 700,
-          color: TEXT_DARK,
-          lineHeight: 1,
-        }}>{count.toLocaleString()}</div>
-      </div>
-
-      <p style={{
-        fontSize: 13, fontWeight: 500, 
-        color: TEXT_MUTED,
-        margin: '16px 0 0',
-      }}>{label}</p>
-    </div>
-  )
-}
-
+ 
+ 
 // ─── Progress Bar ─────────────────────────────────────────────────────
 const ProgressBar = ({ label, current, max }: { label: string; current: number; max: number }) => {
   const isUnlimited = max === -1
@@ -1070,8 +1009,13 @@ export default function Dashboard() {
         </div>
 
        {/* ── Stats Grid with Quick Actions ── */}
-<div className="dash-grid-4">
-  {/* بطاقة المرضى */}
+{/* ── Stats Grid with Quick Actions ── */}
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: `repeat(${hasPermission('doctors.view') ? 4 : 3}, 1fr)`,
+  gap: 20,
+  marginBottom: 32,
+}}>  {/* بطاقة المرضى */}
   <div className="stat-card" style={{
     background: CARD_BG,
     border: `1px solid ${BORDER}`,
@@ -1103,6 +1047,8 @@ export default function Dashboard() {
     <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.patients}</p>
     
     {/* زر الإضافة السريع */}
+    {hasPermission('patients.create') && (
+
     <button
       onClick={(e) => {
         e.stopPropagation()
@@ -1138,9 +1084,12 @@ export default function Dashboard() {
     >
       <span>+</span> {isAr ? 'إضافة مريض' : 'Add Patient'}
     </button>
+    )}
   </div>
 
   {/* بطاقة الأطباء */}
+{/* بطاقة الأطباء */}
+{hasPermission('doctors.view') && (
   <div className="stat-card" style={{
     background: CARD_BG,
     border: `1px solid ${BORDER}`,
@@ -1170,44 +1119,46 @@ export default function Dashboard() {
       </div>
     </div>
     <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.doctors}</p>
-    
-    {/* زر الإضافة السريع */}
-    <button
-  onClick={(e) => {
-    e.stopPropagation()
-    navigate('/doctors/add', { replace: true })
-  }}
-      style={{
-        marginTop: '12px',
-        padding: '8px 12px',
-        background: '#F8FAFA',
-        border: `1px solid ${BORDER}`,
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '500',
-        color: PRIMARY,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        width: '100%',
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = PRIMARY
-        e.currentTarget.style.color = 'white'
-        e.currentTarget.style.borderColor = PRIMARY
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = '#F8FAFA'
-        e.currentTarget.style.color = PRIMARY
-        e.currentTarget.style.borderColor = BORDER
-      }}
-    >
-      <span>+</span> {isAr ? 'إضافة طبيب' : 'Add Doctor'}
-    </button>
+
+    {hasPermission('doctors.create') && (
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          navigate('/doctors/add', { replace: true })
+        }}
+        style={{
+          marginTop: '12px',
+          padding: '8px 12px',
+          background: '#F8FAFA',
+          border: `1px solid ${BORDER}`,
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: '500',
+          color: PRIMARY,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          width: '100%',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = PRIMARY
+          e.currentTarget.style.color = 'white'
+          e.currentTarget.style.borderColor = PRIMARY
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#F8FAFA'
+          e.currentTarget.style.color = PRIMARY
+          e.currentTarget.style.borderColor = BORDER
+        }}
+      >
+        <span>+</span> {isAr ? 'إضافة طبيب' : 'Add Doctor'}
+      </button>
+    )}
   </div>
+)}
 
   {/* بطاقة مواعيد اليوم */}
   <div className="stat-card" style={{
@@ -1241,6 +1192,7 @@ export default function Dashboard() {
     <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.todayAppts}</p>
     
     {/* زر الإضافة السريع */}
+    {hasPermission('appointments.create') && (
     <button
       onClick={(e) => {
         e.stopPropagation()
@@ -1274,8 +1226,9 @@ export default function Dashboard() {
         e.currentTarget.style.borderColor = BORDER
       }}
     >
-      <span>+</span> {isAr ? 'زيارة سريعة' : 'quick-visit'}
+<span>+</span> {isAr ? 'زيارة سريعة' : 'Quick Visit'}
     </button>
+    )}
   </div>
 
   {/* بطاقة مواعيد القادمة */}
@@ -1310,6 +1263,7 @@ export default function Dashboard() {
     <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.upcomingAppts}</p>
     
     {/* زر الإضافة السريع - نفس زر مواعيد اليوم */}
+    {hasPermission('appointments.create') && (
     <button
       onClick={(e) => {
         e.stopPropagation()
@@ -1345,6 +1299,7 @@ export default function Dashboard() {
     >
       <span>+</span> {isAr ? 'حجز موعد' : 'Book Appointment'}
     </button>
+    )}
   </div>
 </div>
 

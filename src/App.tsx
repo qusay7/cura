@@ -22,6 +22,8 @@ import Departments from './pages/Departments'
 import ClinicPermissions from './pages/ClinicPermissions'
 import Reports from './pages/Reports'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import SuperAdminClinics from './pages/SuperAdmin/Clinics'
+
 
 function App() {
   return (
@@ -147,6 +149,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+
+<Route path="/superadmin/clinics" element={
+  <ProtectedRoute>
+    <Layout><SuperAdminClinics /></Layout>
+  </ProtectedRoute>
+} />
         {/* ── Redirects ── */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

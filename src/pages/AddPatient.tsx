@@ -65,7 +65,6 @@ input[type=number] {
 
 // Comfortable color palette
 const PRIMARY = '#5B8C8F'
-const PRIMARY_LIGHT = '#8BAFB1'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -73,7 +72,6 @@ const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
-const SUCCESS = '#4A7679'
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
