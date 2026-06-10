@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
+import AppointmentCalendar from '../components/AppointmentCalendar'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -33,6 +34,22 @@ const globalCss = `
   box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1) !important;
 }
 
+/* Disabled field style */
+.disabled-field {
+  opacity: 0.6;
+  pointer-events: none;
+  filter: grayscale(0.1);
+}
+
+.disabled-message {
+  background: #F8FAFA;
+  border: 1px dashed #DCE5E5;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  color: #6B8A8C;
+}
+
 @media(max-width: 768px) {
   .add-appointment-title { font-size: 24px !important; }
   .form-container { padding: 20px !important; }
@@ -41,7 +58,6 @@ const globalCss = `
 
 // Comfortable color palette
 const PRIMARY = '#5B8C8F'
-const PRIMARY_LIGHT = '#8BAFB1'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -60,6 +76,7 @@ const T = {
     doctor: 'الطبيب',
     doctorPlaceholder: 'بدون طبيب',
     date: 'تاريخ ووقت الموعد *',
+    selectDoctorFirst: 'الرجاء اختيار الطبيب أولاً لعرض الأوقات المتاحة',
     type: 'نوع الزيارة',
     typePlaceholder: 'اختر...',
     typeConsultation: 'استشارة',
@@ -87,6 +104,7 @@ const T = {
     doctor: 'Doctor',
     doctorPlaceholder: 'No doctor',
     date: 'Appointment Date & Time *',
+    selectDoctorFirst: 'Please select a doctor first to see available slots',
     type: 'Visit Type',
     typePlaceholder: 'Select...',
     typeConsultation: 'Consultation',
@@ -209,6 +227,17 @@ export default function AddAppointment() {
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
+  // دالة لاختيار الموعد من التقويم
+  const handleSlotSelect = (dateTime: string) => {
+    setForm(prev => ({
+      ...prev,
+      appointmentDate: dateTime
+    }))
+    if (validationErrors.appointmentDate) {
+      setValidationErrors(prev => ({ ...prev, appointmentDate: '' }))
+    }
+  }
+
   // Inject global styles
   useEffect(() => {
     const styleId = 'cura-add-appointment-css'
@@ -227,17 +256,12 @@ export default function AddAppointment() {
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
 
-    // Fetch patients and doctors
     const fetchData = async () => {
       try {
         const [patientsRes, doctorsRes] = await Promise.all([
           api.get('/patients'),
           api.get('/doctors')
         ])
-        
-        console.log('📋 Patients loaded:', patientsRes.data.length)
-        console.log('📋 Doctors loaded:', doctorsRes.data.length)
-        
         setPatients(patientsRes.data)
         setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
       } catch (err) {
@@ -283,83 +307,32 @@ export default function AddAppointment() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
+
+    if (!validateForm()) return
 
     setError('')
     setLoading(true)
 
     try {
-      // ✅ التحقق من وجود المريض في القائمة
-      const selectedPatient = patients.find(p => p.id === form.patientId)
-      if (!selectedPatient) {
-        setError('المريض المحدد غير موجود في النظام')
-        setLoading(false)
-        return
-      }
-      
-      console.log('✅ Selected patient:', selectedPatient.fullName, selectedPatient.id)
-
-      // ✅ بناء الكائن الداخلي (dto) حسب الـ DTO المطلوب
-      const dto: Record<string, any> = {
-        patientId: form.patientId,           // ✅ استخدمنا patientId بحرف p صغير
+      const payload: Record<string, any> = {
+        patientId: form.patientId,
         appointmentDate: new Date(form.appointmentDate).toISOString(),
       }
 
-      // ✅ إضافة الحقول الاختيارية فقط إذا كانت موجودة
-      if (form.doctorId && form.doctorId !== '') {
-        dto.doctorId = form.doctorId
-      }
-      
-      if (form.type && form.type !== '') {
-        dto.type = form.type
-      }
-      
-      if (form.price && form.price !== '') {
-        dto.price = parseFloat(form.price)
-      }
-      
-      if (form.notes && form.notes.trim() !== '') {
-        dto.notes = form.notes.trim()
-      }
+      if (form.doctorId) payload.doctorId = form.doctorId
+      if (form.type) payload.type = form.type
+      if (form.price) payload.price = parseFloat(form.price)
+      if (form.notes?.trim()) payload.notes = form.notes.trim()
 
-      // ✅ محاولة إرسال البيانات بدون dto (مباشرة)
-      console.log('📤 Sending payload (direct):', JSON.stringify(dto, null, 2))
-      
-      try {
-        // ✅ تجربة الإرسال المباشر أولاً
-        const response = await api.post('/appointments', dto)
-        console.log('✅ Response (direct):', response.data)
-        navigate('/appointments')
-        return
-      } catch (directError: any) {
-        console.log('Direct send failed, trying with dto wrapper...')
-        
-        // ✅ إذا فشل، جرب مع dto
-        const payload = { dto: dto }
-        console.log('📤 Sending payload (with dto):', JSON.stringify(payload, null, 2))
-        
-        const response = await api.post('/appointments', payload)
-        console.log('✅ Response (with dto):', response.data)
-        navigate('/appointments')
-      }
-      
+      await api.post('/appointments', payload)
+      navigate('/appointments')
+
     } catch (err: any) {
-      console.error('❌ Error:', err)
-      console.error('❌ Response data:', err.response?.data)
-      
       const errData = err.response?.data
       if (typeof errData === 'string') {
         setError(errData)
-      } else if (errData?.message) {
-        setError(errData.message)
-      } else if (errData?.title) {
-        setError(errData.title)
       } else if (errData?.errors) {
-        const messages = Object.values(errData.errors).flat().join('، ')
-        setError(messages as string)
+        setError(Object.values(errData.errors).flat().join('، ') as string)
       } else {
         setError(T[lang].error)
       }
@@ -371,17 +344,12 @@ export default function AddAppointment() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  // الحصول على أقل تاريخ ووقت (الآن + 1 ساعة)
-  const getMinDateTime = () => {
-    const now = new Date()
-    now.setHours(now.getHours() + 1)
-    now.setMinutes(0, 0, 0)
-    return now.toISOString().slice(0, 16)
-  }
-
   if (loadingData) {
     return <FormLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
   }
+
+  // ✅ متغير للتحقق من اختيار الطبيب
+  const isDoctorSelected = !!form.doctorId
 
   return (
     <div className="add-appointment-shell" style={{
@@ -424,8 +392,11 @@ export default function AddAppointment() {
             </div>
             <h2 className="add-appointment-title" style={{
               fontFamily: "'DM Serif Display', 'Georgia', serif",
-              fontSize: 32, fontWeight: 500, color: TEXT_DARK,
-              margin: 0, letterSpacing: '-0.3px',
+              fontSize: 28,
+              fontWeight: 500,
+              color: TEXT_DARK,
+              margin: 0,
+              letterSpacing: '-0.3px',
             }}>
               {t.title}
             </h2>
@@ -489,22 +460,26 @@ export default function AddAppointment() {
               </select>
             </FormField>
 
-            {/* Date Field */}
+            {/* ✅ Date Field — معطل حتى يتم اختيار الطبيب */}
             <FormField label={t.date} required error={validationErrors.appointmentDate}>
-              <input
-                type="datetime-local"
-                name="appointmentDate"
-                value={form.appointmentDate}
-                onChange={handleChange}
-                min={getMinDateTime()}
-                className="form-input"
-                style={{
-                  width: '100%', background: CARD_BG, border: `1px solid ${BORDER}`,
-                  borderRadius: 12, padding: '10px 14px', fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK, outline: 'none', transition: 'all 0.2s ease',
-                }}
-              />
+              {isDoctorSelected ? (
+                <AppointmentCalendar
+                  doctorId={form.doctorId}
+                  onSelectSlot={handleSlotSelect}
+                />
+              ) : (
+                <div className="disabled-message">
+                  <span style={{ fontSize: 32, opacity: 0.5 }}>📅</span>
+                  <p style={{ fontSize: 13, marginTop: 8, marginBottom: 0 }}>
+                    {t.selectDoctorFirst}
+                  </p>
+                </div>
+              )}
+              {form.appointmentDate && isDoctorSelected && (
+                <p style={{ fontSize: 12, color: '#4A7679', marginTop: 8, fontWeight: 600 }}>
+                  ✅ {isAr ? 'تم اختيار:' : 'Selected:'} {new Date(form.appointmentDate).toLocaleString(isAr ? 'ar' : 'en')}
+                </p>
+              )}
             </FormField>
 
             {/* Type Field */}

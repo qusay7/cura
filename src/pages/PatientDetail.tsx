@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -536,54 +537,64 @@ export default function PatientDetail() {
             display: 'flex',
             gap: 10,
           }}>
-            <button
-              onClick={() => navigate(`/patients/${id}/edit`)}
-              style={{
-                background: PRIMARY,
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: 10,
-                padding: '8px 20px',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#4A7679' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = PRIMARY }}
-            >
-              ✏️ {t.edit}
-            </button>
-            <button
-              onClick={handleDelete}
-              style={{
-                background: 'transparent',
-                border: `1px solid ${DANGER}40`,
-                borderRadius: 10,
-                padding: '8px 20px',
-                fontSize: 13,
-                fontWeight: 500,
-                color: DANGER,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => { 
-                e.currentTarget.style.background = `${DANGER}10`
-                e.currentTarget.style.borderColor = DANGER
-              }}
-              onMouseLeave={(e) => { 
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.borderColor = `${DANGER}40`
-              }}
-            >
-              🗑️ {t.delete}
-            </button>
+
+<div className="action-buttons" style={{ display: 'flex', gap: 10 }}>
+
+  {hasPermission('patients.edit') && (
+    <button
+      onClick={() => navigate(`/patients/${id}/edit`)}
+      style={{
+        background: PRIMARY,
+        color: '#FFFFFF',
+        border: 'none',
+        borderRadius: 10,
+        padding: '8px 20px',
+        fontSize: 13,
+        fontWeight: 500,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#4A7679' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = PRIMARY }}
+    >
+      ✏️ {t.edit}
+    </button>
+  )}
+
+  {hasPermission('patients.delete') && (
+    <button
+      onClick={handleDelete}
+      style={{
+        background: 'transparent',
+        border: `1px solid ${DANGER}40`,
+        borderRadius: 10,
+        padding: '8px 20px',
+        fontSize: 13,
+        fontWeight: 500,
+        color: DANGER,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = `${DANGER}10`
+        e.currentTarget.style.borderColor = DANGER
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent'
+        e.currentTarget.style.borderColor = `${DANGER}40`
+      }}
+    >
+      🗑️ {t.delete}
+    </button>
+  )}
+
+</div>
           </div>
         </div>
 

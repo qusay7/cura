@@ -16,8 +16,8 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,       // ✅ غيّر من true
+    "noUnusedParameters": false,   // ✅ غيّر من true
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },

@@ -443,17 +443,8 @@ export default function AddPatient() {
               }} />
               {isAr ? 'مريض جديد' : 'New Patient'}
             </div>
-            <h2 className="add-patient-title" style={{
-              fontFamily: "'DM Serif Display', 'Georgia', serif",
-              fontSize: 32,
-              fontWeight: 500,
-              color: TEXT_DARK,
-              margin: 0,
-              letterSpacing: '-0.3px',
-            }}>
-              {t.title}
-            </h2>
-          </div>
+           
+           </div>
         </div>
 
         {/* ── Form ── */}

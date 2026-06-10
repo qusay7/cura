@@ -15,8 +15,8 @@ const translations = {
     headline: ['Built for', 'modern clinics'],
     desc: 'Appointments, patients, and billing — all in one elegant, intelligent workspace.',
     stats: ['Clinics', 'Uptime', 'Support'],
-    lEmail: 'EMAIL ADDRESS',
-    ePh: 'you@clinic.com',
+     lEmail: 'EMAIL OR USERNAME',  // ✅ عدّل
+    ePh: 'email or username',     // ✅ عدّل
     lPass: 'PASSWORD',
     pPh: '••••••••',
     forgot: 'Forgot password?',
@@ -35,8 +35,8 @@ const translations = {
     headline: ['مصمم من أجل', 'العيادة الحديثة'],
     desc: 'المواعيد، المرضى، والفواتير — كل شيء في مكان واحد ذكي.',
     stats: ['عيادة', 'استمرارية', 'دعم فني'],
-    lEmail: 'البريد الإلكتروني',
-    ePh: 'example@clinic.com',
+   lEmail: 'البريد أو اسم المستخدم',  // ✅ عدّل
+    ePh: 'البريد أو اسم المستخدم',     // ✅ عدّل
     lPass: 'كلمة المرور',
     pPh: '••••••••',
     forgot: 'نسيت كلمة المرور؟',
@@ -150,14 +150,15 @@ input:focus {
 }
 `
 
-// Comfortable color palette (Replacing red with soft teal)
-const PRIMARY = '#5B8C8F'      // Soft teal
-const PRIMARY_DARK = '#4A7679'  // Darker teal
-const PRIMARY_SOFT = '#E8F0F0'  // Very soft background
-const PRIMARY_LIGHT = '#8BAFB1' // Lighter teal
-const TEXT_DARK = '#2C3E3F'     // Dark teal-gray
-const TEXT_MUTED = '#6B8A8C'    // Muted text
-const BORDER = '#DCE5E5'        // Soft border
+// Comfortable color palette
+const PRIMARY = '#5B8C8F'
+const PRIMARY_DARK = '#4A7679'
+const PRIMARY_SOFT = '#E8F0F0'
+const TEXT_DARK = '#2C3E3F'
+const TEXT_MUTED = '#6B8A8C'
+const BORDER = '#DCE5E5'
+const ERROR_BG = '#FDF5F5'
+const ERROR_TEXT = '#C4A77D'
 
 // ─── Eye Icons ─────────────────────────────────────────────────────────────
 const EyeIcon = () => (
@@ -176,7 +177,7 @@ const EyeOffIcon = () => (
   </svg>
 )
 
-// ─── Medical Background SVG (Improved with teal colors) ────────────────────
+// ─── Medical Background SVG ────────────────────────────────────────────────
 const MedicalBg = () => (
   <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
     viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
@@ -186,7 +187,6 @@ const MedicalBg = () => (
         .medl { fill:rgba(91,140,143,0.035); stroke:rgba(91,140,143,0.06); stroke-width:1 }
       `}</style>
     </defs>
-    {/* Stethoscope large */}
     <g transform="translate(270,60) rotate(20)">
       <circle cx="0" cy="0" r="32" className="medl" />
       <circle cx="0" cy="0" r="20" className="med" />
@@ -197,7 +197,6 @@ const MedicalBg = () => (
       <line x1="0" y1="-32" x2="0" y2="-70" stroke="rgba(91,140,143,0.07)" strokeWidth="5" strokeLinecap="round" />
       <circle cx="0" cy="-80" r="8" className="med" />
     </g>
-    {/* Syringe top-right */}
     <g transform="translate(340,220) rotate(-35)">
       <rect x="-6" y="-60" width="12" height="90" rx="6" className="medl" />
       <rect x="-8" y="-65" width="16" height="12" rx="3" className="med" />
@@ -209,17 +208,14 @@ const MedicalBg = () => (
       <rect x="-14" y="22" width="8" height="18" rx="2" className="medl" />
       <rect x="6" y="22" width="8" height="18" rx="2" className="medl" />
     </g>
-    {/* Pill capsule top-left */}
     <g transform="translate(50,90) rotate(30)">
       <rect x="-10" y="-30" width="20" height="60" rx="10" className="medl" />
       <rect x="-10" y="-30" width="20" height="30" rx="10" fill="rgba(91,140,143,0.06)" stroke="rgba(91,140,143,0.08)" strokeWidth="1" />
       <line x1="-10" y1="0" x2="10" y2="0" stroke="rgba(91,140,143,0.08)" strokeWidth="1" />
     </g>
-    {/* Scattered pills */}
     <ellipse cx="100" cy="200" rx="14" ry="9" className="medl" transform="rotate(45,100,200)" />
     <ellipse cx="310" cy="380" rx="14" ry="9" className="medl" transform="rotate(-20,310,380)" />
     <ellipse cx="60" cy="480" rx="18" ry="11" className="medl" transform="rotate(60,60,480)" />
-    {/* Medical cross */}
     <g transform="translate(50,310)" opacity=".6">
       <rect x="-6" y="-20" width="12" height="40" rx="3" className="medl" />
       <rect x="-20" y="-6" width="40" height="12" rx="3" className="medl" />
@@ -253,29 +249,47 @@ const StatsDashboard = ({ lang }: { lang: 'en' | 'ar' }) => {
   const dt = dashTrans[lang]
 
   useEffect(() => {
-    setTimeout(() => {
-      const animCount = (id: string, target: number) => {
-        const el = document.getElementById(id)
-        if (!el) return
-        let cur = 0
-        const step = target / 50
-        const interval = setInterval(() => {
-          cur = Math.min(cur + step, target)
-          el.textContent = Math.round(cur).toLocaleString()
-          if (cur >= target) clearInterval(interval)
-        }, 800 / 50)
-      }
-      animCount('sd-appt', 48)
-      animCount('sd-pat', 1247)
-      animCount('sd-rev', 84)
+    const intervals: number[] = []
+    const timeouts: number[] = []
 
+    const animCount = (id: string, target: number) => {
+      const el = document.getElementById(id)
+      if (!el) return
+      let cur = 0
+      const step = target / 50
+      const interval = window.setInterval(() => {
+        cur = Math.min(cur + step, target)
+        el.textContent = Math.round(cur).toLocaleString()
+        if (cur >= target) window.clearInterval(interval)
+      }, 800 / 50)
+      intervals.push(interval)
+    }
+    
+    animCount('sd-appt', 48)
+    animCount('sd-pat', 1247)
+    animCount('sd-rev', 84)
+
+    const barTimeout = window.setTimeout(() => {
       document.querySelectorAll<HTMLElement>('.sd-bar').forEach(b => {
-        setTimeout(() => { b.style.width = (b.dataset.w || '0') + '%' }, 200)
+        b.style.width = (b.dataset.w || '0') + '%'
       })
+    }, 200)
+    timeouts.push(barTimeout)
+
+    const mbTimeout = window.setTimeout(() => {
       document.querySelectorAll<HTMLElement>('.sd-mb').forEach((b, i) => {
-        setTimeout(() => { b.style.height = (b.dataset.h || '0') + '%' }, 200 + i * 60)
+        const timeout = window.setTimeout(() => {
+          b.style.height = (b.dataset.h || '0') + '%'
+        }, i * 60)
+        timeouts.push(timeout)
       })
-    }, 100)
+    }, 200)
+    timeouts.push(mbTimeout)
+
+    return () => {
+      intervals.forEach(id => window.clearInterval(id))
+      timeouts.forEach(id => window.clearTimeout(id))
+    }
   }, [])
 
   const deptsBase = [88, 72, 61, 45]
@@ -358,7 +372,7 @@ export default function Login() {
   const navigate = useNavigate()
 
   const [lang, setLangState] = useState<Lang>('en')
-  const [email, setEmail] = useState('')
+  const [emailOrUsername, setEmailOrUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
@@ -383,32 +397,40 @@ export default function Login() {
     }
   }, [])
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email || !password) {
-      setError(t.errEmpty)
-      return
-    }
-    setError('')
-    setLoading(true)
-    try {
-      const { data } = await api.post<AuthResponse>('/auth/login', { email, password })
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('refreshToken', data.refreshToken)
-      localStorage.setItem('user', JSON.stringify({
-        fullName: data.fullName,
-        email: data.email,
-        role: data.role,
-        clinicId: data.clinicId,
-        clinicName: data.clinicName,
-      }))
-      navigate('/dashboard')
-    } catch {
-      setError(t.errWrong)
-    } finally {
-      setLoading(false)
-    }
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setError('')
+  setLoading(true)
+
+  try {
+    const response = await api.post<AuthResponse>('/auth/login', {
+      emailOrUsername,  // ✅ بدل email
+      password,
+    })
+
+    const data = response.data
+
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('refreshToken', data.refreshToken)
+    localStorage.setItem('user', JSON.stringify({
+      fullName:   data.fullName,
+      email:      data.email,
+      role:       data.role,
+      clinicId:   data.clinicId,
+      clinicName: data.clinicName,
+    }))
+
+    const permRes = await api.get('/roles/my-permissions')
+    localStorage.setItem('permissions', JSON.stringify(permRes.data.permissions))
+
+    navigate('/dashboard')
+
+  } catch {
+    setError(isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials')
+  } finally {
+    setLoading(false)
   }
+}
 
   const LoadingDots = () => (
     <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
@@ -427,7 +449,6 @@ export default function Login() {
     { n: '24/7', l: t.stats[2] },
   ]
 
-  // Show loading screen when loading is true
   if (loading) {
     return (
       <LoadingScreen
@@ -453,7 +474,6 @@ export default function Login() {
       }}>
         <MedicalBg />
 
-        {/* Tag */}
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -473,12 +493,10 @@ export default function Login() {
           {lang === 'ar' ? 'منصة إدارة العيادات' : 'Clinic Management Platform'}
         </div>
 
-        {/* ECG Animation */}
         <div style={{ marginBottom: '1.5rem', width: '100%' }}>
           <ECGAnimation height={110} showLetters={true} speed={0.7} />
         </div>
 
-        {/* Title */}
         <h1 className="cura-title" style={{
           fontFamily: "'Playfair Display', serif",
           fontSize: 42,
@@ -501,7 +519,6 @@ export default function Login() {
           {t.desc}
         </p>
 
-        {/* Stats Grid */}
         <div className="cura-stats-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -522,7 +539,6 @@ export default function Login() {
           ))}
         </div>
 
-        {/* Stats Dashboard */}
         <StatsDashboard lang={lang} />
       </div>
 
@@ -541,7 +557,6 @@ export default function Login() {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.04)',
         }}>
 
-          {/* Language Toggle */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',
@@ -573,7 +588,6 @@ export default function Login() {
             ))}
           </div>
 
-          {/* Logo */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem', gap: 8 }}>
             <div style={{
               width: 70,
@@ -590,53 +604,54 @@ export default function Login() {
             <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: 'center' }}>{t.sub}</div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleLogin} style={{ direction: t.dir }}>
 
-            {/* Email Field */}
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{
-                display: 'block',
-                fontSize: 10,
-                fontWeight: 600,
-                color: TEXT_MUTED,
-                marginBottom: 6,
-                letterSpacing: '0.6px',
-                textTransform: 'uppercase',
-              }}>{t.lEmail}</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="email"
-                  value={email}
-                  required
-                  placeholder={t.ePh}
-                  style={{
-                    width: '100%',
-                    background: PRIMARY_SOFT,
-                    border: `1px solid ${BORDER}`,
-                    borderRadius: 12,
-                    fontSize: 14,
-                    fontFamily: t.font,
-                    color: TEXT_DARK,
-                    outline: 'none',
-                    transition: 'all 0.2s ease',
-                    padding: isAr ? '12px 14px 12px 40px' : '12px 40px 12px 14px',
-                  }}
-                  onChange={e => setEmail(e.target.value)}
-                />
-                <span style={{
-                  position: 'absolute',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: TEXT_MUTED,
-                  fontSize: 14,
-                  pointerEvents: 'none',
-                  ...(isAr ? { left: 14 } : { right: 14 }),
-                }}>✉</span>
-              </div>
-            </div>
+ 
+<div style={{ marginBottom: '1rem' }}>
+  <label style={{
+    display: 'block',
+    fontSize: 10,
+    fontWeight: 600,
+    color: TEXT_MUTED,
+    marginBottom: 6,
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  }}>
+    {isAr ? 'البريد الإلكتروني أو اسم المستخدم' : 'EMAIL OR USERNAME'}
+  </label>
+  <div style={{ position: 'relative' }}>
+    <input
+      type="text"                           // ✅ text بدل email
+      value={emailOrUsername}
+      required
+      autoComplete="username"              // ✅ أضف
+      placeholder={isAr ? 'example@clinic.com أو username' : 'email or username'}
+      style={{
+        width: '100%',
+        background: PRIMARY_SOFT,
+        border: `1px solid ${BORDER}`,
+        borderRadius: 12,
+        fontSize: 14,
+        fontFamily: t.font,
+        color: TEXT_DARK,
+        outline: 'none',
+        transition: 'all 0.2s ease',
+        padding: isAr ? '12px 14px 12px 40px' : '12px 40px 12px 14px',
+      }}
+      onChange={e => setEmailOrUsername(e.target.value)}
+    />
+    <span style={{
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: TEXT_MUTED,
+      fontSize: 14,
+      pointerEvents: 'none',
+      ...(isAr ? { left: 14 } : { right: 14 }),
+    }}>👤</span>
+  </div>
+</div>
 
-            {/* Password Field */}
             <div style={{ marginBottom: '1rem' }}>
               <label style={{
                 display: 'block',
@@ -650,6 +665,8 @@ export default function Login() {
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPass ? 'text' : 'password'}
+                    autoComplete="current-password"  // ✅ أضف
+
                   value={password}
                   required
                   placeholder={t.pPh}
@@ -701,7 +718,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Forgot Password */}
             <div style={{ textAlign: isAr ? 'right' : 'left', marginBottom: '1.25rem' }}>
               <a
                 href="#"
@@ -712,25 +728,38 @@ export default function Login() {
               </a>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div style={{
-                background: '#FDF5F5',
-                border: `1px solid rgba(91, 140, 143, 0.2)`,
+                background: ERROR_BG,
+                border: `1px solid ${ERROR_TEXT}40`,
                 borderRadius: 10,
                 padding: '10px 12px',
                 fontSize: 12,
-                color: PRIMARY,
+                color: ERROR_TEXT,
                 marginBottom: '1rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
+                animation: 'fade-in 0.3s ease',
               }}>
-                <span>⚠</span> {error}
+                <span style={{ fontSize: 14 }}>⚠️</span>
+                <span style={{ fontSize: 13, flex: 1 }}>{error}</span>
+                <button
+                  onClick={() => setError('')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    color: ERROR_TEXT,
+                    padding: 4,
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
@@ -757,14 +786,12 @@ export default function Login() {
               {loading ? <LoadingDots /> : t.btn}
             </button>
 
-            {/* Divider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '1.25rem 0' }}>
               <div style={{ flex: 1, height: 1, background: BORDER }} />
               <span style={{ fontSize: 10, color: TEXT_MUTED, letterSpacing: '0.5px', textTransform: 'uppercase' }}>{t.ssl}</span>
               <div style={{ flex: 1, height: 1, background: BORDER }} />
             </div>
 
-            {/* Trust Badges */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
               {t.trust.map((label, i) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: TEXT_MUTED }}>
@@ -779,3 +806,6 @@ export default function Login() {
     </div>
   )
 }
+
+
+

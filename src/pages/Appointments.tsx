@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import type { Appointment } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -93,14 +94,12 @@ const globalCss = `
 
 // Comfortable color palette
 const PRIMARY = '#5B8C8F'
-const PRIMARY_LIGHT = '#8BAFB1'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const SUCCESS = '#4A7679'
-const WARNING = '#C4A77D'
 const INFO = '#8BAFB1'
 const DANGER = '#C4A77D'
 
@@ -702,6 +701,7 @@ export default function Appointments() {
               )}
             </p>
           </div>
+{hasPermission('appointments.create') && (
 
           <button
             onClick={() => navigate('/appointments/add')}
@@ -732,7 +732,8 @@ export default function Appointments() {
             <span style={{ fontSize: 16 }}>+</span>
             {t.addAppointment}
           </button>
-        </div>
+        )}
+      </div>
 
         {/* ── Filter Bar with Search ── */}
         <FilterBar 
@@ -782,6 +783,9 @@ export default function Appointments() {
                   <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
                     {t.status}
                   </th>
+                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
+                   {isAr ? 'إجراءات' : 'Actions'}
+                      </th>
                 </tr>
               </thead>
               <tbody>
@@ -872,7 +876,42 @@ export default function Appointments() {
                       <td style={{ padding: '14px 16px' }}>
                         <StatusBadge status={appointment.status} lang={lang} />
                        </td>
+                       <td style={{ padding: '14px 16px' }}>
+  <div style={{ display: 'flex', gap: 8 }}>
+    {/* زر التعديل */}
+    {hasPermission('appointments.edit') && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation()
+      navigate(`/appointments/${appointment.id}/edit`)
+    }}
+    style={{
+      background: PRIMARY_SOFT,
+      border: `1px solid ${BORDER}`,
+      borderRadius: 8,
+      padding: '6px 12px',
+      fontSize: 12,
+      color: PRIMARY,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.background = PRIMARY
+      e.currentTarget.style.color = '#FFFFFF'
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.background = PRIMARY_SOFT
+      e.currentTarget.style.color = PRIMARY
+    }}
+  >
+    ✏️ {isAr ? 'تعديل' : 'Edit'}
+  </button>
+)}
+  </div>
+</td>
                     </tr>
+                    
+                    
                   ))
                 )}
               </tbody>

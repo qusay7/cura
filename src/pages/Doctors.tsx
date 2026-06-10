@@ -219,7 +219,12 @@ const DoctorsLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) 
 )
 
 // ─── Doctor Card Component ───────────────────────────────────────────────────
-const DoctorCard = ({ doctor, lang, onClick }: { doctor: Doctor; lang: 'ar' | 'en'; onClick?: () => void }) => {
+const DoctorCard = ({ doctor, lang, onClick, onEdit }: { 
+  doctor: Doctor; 
+  lang: 'ar' | 'en'; 
+  onClick?: () => void;
+  onEdit?: () => void 
+}) => {
   const t = T[lang]
   const isAr = lang === 'ar'
 
@@ -360,6 +365,42 @@ const DoctorCard = ({ doctor, lang, onClick }: { doctor: Doctor; lang: 'ar' | 'e
             {doctor.isActive ? t.active : t.inactive}
           </span>
         </div>
+      </div>
+
+      {/* Edit Button */}
+      <div style={{
+        marginTop: 12,
+        paddingTop: 12,
+        borderTop: `1px solid ${BORDER}`,
+      }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onEdit) onEdit()
+          }}
+          style={{
+            width: '100%',
+            background: PRIMARY_SOFT,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 10,
+            padding: '8px 12px',
+            fontSize: 12,
+            fontWeight: 500,
+            color: PRIMARY,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = PRIMARY
+            e.currentTarget.style.color = '#FFFFFF'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = PRIMARY_SOFT
+            e.currentTarget.style.color = PRIMARY
+          }}
+        >
+          ✏️ {isAr ? 'تعديل' : 'Edit'}
+        </button>
       </div>
     </div>
   )
@@ -628,6 +669,7 @@ export default function Doctors() {
                 doctor={doctor}
                 lang={lang}
                 onClick={() => navigate(`/doctors/${doctor.id}`)}
+                onEdit={() => navigate(`/doctors/${doctor.id}/edit`)}
               />
             ))}
           </div>

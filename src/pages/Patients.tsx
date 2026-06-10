@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -92,7 +93,6 @@ const globalCss = `
 
 // Comfortable color palette
 const PRIMARY = '#5B8C8F'
-const PRIMARY_LIGHT = '#8BAFB1'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -396,35 +396,38 @@ export default function Patients() {
             </p>
           </div>
 
-          <button
-            onClick={() => navigate('/patients/add')}
-            style={{
-              background: PRIMARY,
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: 12,
-              padding: '10px 20px',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 8px rgba(91, 140, 143, 0.2)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#4A7679'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = PRIMARY
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
-          >
-            <span style={{ fontSize: 16 }}>+</span>
-            {t.addPatient}
-          </button>
+
+{hasPermission('patients.create') && (
+  <button
+    onClick={() => navigate('/patients/add')}
+    style={{
+      background: PRIMARY,
+      color: '#FFFFFF',
+      border: 'none',
+      borderRadius: 12,
+      padding: '10px 20px',
+      fontSize: 13,
+      fontWeight: 500,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      transition: 'all 0.2s ease',
+      boxShadow: '0 2px 8px rgba(91, 140, 143, 0.2)',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.background = '#4A7679'
+      e.currentTarget.style.transform = 'translateY(-1px)'
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.background = PRIMARY
+      e.currentTarget.style.transform = 'translateY(0)'
+    }}
+  >
+    <span style={{ fontSize: 16 }}>+</span>
+    {t.addPatient}
+  </button>
+)}
         </div>
 
         {/* ── Search Bar ── */}
@@ -554,7 +557,7 @@ export default function Patients() {
                     </td>
                   </tr>
                 ) : (
-                  filteredPatients.map((patient, index) => (
+                  filteredPatients.map((patient) => (
                     <tr 
                       key={patient.id} 
                       className="patient-row"
@@ -597,7 +600,7 @@ export default function Patients() {
                         {patient.phone || '—'}
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <GenderBadge gender={patient.gender} lang={lang} />
+                        <GenderBadge gender={patient.gender ?? undefined} lang={lang} />
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
                         {formatDate(patient.createdAt)}

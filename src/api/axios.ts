@@ -1,17 +1,15 @@
 import axios from 'axios'
 
-// ✅ استخدم المسار النسبي فقط (بدون IP أو منفذ)
-const API_BASE_URL = '/api'  // ← هذا مهم جداً مع Proxy
+const API_BASE_URL = '/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false,
 })
 
-// إضافة التوكن تلقائياً لكل طلب
+// ─── Request Interceptor ──────────────────────────────────────────────────
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -20,9 +18,36 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// تجديد التوكن تلقائياً عند انتهائه
+// ─── Response Interceptor ────────────────────────────────────────────────
 api.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    // ✅ تحديث الصلاحيات كل 5 دقائق
+    // تجنب الـ loop — لا تحدّث عند استدعاء my-permissions نفسه
+    const isPermsRequest = response.config.url?.includes('my-permissions')
+
+    if (!isPermsRequest) {
+      const lastUpdate = localStorage.getItem('perms_updated_at')
+      const now = Date.now()
+      const fiveMinutes = 5 * 60 * 1000
+
+      if (!lastUpdate || now - Number(lastUpdate) > fiveMinutes) {
+        try {
+          // ✅ استخدم axios مباشرة بدل api لتجنب الـ loop
+          const token = localStorage.getItem('token')
+          const res = await axios.get(`${API_BASE_URL}/roles/my-permissions`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          localStorage.setItem('permissions', JSON.stringify(res.data.permissions))
+          localStorage.setItem('perms_updated_at', String(now))
+        } catch {
+          // تجاهل الخطأ — لا نوقف الطلب الأصلي
+        }
+      }
+    }
+
+    return response
+  },
+
   async (error) => {
     const originalRequest = error.config
 
@@ -39,12 +64,7 @@ api.interceptors.response.use(
       try {
         const response = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
-          { refreshToken },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          }
+          { refreshToken }
         )
 
         const { token, refreshToken: newRefreshToken } = response.data
@@ -54,10 +74,9 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${token}`
         return api(originalRequest)
 
-      } catch (refreshError) {
+      } catch {
         localStorage.clear()
         window.location.href = '/login'
-        return Promise.reject(refreshError)
       }
     }
 

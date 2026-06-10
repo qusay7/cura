@@ -22,10 +22,6 @@ const globalCss = `
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3px); }
-}
 @keyframes pulse-soft {
   0%, 100% { opacity: 0.3; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.2); }
@@ -59,38 +55,414 @@ const globalCss = `
 
 .dash-shell * { box-sizing:border-box; }
 
-/* Smooth scrolling for better UX */
-.dash-shell {
-  scroll-behavior: smooth;
-}
-
-/* Subtle focus rings for accessibility */
+/* Focus rings */
 *:focus-visible {
   outline: 2px solid #5B8C8F;
   outline-offset: 2px;
   border-radius: 8px;
 }
 
-/* Notification dropdown animation */
+/* Notification dropdown */
 .notification-dropdown {
   animation: notification-slide 0.3s ease both;
 }
 
-@media(max-width:768px){
-  .dash-grid-4     { grid-template-columns:1fr 1fr !important; gap: 12px !important; }
-  .dash-grid-4-sub { grid-template-columns:1fr 1fr !important; gap: 12px !important; }
-  .dash-title      { font-size:24px !important; }
-  .notification-dropdown {
-    position: fixed !important;
-    top: 60px !important;
-    right: 10px !important;
-    left: 10px !important;
-    width: auto !important;
-    max-width: none !important;
+/* ============================================
+   TOP BAR STYLES
+   ============================================ */
+.dashboard-top-bar {
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 16px 24px;
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #DCE5E5;
+}
+
+.top-bar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #E8F0F0;
+  border-radius: 100px;
+  padding: 4px 14px;
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5B8C8F;
+}
+
+.brand-badge span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5B8C8F;
+  animation: soft-pulse 2s infinite;
+}
+
+.top-bar-left h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2C3E3F;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.top-bar-left p {
+  font-size: 13px;
+  color: #6B8A8C;
+  margin: 0;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.datetime-card {
+  background: #F8FAFA;
+  border-radius: 16px;
+  padding: 8px 16px;
+  min-width: 180px;
+  border: 1px solid #DCE5E5;
+  text-align: center;
+}
+
+.datetime-card .date {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2C3E3F;
+  margin-bottom: 2px;
+}
+
+.datetime-card .time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5B8C8F;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: #F8FAFA;
+  border: 1px solid #DCE5E5;
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.icon-btn:hover {
+  background: #E8F0F0;
+  transform: translateY(-2px);
+}
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F8FAFA;
+  border: 1px solid #DCE5E5;
+  border-radius: 30px;
+  padding: 5px 16px 5px 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-btn:hover {
+  background: #E8F0F0;
+  transform: translateY(-2px);
+}
+
+.user-avatar-small {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5B8C8F 0%, #8BAFB1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.user-info-small {
+  text-align: left;
+}
+
+.user-name-small {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2C3E3F;
+  margin: 0;
+}
+
+.user-role-small {
+  font-size: 10px;
+  color: #6B8A8C;
+  margin: 0;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #C4A77D;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-btn-icon {
+  background: none;
+  border: 1px solid #DCE5E5;
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #C4A77D;
+}
+
+.logout-btn-icon:hover {
+  background: #FDF5F5;
+  border-color: #C4A77D;
+  color: #C4A77D;
+}
+
+/* Stats Grid */
+.dash-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.dash-grid-4-sub {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* Doctors Today Appointments Section */
+.doctors-today-section {
+  background: #FFFFFF;
+  border: 1px solid #DCE5E5;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #E8F0F0;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2C3E3F;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title span {
+  font-size: 24px;
+}
+
+.view-all-link {
+  font-size: 12px;
+  color: #5B8C8F;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.view-all-link:hover {
+  color: #4A7679;
+  text-decoration: underline;
+}
+
+.doctors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.doctor-today-card {
+  background: #F8FAFA;
+  border: 1px solid #DCE5E5;
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.doctor-today-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: #5B8C8F;
+}
+
+.doctor-today-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.doctor-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5B8C8F 0%, #8BAFB1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+}
+
+.doctor-info {
+  flex: 1;
+}
+
+.doctor-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2C3E3F;
+  margin: 0 0 4px 0;
+}
+
+.doctor-specialty {
+  font-size: 11px;
+  color: #6B8A8C;
+  margin: 0;
+}
+
+.appointment-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #DCE5E5;
+}
+
+.count-badge {
+  background: #E8F0F0;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #5B8C8F;
+}
+
+.count-label {
+  font-size: 12px;
+  color: #6B8A8C;
+}
+
+.empty-doctors {
+  text-align: center;
+  padding: 40px;
+  color: #6B8A8C;
+  background: #F8FAFA;
+  border-radius: 16px;
+}
+
+/* Responsive */
+@media(max-width: 1024px) {
+  .dash-grid-4 { gap: 16px; }
+  .dash-grid-4-sub { gap: 16px; }
+  .doctors-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}
+
+@media(max-width: 768px) {
+  .dashboard-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+  
+  .top-bar-right {
+    justify-content: space-between;
+  }
+  
+  .datetime-card {
+    flex: 1;
+    text-align: center;
+    min-width: auto;
+  }
+  
+  .user-info-small {
+    display: none;
+  }
+  
+  .user-btn {
+    padding: 5px;
+  }
+  
+  .dash-grid-4 { 
+    grid-template-columns: repeat(2, 1fr) !important; 
+    gap: 12px !important; 
+  }
+  
+  .dash-grid-4-sub { 
+    grid-template-columns: repeat(2, 1fr) !important; 
+    gap: 12px !important; 
+  }
+  
+  .doctors-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 }
-@media(max-width:480px){
-  .dash-grid-4 { grid-template-columns:1fr !important; }
+
+@media(max-width: 480px) {
+  .dash-grid-4 { grid-template-columns: 1fr !important; }
+  .dash-grid-4-sub { grid-template-columns: 1fr !important; }
 }
 `
 
@@ -103,7 +475,7 @@ const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const PROGRESS_BG = '#E8F0F0'
-const NOTIFICATION_BADGE = '#C4A77D'  // Warm sand for badges
+const NOTIFICATION_BADGE = '#C4A77D'
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
@@ -123,6 +495,12 @@ const T = {
     appointments: 'مواعيد',
     alerts: 'تنبيهات',
     system: 'النظام',
+    localDateTime: 'التاريخ والوقت المحلي',
+    logout: 'تسجيل الخروج',
+    doctorsTodayTitle: 'مواعيد اليوم حسب الطبيب',
+    viewAllAppointments: 'عرض جميع المواعيد',
+    totalAppointments: 'إجمالي المواعيد',
+    noAppointmentsToday: 'لا توجد مواعيد اليوم',
   },
   en: {
     title: 'Dashboard', plan: 'Plan', loading: 'Loading...',
@@ -140,10 +518,16 @@ const T = {
     appointments: 'Appointments',
     alerts: 'Alerts',
     system: 'System',
+    localDateTime: 'Local Date & Time',
+    logout: 'Sign Out',
+    doctorsTodayTitle: "Today's Appointments by Doctor",
+    viewAllAppointments: 'View all appointments',
+    totalAppointments: 'Total appointments',
+    noAppointmentsToday: 'No appointments today',
   },
 }
 
-// ─── Types for Notifications ─────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────
 interface Notification {
   id: number
   title: string
@@ -151,272 +535,18 @@ interface Notification {
   time: string
   read: boolean
   type: 'appointment' | 'alert' | 'system'
-  icon: string
 }
 
-// ─── Notification Bell Component ─────────────────────────────────────────────
-const NotificationBell = ({ 
-  notifications, 
-  onMarkAsRead, 
-  onViewAll,
-  lang 
-}: { 
-  notifications: Notification[]
-  onMarkAsRead: (id: number) => void
-  onViewAll: () => void
-  lang: 'ar' | 'en'
-}) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isRinging, setIsRinging] = useState(false)
-  const unreadCount = notifications.filter(n => !n.read).length
-  const t = T[lang]
-  const isAr = lang === 'ar'
-
-  // Trigger bell ring when new notification arrives
-  useEffect(() => {
-    if (unreadCount > 0) {
-      setIsRinging(true)
-      const timer = setTimeout(() => setIsRinging(false), 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [unreadCount])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest('.notification-container')) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [])
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'appointment': return '📅'
-      case 'alert': return '⚠️'
-      case 'system': return '🔔'
-      default: return '📋'
-    }
-  }
-
-  const getTimeAgo = (timeStr: string) => {
-    // Simple time formatter - you can enhance this
-    return timeStr
-  }
-
-  return (
-    <div className="notification-container" style={{ position: 'relative' }}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: 'relative',
-          background: PRIMARY_SOFT,
-          border: `1px solid ${BORDER}`,
-          borderRadius: '50%',
-          width: 42,
-          height: 42,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#E0EBEB'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = PRIMARY_SOFT
-        }}
-      >
-        <span style={{ fontSize: 20 }}>🔔</span>
-        
-        {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: -4,
-            right: -4,
-            background: NOTIFICATION_BADGE,
-            color: '#FFFFFF',
-            fontSize: 10,
-            fontWeight: 600,
-            borderRadius: '50%',
-            width: 18,
-            height: 18,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          }}>
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {/* Dropdown */}
-      {isOpen && (
-        <div 
-          className="notification-dropdown"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 10px)',
-            [isAr ? 'left' : 'right']: 0,
-            width: 360,
-            maxWidth: 'calc(100vw - 20px)',
-            background: CARD_BG,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 16,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            zIndex: 1000,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Header */}
-          <div style={{
-            padding: '14px 16px',
-            borderBottom: `1px solid ${BORDER}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: PRIMARY_SOFT,
-          }}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>
-              {t.notifications}
-            </h4>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => notifications.forEach(n => !n.read && onMarkAsRead(n.id))}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: 11,
-                  color: PRIMARY,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                {t.markAllRead}
-              </button>
-            )}
-          </div>
-
-          {/* Notifications List */}
-          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-            {notifications.length === 0 ? (
-              <div style={{
-                padding: '40px 20px',
-                textAlign: 'center',
-                color: TEXT_MUTED,
-              }}>
-                <span style={{ fontSize: 32, opacity: 0.5 }}>🔕</span>
-                <p style={{ fontSize: 13, marginTop: 8 }}>{t.noNotifications}</p>
-              </div>
-            ) : (
-              notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => onMarkAsRead(notif.id)}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: `1px solid ${BORDER}`,
-                    display: 'flex',
-                    gap: 12,
-                    cursor: 'pointer',
-                    background: notif.read ? 'transparent' : PRIMARY_SOFT,
-                    transition: 'background 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#F0F5F5'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = notif.read ? 'transparent' : PRIMARY_SOFT
-                  }}
-                >
-                  <div style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    background: `${PRIMARY}15`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 18,
-                  }}>
-                    {getNotificationIcon(notif.type)}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: 4,
-                    }}>
-                      <span style={{
-                        fontSize: 13,
-                        fontWeight: notif.read ? 500 : 600,
-                        color: TEXT_DARK,
-                      }}>
-                        {notif.title}
-                      </span>
-                      <span style={{
-                        fontSize: 10,
-                        color: TEXT_MUTED,
-                      }}>
-                        {getTimeAgo(notif.time)}
-                      </span>
-                    </div>
-                    <p style={{
-                      fontSize: 11,
-                      color: TEXT_MUTED,
-                      margin: 0,
-                      lineHeight: 1.4,
-                    }}>
-                      {notif.message}
-                    </p>
-                  </div>
-                  {!notif.read && (
-                    <div style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      background: NOTIFICATION_BADGE,
-                      alignSelf: 'center',
-                    }} />
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div style={{
-              padding: '10px 16px',
-              borderTop: `1px solid ${BORDER}`,
-              textAlign: 'center',
-            }}>
-              <button
-                onClick={onViewAll}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: 12,
-                  color: PRIMARY,
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                }}
-              >
-                {t.viewAll} →
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
+interface DoctorTodayAppointment {
+  doctorId: string
+  doctorName: string
+  doctorSpecialty: string
+  appointmentCount: number
+  appointments: Array<{
+    id: number
+    patientName: string
+    time: string
+  }>
 }
 
 // ─── Counter hook ─────────────────────────────────────────────────────────
@@ -446,7 +576,7 @@ const StatCard = ({ label, value, icon, delay = 0 }: {
       background: CARD_BG,
       border: `1px solid ${BORDER}`,
       borderRadius: 20,
-      padding: '20px 20px',
+      padding: '20px',
       position: 'relative',
       overflow: 'hidden',
       animationDelay: `${delay}s`,
@@ -465,7 +595,6 @@ const StatCard = ({ label, value, icon, delay = 0 }: {
           background: PRIMARY_SOFT,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 22,
-          transition: 'transform 0.2s ease',
         }}>{icon}</div>
         <div style={{
           fontSize: 32, fontWeight: 700,
@@ -596,52 +725,208 @@ const DashboardLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }
   </div>
 )
 
+// ─── Notification Bell Component ─────────────────────────────────────────────
+const NotificationBell = ({ 
+  notifications, 
+  onMarkAsRead, 
+  onViewAll,
+  lang,
+  unreadCount
+}: { 
+  notifications: Notification[]
+  onMarkAsRead: (id: number) => void
+  onViewAll: () => void
+  lang: 'ar' | 'en'
+  unreadCount: number
+}) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isRinging, setIsRinging] = useState(false)
+  const t = T[lang]
+  const isAr = lang === 'ar'
+
+  useEffect(() => {
+    if (unreadCount > 0) {
+      setIsRinging(true)
+      const timer = setTimeout(() => setIsRinging(false), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [unreadCount])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.notification-container')) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'appointment': return '📅'
+      case 'alert': return '⚠️'
+      case 'system': return '🔔'
+      default: return '📋'
+    }
+  }
+
+  return (
+    <div className="notification-container" style={{ position: 'relative' }}>
+      <button
+        className="icon-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none' }}
+      >
+        <span style={{ fontSize: 18 }}>🔔</span>
+        {unreadCount > 0 && (
+          <span className="notification-badge">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="notification-dropdown" style={{ 
+          position: 'absolute',
+          top: '50px',
+          [isAr ? 'left' : 'right']: 0,
+          width: 360,
+          maxWidth: 'calc(100vw - 20px)',
+          background: CARD_BG,
+          border: `1px solid ${BORDER}`,
+          borderRadius: 16,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+          zIndex: 1000,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '12px 16px',
+            borderBottom: `1px solid ${BORDER}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: PRIMARY_SOFT,
+          }}>
+            <h4 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{t.notifications}</h4>
+            {unreadCount > 0 && (
+              <button
+                onClick={() => notifications.forEach(n => !n.read && onMarkAsRead(n.id))}
+                style={{ background: 'transparent', border: 'none', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}
+              >
+                {t.markAllRead}
+              </button>
+            )}
+          </div>
+
+          <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+            {notifications.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: TEXT_MUTED }}>
+                <span style={{ fontSize: 32, opacity: 0.5 }}>🔕</span>
+                <p style={{ fontSize: 13, marginTop: 8 }}>{t.noNotifications}</p>
+              </div>
+            ) : (
+              notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  onClick={() => onMarkAsRead(notif.id)}
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: `1px solid ${BORDER}`,
+                    display: 'flex',
+                    gap: 12,
+                    cursor: 'pointer',
+                    background: notif.read ? 'transparent' : PRIMARY_SOFT,
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: `${PRIMARY}15`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18,
+                  }}>
+                    {getNotificationIcon(notif.type)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: notif.read ? 500 : 600, color: TEXT_DARK }}>{notif.title}</span>
+                      <span style={{ fontSize: 10, color: TEXT_MUTED }}>{notif.time}</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
+                  </div>
+                  {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: NOTIFICATION_BADGE, alignSelf: 'center' }} />}
+                </div>
+              ))
+            )}
+          </div>
+
+          {notifications.length > 0 && (
+            <div style={{ padding: '10px 16px', borderTop: `1px solid ${BORDER}`, textAlign: 'center' }}>
+              <button onClick={onViewAll} style={{ background: 'transparent', border: 'none', fontSize: 12, color: PRIMARY, cursor: 'pointer' }}>
+                {t.viewAll} →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
+  const [doctorsToday, setDoctorsToday] = useState<DoctorTodayAppointment[]>([])
+  
+  // التاريخ والوقت المحلي
+  const getLocalDateTime = () => {
+    const now = new Date()
+    const dateOptions: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }
+    const timeOptions: Intl.DateTimeFormatOptions = { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    }
+    const date = now.toLocaleDateString(lang === 'ar' ? 'ar-SA' : undefined, dateOptions)
+    const time = now.toLocaleTimeString(lang === 'ar' ? 'ar-SA' : undefined, timeOptions)
+    return { date, time }
+  }
+  
+  const [currentDateTime, setCurrentDateTime] = useState(getLocalDateTime())
   
   // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: 'موعد جديد',
-      message: 'تم إضافة موعد جديد مع د. أحمد السيد',
-      time: 'منذ 5 دقائق',
-      read: false,
-      type: 'appointment',
-      icon: '📅',
-    },
-    {
-      id: 2,
-      title: 'تنبيه الحصة',
-      message: 'اقتربت من الحد الأقصى لعدد المرضى (85%)',
-      time: 'منذ ساعة',
-      read: false,
-      type: 'alert',
-      icon: '⚠️',
-    },
-    {
-      id: 3,
-      title: 'تحديث النظام',
-      message: 'تم تحديث النظام إلى الإصدار الأحدث',
-      time: 'منذ 3 ساعات',
-      read: true,
-      type: 'system',
-      icon: '🔔',
-    },
-    {
-      id: 4,
-      title: 'تذكير',
-      message: 'لديك 3 مواعيد اليوم في الساعة 2:00 م',
-      time: 'منذ 5 ساعات',
-      read: false,
-      type: 'appointment',
-      icon: '📅',
-    },
+    { id: 1, title: 'موعد جديد', message: 'تم إضافة موعد جديد مع د. أحمد السيد', time: 'منذ 5 دقائق', read: false, type: 'appointment' },
+    { id: 2, title: 'تنبيه الحصة', message: 'اقتربت من الحد الأقصى لعدد المرضى (85%)', time: 'منذ ساعة', read: false, type: 'alert' },
+    { id: 3, title: 'تحديث النظام', message: 'تم تحديث النظام إلى الإصدار الأحدث', time: 'منذ 3 ساعات', read: true, type: 'system' },
   ])
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const user = (() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}') }
+    catch { return {} }
+  })()
+
+  // جلب بيانات مواعيد اليوم لكل طبيب
+  const fetchDoctorsTodayAppointments = async () => {
+    try {
+      const response = await api.get('/appointments/today-by-doctor')
+      setDoctorsToday(response.data)
+    } catch (error) {
+      console.error('Error fetching doctors appointments:', error)
+      
+    }
+  }
 
   useEffect(() => {
     const styleId = 'cura-dash-css'
@@ -663,8 +948,13 @@ export default function Dashboard() {
     const startTime = Date.now()
     const minLoadingTime = 1500
 
-    api.get('/dashboard')
-      .then(res => setData(res.data))
+    Promise.all([
+      api.get('/dashboard'),
+      fetchDoctorsTodayAppointments()
+    ])
+      .then(([dashboardRes]) => {
+        setData(dashboardRes.data)
+      })
       .catch(() => navigate('/login'))
       .finally(() => {
         const elapsed = Date.now() - startTime
@@ -674,23 +964,33 @@ export default function Dashboard() {
           setLoading(false)
         }
       })
+      
+    const timer = setInterval(() => {
+      setCurrentDateTime(getLocalDateTime())
+    }, 1000)
 
-    return () => window.removeEventListener('cura-lang-change', handleLangChange)
-  }, [navigate])
+    return () => {
+      window.removeEventListener('cura-lang-change', handleLangChange)
+      clearInterval(timer)
+    }
+  }, [navigate, lang])
 
-  // Notification handlers
   const handleMarkAsRead = (id: number) => {
-    setNotifications(prev =>
-      prev.map(notif =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    )
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
   const handleViewAllNotifications = () => {
-    // يمكنك توجيه المستخدم إلى صفحة الإشعارات
-    console.log('View all notifications')
-    // navigate('/notifications')
+    navigate('/appointments')
+  }
+
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken')
+    try {
+      await api.post('/auth/logout', { refreshToken })
+    } finally {
+      localStorage.clear()
+      navigate('/login')
+    }
   }
 
   const t = T[lang]
@@ -698,12 +998,7 @@ export default function Dashboard() {
   const font = isAr ? "'Cairo', 'Tajawal', sans-serif" : "'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif"
 
   if (loading) {
-    return (
-      <DashboardLoadingScreen 
-        msg={t.loadingMessage} 
-        subMsg={t.loadingSub}
-      />
-    )
+    return <DashboardLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
   }
 
   const sub = data?.subscription
@@ -726,71 +1021,375 @@ export default function Dashboard() {
     }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
-        {/* ── Header with Notifications ── */}
-        <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: PRIMARY_SOFT,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 100, padding: '4px 16px',
-              fontSize: 11, fontWeight: 600, 
-              color: PRIMARY,
-              letterSpacing: '0.3px',
-              marginBottom: 12,
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: 'soft-pulse 2s infinite' }} />
+
+        {/* ── Top Bar ── */}
+        <div className="dashboard-top-bar">
+          <div className="top-bar-left">
+            <div className="brand-badge">
+              <span />
               CURA
             </div>
-            <h2 className="dash-title" style={{
-              fontFamily: "'DM Serif Display', 'Georgia', serif",
-              fontSize: 32, fontWeight: 500,
-              color: TEXT_DARK,
-              margin: 0, letterSpacing: '-0.3px',
-            }}>{t.title}</h2>
-            <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 8 }}>{t.welcome} 👋</p>
+            <h1>{t.title}</h1>
+            <p>{t.welcome} 👋</p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Notification Bell */}
-            <NotificationBell
-              notifications={notifications}
-              onMarkAsRead={handleMarkAsRead}
-              onViewAll={handleViewAllNotifications}
-              lang={lang}
-            />
+          <div className="top-bar-right">
+            <div className="datetime-card">
+              <div className="date">{currentDateTime.date}</div>
+              <div className="time">{currentDateTime.time}</div>
+            </div>
 
-            {/* Plan Badge */}
-            {sub && (
-              <div style={{
-                background: CARD_BG,
-                border: `1px solid ${BORDER}`,
-                borderRadius: 100, 
-                padding: '6px 20px 6px 16px',
-                display: 'flex', alignItems: 'center', gap: 12,
-                fontSize: 13,
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: PRIMARY_SOFT,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14,
-                }}>📋</div>
-                <div>
-                  <div style={{ fontSize: 10, color: TEXT_MUTED, letterSpacing: '0.3px' }}>{t.plan}</div>
-                  <div style={{ fontWeight: 600, color: TEXT_DARK }}>{sub.planName}</div>
+            <div className="action-buttons">
+              <NotificationBell
+                notifications={notifications}
+                onMarkAsRead={handleMarkAsRead}
+                onViewAll={handleViewAllNotifications}
+                lang={lang}
+                unreadCount={unreadCount}
+              />
+
+              <button className="user-btn" onClick={() => navigate('/profile')}>
+                <div className="user-avatar-small">
+                  {(user.fullName || 'U')[0].toUpperCase()}
                 </div>
-              </div>
-            )}
+                <div className="user-info-small">
+                  <p className="user-name-small">{user.fullName || '---'}</p>
+                  <p className="user-role-small">{user.role || ''}</p>
+                </div>
+              </button>
+
+              <button className="logout-btn-icon" onClick={handleLogout}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* ── Stats Grid ── */}
-        <div className="dash-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20, marginBottom: '32px' }}>
-          <StatCard label={t.patients} value={data?.totalPatients ?? 0} icon="👥" delay={0.05} />
-          <StatCard label={t.doctors} value={data?.totalDoctors ?? 0} icon="⚕️" delay={0.1} />
-          <StatCard label={t.todayAppts} value={data?.todayAppointments ?? 0} icon="📅" delay={0.15} />
-          <StatCard label={t.upcomingAppts} value={data?.upcomingAppointments ?? 0} icon="⏰" delay={0.2} />
+       {/* ── Stats Grid with Quick Actions ── */}
+<div className="dash-grid-4">
+  {/* بطاقة المرضى */}
+  <div className="stat-card" style={{
+    background: CARD_BG,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 20,
+    padding: '20px',
+    position: 'relative',
+    overflow: 'hidden',
+    animationDelay: '0.05s',
+    cursor: 'pointer',
+  }} onClick={() => navigate('/patients')}>
+    <div style={{
+      position: 'absolute',
+      top: 0, left: 0, right: 0, height: '3px',
+      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
+      backgroundSize: '200% auto',
+      animation: 'shimmer 3s linear infinite',
+    }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 16,
+        background: PRIMARY_SOFT,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 22,
+      }}>👥</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
+        {data?.totalPatients?.toLocaleString() || 0}
+      </div>
+    </div>
+    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.patients}</p>
+    
+    {/* زر الإضافة السريع */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        navigate('/patients/add')
+      }}
+      style={{
+        marginTop: '12px',
+        padding: '8px 12px',
+        background: '#F8FAFA',
+        border: `1px solid ${BORDER}`,
+        borderRadius: '12px',
+        fontSize: '12px',
+        fontWeight: '500',
+        color: PRIMARY,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        width: '100%',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = PRIMARY
+        e.currentTarget.style.color = 'white'
+        e.currentTarget.style.borderColor = PRIMARY
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = '#F8FAFA'
+        e.currentTarget.style.color = PRIMARY
+        e.currentTarget.style.borderColor = BORDER
+      }}
+    >
+      <span>+</span> {isAr ? 'إضافة مريض' : 'Add Patient'}
+    </button>
+  </div>
+
+  {/* بطاقة الأطباء */}
+  <div className="stat-card" style={{
+    background: CARD_BG,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 20,
+    padding: '20px',
+    position: 'relative',
+    overflow: 'hidden',
+    animationDelay: '0.1s',
+    cursor: 'pointer',
+  }} onClick={() => navigate('/doctors')}>
+    <div style={{
+      position: 'absolute',
+      top: 0, left: 0, right: 0, height: '3px',
+      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
+      backgroundSize: '200% auto',
+      animation: 'shimmer 3s linear infinite',
+    }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 16,
+        background: PRIMARY_SOFT,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 22,
+      }}>⚕️</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
+        {data?.totalDoctors?.toLocaleString() || 0}
+      </div>
+    </div>
+    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.doctors}</p>
+    
+    {/* زر الإضافة السريع */}
+    <button
+  onClick={(e) => {
+    e.stopPropagation()
+    navigate('/doctors/add', { replace: true })
+  }}
+      style={{
+        marginTop: '12px',
+        padding: '8px 12px',
+        background: '#F8FAFA',
+        border: `1px solid ${BORDER}`,
+        borderRadius: '12px',
+        fontSize: '12px',
+        fontWeight: '500',
+        color: PRIMARY,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        width: '100%',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = PRIMARY
+        e.currentTarget.style.color = 'white'
+        e.currentTarget.style.borderColor = PRIMARY
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = '#F8FAFA'
+        e.currentTarget.style.color = PRIMARY
+        e.currentTarget.style.borderColor = BORDER
+      }}
+    >
+      <span>+</span> {isAr ? 'إضافة طبيب' : 'Add Doctor'}
+    </button>
+  </div>
+
+  {/* بطاقة مواعيد اليوم */}
+  <div className="stat-card" style={{
+    background: CARD_BG,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 20,
+    padding: '20px',
+    position: 'relative',
+    overflow: 'hidden',
+    animationDelay: '0.15s',
+    cursor: 'pointer',
+  }} onClick={() => navigate('/appointments?filter=today')}>
+    <div style={{
+      position: 'absolute',
+      top: 0, left: 0, right: 0, height: '3px',
+      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
+      backgroundSize: '200% auto',
+      animation: 'shimmer 3s linear infinite',
+    }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 16,
+        background: PRIMARY_SOFT,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 22,
+      }}>📅</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
+        {data?.todayAppointments?.toLocaleString() || 0}
+      </div>
+    </div>
+    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.todayAppts}</p>
+    
+    {/* زر الإضافة السريع */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        navigate('/quick-visit')
+      }}
+      style={{
+        marginTop: '12px',
+        padding: '8px 12px',
+        background: '#F8FAFA',
+        border: `1px solid ${BORDER}`,
+        borderRadius: '12px',
+        fontSize: '12px',
+        fontWeight: '500',
+        color: PRIMARY,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        width: '100%',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = PRIMARY
+        e.currentTarget.style.color = 'white'
+        e.currentTarget.style.borderColor = PRIMARY
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = '#F8FAFA'
+        e.currentTarget.style.color = PRIMARY
+        e.currentTarget.style.borderColor = BORDER
+      }}
+    >
+      <span>+</span> {isAr ? 'زيارة سريعة' : 'quick-visit'}
+    </button>
+  </div>
+
+  {/* بطاقة مواعيد القادمة */}
+  <div className="stat-card" style={{
+    background: CARD_BG,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 20,
+    padding: '20px',
+    position: 'relative',
+    overflow: 'hidden',
+    animationDelay: '0.2s',
+    cursor: 'pointer',
+  }} onClick={() => navigate('/appointments?filter=upcoming')}>
+    <div style={{
+      position: 'absolute',
+      top: 0, left: 0, right: 0, height: '3px',
+      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
+      backgroundSize: '200% auto',
+      animation: 'shimmer 3s linear infinite',
+    }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 16,
+        background: PRIMARY_SOFT,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 22,
+      }}>⏰</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
+        {data?.upcomingAppointments?.toLocaleString() || 0}
+      </div>
+    </div>
+    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.upcomingAppts}</p>
+    
+    {/* زر الإضافة السريع - نفس زر مواعيد اليوم */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        navigate('/appointments/add')
+      }}
+      style={{
+        marginTop: '12px',
+        padding: '8px 12px',
+        background: '#F8FAFA',
+        border: `1px solid ${BORDER}`,
+        borderRadius: '12px',
+        fontSize: '12px',
+        fontWeight: '500',
+        color: PRIMARY,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        width: '100%',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = PRIMARY
+        e.currentTarget.style.color = 'white'
+        e.currentTarget.style.borderColor = PRIMARY
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = '#F8FAFA'
+        e.currentTarget.style.color = PRIMARY
+        e.currentTarget.style.borderColor = BORDER
+      }}
+    >
+      <span>+</span> {isAr ? 'حجز موعد' : 'Book Appointment'}
+    </button>
+  </div>
+</div>
+
+        {/* ── Doctors Today Appointments Section ── */}
+        <div className="doctors-today-section">
+          <div className="section-header">
+            <div className="section-title">
+              <span>👨‍⚕️</span>
+              {t.doctorsTodayTitle}
+            </div>
+            <div className="view-all-link" onClick={() => navigate('/appointments?filter=today')}>
+              {t.viewAllAppointments} →
+            </div>
+          </div>
+
+          {doctorsToday.length === 0 ? (
+            <div className="empty-doctors">
+              <span style={{ fontSize: 32, opacity: 0.5 }}>📅</span>
+              <p style={{ marginTop: 12 }}>{t.noAppointmentsToday}</p>
+            </div>
+          ) : (
+            <div className="doctors-grid">
+              {doctorsToday.map((doctor) => (
+                <div 
+                  key={doctor.doctorId} 
+                  className="doctor-today-card"
+                  onClick={() => navigate(`/appointments?doctorId=${doctor.doctorId}&filter=today`)}
+                >
+                  <div className="doctor-today-header">
+                    <div className="doctor-avatar">
+                      👨‍⚕️
+                    </div>
+                    <div className="doctor-info">
+                      <h4 className="doctor-name">{doctor.doctorName}</h4>
+                      <p className="doctor-specialty">{doctor.doctorSpecialty || (isAr ? 'طبيب عام' : 'General Physician')}</p>
+                    </div>
+                  </div>
+                  <div className="appointment-count">
+                    <span className="count-badge">{doctor.appointmentCount}</span>
+                    <span className="count-label">{t.totalAppointments}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Subscription Card ── */}
@@ -800,12 +1399,15 @@ export default function Dashboard() {
             border: `1px solid ${BORDER}`,
             borderRadius: 24,
             overflow: 'hidden',
-            transition: 'box-shadow 0.2s ease',
           }}>
             <div style={{
               padding: '20px 28px',
               borderBottom: `1px solid ${BORDER}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
             }}>
               <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span>💎</span> {t.subscription}
@@ -813,18 +1415,21 @@ export default function Dashboard() {
               <div style={{
                 background: PRIMARY_SOFT,
                 border: `1px solid ${BORDER}`,
-                borderRadius: 40, 
+                borderRadius: 40,
                 padding: '6px 16px',
-                fontSize: 13, fontWeight: 500, 
+                fontSize: 13,
+                fontWeight: 500,
                 color: daysColor,
-                display: 'flex', alignItems: 'center', gap: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
               }}>
                 <span>📅</span> {t.remaining} {sub.daysRemaining} {t.day}
               </div>
             </div>
 
             <div style={{ padding: '24px 28px' }}>
-              <div className="dash-grid-4-sub" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20, marginBottom: 28 }}>
+              <div className="dash-grid-4-sub">
                 {[
                   { label: t.plan, value: sub.planName, suffix: '', isText: true },
                   { label: t.daysLeft, value: `${sub.daysRemaining}`, suffix: t.day, isText: false },
@@ -834,7 +1439,7 @@ export default function Dashboard() {
                   <div key={i} style={{
                     background: PRIMARY_SOFT,
                     border: `1px solid ${BORDER}`,
-                    borderRadius: 16, 
+                    borderRadius: 16,
                     padding: '14px 16px',
                   }}>
                     <p style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -853,7 +1458,7 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20 }}>
+              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginTop: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
                   <span style={{ fontSize: 18 }}>📊</span>
                   <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', margin: 0 }}>

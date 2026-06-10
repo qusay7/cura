@@ -20,16 +20,22 @@ export interface Patient {
   createdAt: string
 }
 
+// types/index.ts
+
 export interface Doctor {
-  id: string           // ✅ string وليس number
+  id: string
   fullName: string
-  specialty: string | null
-  phone: string | null
-  email: string | null
+  specialty?: string
+  phone?: string
+  email?: string
+  notes?: string
   isActive: boolean
   clinicId: string
-  clinicName: string | null
+  clinicName?: string
   createdAt: string
+  gender?: string  // ✅ أضف
+  userId?: string
+  departmentId?: string
 }
 
 export interface Appointment {
