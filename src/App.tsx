@@ -23,7 +23,10 @@ import ClinicPermissions from './pages/ClinicPermissions'
 import Reports from './pages/Reports'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import SuperAdminClinics from './pages/SuperAdmin/Clinics'
-
+import SuperAdminPlans from './pages/SuperAdmin/Plans'
+import Queue from './pages/Queue'
+import AppointmentDetail from './pages/AppointmentDetail'
+import PatientVisitNotes from './pages/PatientVisitNotes'
 
 function App() {
   return (
@@ -60,6 +63,12 @@ function App() {
             <Layout><EditPatient /></Layout>
           </ProtectedRoute>
         } />
+        {/* ── سجل زيارات المريض ── */}
+        <Route path="/patients/:patientId/visit-notes" element={
+          <ProtectedRoute permission="patients.view">
+            <Layout><PatientVisitNotes /></Layout>
+          </ProtectedRoute>
+        } />
 
         {/* ── الأطباء ── */}
         <Route path="/doctors" element={
@@ -87,6 +96,12 @@ function App() {
         <Route path="/appointments/add" element={
           <ProtectedRoute permission="appointments.create">
             <Layout><AddAppointment /></Layout>
+          </ProtectedRoute>
+        } />
+        {/* ✅ تفاصيل الموعد — قبل edit */}
+        <Route path="/appointments/:id" element={
+          <ProtectedRoute permission="appointments.view">
+            <Layout><AppointmentDetail /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/appointments/:id/edit" element={
@@ -149,12 +164,25 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* ── SuperAdmin ── */}
+        <Route path="/superadmin/clinics" element={
+          <ProtectedRoute>
+            <Layout><SuperAdminClinics /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/superadmin/plans" element={
+          <ProtectedRoute>
+            <Layout><SuperAdminPlans /></Layout>
+          </ProtectedRoute>
+        } />
 
-<Route path="/superadmin/clinics" element={
-  <ProtectedRoute>
-    <Layout><SuperAdminClinics /></Layout>
-  </ProtectedRoute>
-} />
+        {/* ── قائمة الانتظار ── */}
+        <Route path="/queue" element={
+          <ProtectedRoute>
+            <Layout><Queue /></Layout>
+          </ProtectedRoute>
+        } />
+
         {/* ── Redirects ── */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

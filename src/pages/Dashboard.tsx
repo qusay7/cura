@@ -4,469 +4,101 @@ import api from '../api/axios'
 import type { DashboardData } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
+
+const formatPrice = (price: number, lang: 'ar' | 'en') => {
+  if (!price && price !== 0) return '—'
+  return new Intl.NumberFormat(lang === 'ar' ? 'ar-JO' : 'en-JO', {
+    style: 'currency', currency: 'JOD', minimumFractionDigits: 0, maximumFractionDigits: 2
+  }).format(price)
+}
+
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-// ─── Global CSS with Comfortable Colors ──────────────────────────────────────
 const globalCss = `
 @keyframes fade-up { 
   from { opacity: 0; transform: translateY(20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-@keyframes notification-slide {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes bell-ring {
-  0% { transform: rotate(0deg); }
-  25% { transform: rotate(15deg); }
-  50% { transform: rotate(-15deg); }
-  75% { transform: rotate(5deg); }
-  100% { transform: rotate(0deg); }
-}
+@keyframes soft-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes pulse-soft { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes notification-slide { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes bell-ring { 0%{transform:rotate(0)} 25%{transform:rotate(15deg)} 50%{transform:rotate(-15deg)} 75%{transform:rotate(5deg)} 100%{transform:rotate(0)} }
 
 .dash-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
+.dash-shell * { box-sizing: border-box; }
+*:focus-visible { outline: 2px solid #5B8C8F; outline-offset: 2px; border-radius: 8px; }
 
-.stat-card { 
-  animation: fade-up 0.4s ease both;
-  transition: all 0.2s ease;
-}
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px -8px rgba(0,0,0,0.08);
-}
-.stat-card:nth-child(1){ animation-delay:0.05s }
-.stat-card:nth-child(2){ animation-delay:0.1s  }
-.stat-card:nth-child(3){ animation-delay:0.15s }
-.stat-card:nth-child(4){ animation-delay:0.2s  }
+.stat-card { transition: all 0.2s ease; }
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px -8px rgba(0,0,0,0.08); }
 
-.dash-shell * { box-sizing:border-box; }
-
-/* Focus rings */
-*:focus-visible {
-  outline: 2px solid #5B8C8F;
-  outline-offset: 2px;
-  border-radius: 8px;
-}
-
-/* Notification dropdown */
-.notification-dropdown {
-  animation: notification-slide 0.3s ease both;
-}
-
-/* ============================================
-   TOP BAR STYLES
-   ============================================ */
-.dashboard-top-bar {
-  background: #FFFFFF;
-  border-radius: 24px;
-  padding: 16px 24px;
-  margin-bottom: 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid #DCE5E5;
-}
-
-.top-bar-left {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.brand-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #E8F0F0;
-  border-radius: 100px;
-  padding: 4px 14px;
-  width: fit-content;
-  font-size: 11px;
-  font-weight: 600;
-  color: #5B8C8F;
-}
-
-.brand-badge span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #5B8C8F;
-  animation: soft-pulse 2s infinite;
-}
-
-.top-bar-left h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #2C3E3F;
-  margin: 0;
-  letter-spacing: -0.3px;
-}
-
-.top-bar-left p {
-  font-size: 13px;
-  color: #6B8A8C;
-  margin: 0;
-}
-
-.top-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.datetime-card {
-  background: #F8FAFA;
-  border-radius: 16px;
-  padding: 8px 16px;
-  min-width: 180px;
-  border: 1px solid #DCE5E5;
-  text-align: center;
-}
-
-.datetime-card .date {
-  font-size: 12px;
-  font-weight: 500;
-  color: #2C3E3F;
-  margin-bottom: 2px;
-}
-
-.datetime-card .time {
-  font-size: 14px;
-  font-weight: 600;
-  color: #5B8C8F;
-}
-
-.action-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.icon-btn {
-  background: #F8FAFA;
-  border: 1px solid #DCE5E5;
-  border-radius: 12px;
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.icon-btn:hover {
-  background: #E8F0F0;
-  transform: translateY(-2px);
-}
-
-.user-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #F8FAFA;
-  border: 1px solid #DCE5E5;
-  border-radius: 30px;
-  padding: 5px 16px 5px 5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.user-btn:hover {
-  background: #E8F0F0;
-  transform: translateY(-2px);
-}
-
-.user-avatar-small {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #5B8C8F 0%, #8BAFB1 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
-}
-
-.user-info-small {
-  text-align: left;
-}
-
-.user-name-small {
-  font-size: 13px;
-  font-weight: 600;
-  color: #2C3E3F;
-  margin: 0;
-}
-
-.user-role-small {
-  font-size: 10px;
-  color: #6B8A8C;
-  margin: 0;
-}
-
-.notification-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #C4A77D;
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logout-btn-icon {
-  background: none;
-  border: 1px solid #DCE5E5;
-  border-radius: 12px;
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #C4A77D;
-}
-
-.logout-btn-icon:hover {
-  background: #FDF5F5;
-  border-color: #C4A77D;
-  color: #C4A77D;
-}
+.notification-dropdown { animation: notification-slide 0.3s ease both; }
 
 /* Stats Grid */
-.dash-grid-4 {
+.stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 32px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.dash-grid-4-sub {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-/* Doctors Today Appointments Section */
-.doctors-today-section {
-  background: #FFFFFF;
-  border: 1px solid #DCE5E5;
-  border-radius: 24px;
-  padding: 24px;
-  margin-bottom: 32px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #E8F0F0;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #2C3E3F;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.section-title span {
-  font-size: 24px;
-}
-
-.view-all-link {
-  font-size: 12px;
-  color: #5B8C8F;
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.view-all-link:hover {
-  color: #4A7679;
-  text-decoration: underline;
-}
-
+/* Doctors Grid */
 .doctors-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
 }
 
-.doctor-today-card {
-  background: #F8FAFA;
-  border: 1px solid #DCE5E5;
-  border-radius: 16px;
-  padding: 16px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.doctor-today-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border-color: #5B8C8F;
-}
-
-.doctor-today-header {
-  display: flex;
-  align-items: center;
+/* Subscription Grid */
+.sub-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  margin-bottom: 12px;
 }
 
-.doctor-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #5B8C8F 0%, #8BAFB1 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: white;
+/* SuperAdmin grids */
+.sa-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.sa-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
 
-.doctor-info {
-  flex: 1;
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .sub-grid { grid-template-columns: repeat(2, 1fr); }
+  .sa-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .sa-two-col { grid-template-columns: 1fr; }
 }
 
-.doctor-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #2C3E3F;
-  margin: 0 0 4px 0;
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sub-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sa-stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sa-two-col { grid-template-columns: 1fr; }
+  .doctors-grid { grid-template-columns: 1fr; }
+  .top-bar-inner { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
+  .sa-header-inner { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
+  .sa-header-btns { flex-wrap: wrap !important; }
+  .section-header-inner { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  .sub-header-inner { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
 }
 
-.doctor-specialty {
-  font-size: 11px;
-  color: #6B8A8C;
-  margin: 0;
-}
-
-.appointment-count {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid #DCE5E5;
-}
-
-.count-badge {
-  background: #E8F0F0;
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #5B8C8F;
-}
-
-.count-label {
-  font-size: 12px;
-  color: #6B8A8C;
-}
-
-.empty-doctors {
-  text-align: center;
-  padding: 40px;
-  color: #6B8A8C;
-  background: #F8FAFA;
-  border-radius: 16px;
-}
-
-/* Responsive */
-@media(max-width: 1024px) {
-  .dash-grid-4 { gap: 16px; }
-  .dash-grid-4-sub { gap: 16px; }
-  .doctors-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-}
-
-@media(max-width: 768px) {
-  .dashboard-top-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 16px;
-  }
-  
-  .top-bar-right {
-    justify-content: space-between;
-  }
-  
-  .datetime-card {
-    flex: 1;
-    text-align: center;
-    min-width: auto;
-  }
-  
-  .user-info-small {
-    display: none;
-  }
-  
-  .user-btn {
-    padding: 5px;
-  }
-  
-  .dash-grid-4 { 
-    grid-template-columns: repeat(2, 1fr) !important; 
-    gap: 12px !important; 
-  }
-  
-  .dash-grid-4-sub { 
-    grid-template-columns: repeat(2, 1fr) !important; 
-    gap: 12px !important; 
-  }
-  
-  .doctors-grid {
-    grid-template-columns: 1fr !important;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-}
-
-@media(max-width: 480px) {
-  .dash-grid-4 { grid-template-columns: 1fr !important; }
-  .dash-grid-4-sub { grid-template-columns: 1fr !important; }
+/* ── Small Mobile ── */
+@media (max-width: 400px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .sub-grid { grid-template-columns: 1fr; }
 }
 `
 
-// Comfortable color palette
 const PRIMARY = '#5B8C8F'
 const PRIMARY_LIGHT = '#8BAFB1'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -477,7 +109,6 @@ const CARD_BG = '#FFFFFF'
 const PROGRESS_BG = '#E8F0F0'
 const NOTIFICATION_BADGE = '#C4A77D'
 
-// ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
   ar: {
     title: 'لوحة التحكم', plan: 'الباقة', loading: 'جارٍ التحميل...',
@@ -488,80 +119,52 @@ const T = {
     daysLeft: 'الأيام المتبقية', welcome: 'مرحباً بعودتك',
     loadingMessage: 'جاري تحميل لوحة التحكم',
     loadingSub: 'يرجى الانتظار أثناء تحميل بيانات العيادة',
-    notifications: 'الإشعارات',
-    markAllRead: 'تحديد الكل كمقروء',
-    noNotifications: 'لا توجد إشعارات جديدة',
-    viewAll: 'عرض الكل',
-    appointments: 'مواعيد',
-    alerts: 'تنبيهات',
-    system: 'النظام',
-    localDateTime: 'التاريخ والوقت المحلي',
-    logout: 'تسجيل الخروج',
+    notifications: 'الإشعارات', markAllRead: 'تحديد الكل كمقروء',
+    noNotifications: 'لا توجد إشعارات جديدة', viewAll: 'عرض الكل',
+    localDateTime: 'التاريخ والوقت المحلي', logout: 'تسجيل الخروج',
     doctorsTodayTitle: 'مواعيد اليوم حسب الطبيب',
     viewAllAppointments: 'عرض جميع المواعيد',
     totalAppointments: 'إجمالي المواعيد',
     noAppointmentsToday: 'لا توجد مواعيد اليوم',
+    addPatient: 'إضافة مريض', addDoctor: 'إضافة طبيب',
+    quickVisit: 'زيارة سريعة', bookAppointment: 'حجز موعد',
   },
   en: {
     title: 'Dashboard', plan: 'Plan', loading: 'Loading...',
     patients: 'Patients', doctors: 'Doctors',
     todayAppts: "Today's Appts", upcomingAppts: 'Upcoming',
     subscription: 'Current Plan', remaining: 'Remaining',
-    day: 'days', usage: 'Usage',
-    daysLeft: 'Days Left', welcome: 'Welcome back',
+    day: 'days', usage: 'Usage', daysLeft: 'Days Left', welcome: 'Welcome back',
     loadingMessage: 'Loading Dashboard',
     loadingSub: 'Please wait while we load your clinic data',
-    notifications: 'Notifications',
-    markAllRead: 'Mark all as read',
-    noNotifications: 'No new notifications',
-    viewAll: 'View all',
-    appointments: 'Appointments',
-    alerts: 'Alerts',
-    system: 'System',
-    localDateTime: 'Local Date & Time',
-    logout: 'Sign Out',
+    notifications: 'Notifications', markAllRead: 'Mark all as read',
+    noNotifications: 'No new notifications', viewAll: 'View all',
+    localDateTime: 'Local Date & Time', logout: 'Sign Out',
     doctorsTodayTitle: "Today's Appointments by Doctor",
     viewAllAppointments: 'View all appointments',
     totalAppointments: 'Total appointments',
     noAppointmentsToday: 'No appointments today',
+    addPatient: 'Add Patient', addDoctor: 'Add Doctor',
+    quickVisit: 'Quick Visit', bookAppointment: 'Book Appointment',
   },
 }
 
-// ─── Types ─────────────────────────────────────────────────────────────────
 interface Notification {
-  id: number
-  title: string
-  message: string
-  time: string
-  read: boolean
-  type: 'appointment' | 'alert' | 'system'
+  id: number; title: string; message: string; time: string
+  read: boolean; type: 'appointment' | 'alert' | 'system'
 }
 
 interface DoctorTodayAppointment {
-  doctorId: string
-  doctorName: string
-  doctorSpecialty: string
+  doctorId: string; doctorName: string; doctorSpecialty: string
   appointmentCount: number
-  appointments: Array<{
-    id: number
-    patientName: string
-    time: string
-  }>
+  appointments: Array<{ id: number; patientName: string; time: string }>
 }
 
- 
- 
-// ─── Progress Bar ─────────────────────────────────────────────────────
+// ─── ProgressBar ─────────────────────────────────────────────────────────────
 const ProgressBar = ({ label, current, max }: { label: string; current: number; max: number }) => {
   const isUnlimited = max === -1
   const pct = isUnlimited ? 100 : Math.min((current / max) * 100, 100)
-  const isHigh = pct > 85
-  const isMedium = pct > 70 && pct <= 85
-  
-  let barColor = PRIMARY
-  if (isHigh) barColor = '#C4A77D'
-  if (isMedium) barColor = '#8BAFB1'
-  
+  const barColor = pct > 85 ? '#C4A77D' : pct > 70 ? '#8BAFB1' : PRIMARY
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -571,112 +174,35 @@ const ProgressBar = ({ label, current, max }: { label: string; current: number; 
         </span>
       </div>
       <div style={{ background: PROGRESS_BG, borderRadius: 12, height: 8, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', borderRadius: 12,
-          background: barColor,
-          width: `${pct}%`,
-          transition: 'width 0.8s cubic-bezier(0.22, 0.97, 0.36, 1)',
-        }}/>
+        <div style={{ height: '100%', borderRadius: 12, background: barColor, width: `${pct}%`, transition: 'width 0.8s cubic-bezier(0.22, 0.97, 0.36, 1)' }} />
       </div>
     </div>
   )
 }
 
-// ─── Loading Screen ───────────────────────────────────────────────────
+// ─── Loading Screen ───────────────────────────────────────────────────────────
 const DashboardLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'rgba(255,255,255,0.95)',
-    backdropFilter: 'blur(8px)',
-    zIndex: 9999,
-  }}>
-    <div style={{
-      textAlign: 'center',
-      padding: '2rem',
-      maxWidth: 400,
-      width: '100%',
-    }}>
-      <div style={{
-        background: PRIMARY_SOFT,
-        borderRadius: 20,
-        padding: '20px 24px',
-        marginBottom: '1.5rem',
-        border: `1px solid ${BORDER}`,
-      }}>
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', zIndex: 9999 }}>
+    <div style={{ textAlign: 'center', padding: '2rem', maxWidth: 400, width: '100%' }}>
+      <div style={{ background: PRIMARY_SOFT, borderRadius: 20, padding: '20px 24px', marginBottom: '1.5rem', border: `1px solid ${BORDER}` }}>
         <ECGAnimation height={100} showLetters={true} speed={0.7} />
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginTop: 12,
-          fontSize: 9,
-          color: TEXT_MUTED,
-          letterSpacing: '0.5px',
-        }}>
-          <span>❤️ FETCHING DATA</span>
-          <span>⚡ LOADING</span>
-          <span>📊 SECURE</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontSize: 9, color: TEXT_MUTED }}>
+          <span>❤️ FETCHING DATA</span><span>⚡ LOADING</span><span>📊 SECURE</span>
         </div>
       </div>
-
-      <h3 style={{
-        fontSize: 18,
-        fontWeight: 600,
-        color: TEXT_DARK,
-        marginBottom: 8,
-        fontFamily: "'Playfair Display', serif",
-      }}>
-        {msg}
-      </h3>
-      <p style={{
-        fontSize: 13,
-        color: TEXT_MUTED,
-        marginBottom: 24,
-      }}>
-        {subMsg}
-      </p>
-
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: 8,
-      }}>
-        {[0, 1, 2].map(i => (
-          <div
-            key={i}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: PRIMARY,
-              animation: `pulse-soft 1.5s ${i * 0.2}s infinite`,
-            }}
-          />
-        ))}
+      <h3 style={{ fontSize: 18, fontWeight: 600, color: TEXT_DARK, marginBottom: 8, fontFamily: "'Playfair Display', serif" }}>{msg}</h3>
+      <p style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 24 }}>{subMsg}</p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: `pulse-soft 1.5s ${i * 0.2}s infinite` }} />)}
       </div>
     </div>
   </div>
 )
 
-// ─── Notification Bell Component ─────────────────────────────────────────────
-const NotificationBell = ({ 
-  notifications, 
-  onMarkAsRead, 
-  onViewAll,
-  lang,
-  unreadCount
-}: { 
-  notifications: Notification[]
-  onMarkAsRead: (id: number) => void
-  onViewAll: () => void
-  lang: 'ar' | 'en'
-  unreadCount: number
+// ─── Notification Bell ────────────────────────────────────────────────────────
+const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang, unreadCount }: {
+  notifications: Notification[]; onMarkAsRead: (id: number) => void
+  onViewAll: () => void; lang: 'ar' | 'en'; unreadCount: number
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isRinging, setIsRinging] = useState(false)
@@ -684,127 +210,54 @@ const NotificationBell = ({
   const isAr = lang === 'ar'
 
   useEffect(() => {
-    if (unreadCount > 0) {
-      setIsRinging(true)
-      const timer = setTimeout(() => setIsRinging(false), 1000)
-      return () => clearTimeout(timer)
-    }
+    if (unreadCount > 0) { setIsRinging(true); setTimeout(() => setIsRinging(false), 1000) }
   }, [unreadCount])
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest('.notification-container')) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
+    const handler = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('.notif-wrap')) setIsOpen(false) }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
   }, [])
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'appointment': return '📅'
-      case 'alert': return '⚠️'
-      case 'system': return '🔔'
-      default: return '📋'
-    }
-  }
+  const getIcon = (type: string) => ({ appointment: '📅', alert: '⚠️', system: '🔔' }[type] || '📋')
 
   return (
-    <div className="notification-container" style={{ position: 'relative' }}>
-      <button
-        className="icon-btn"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none' }}
-      >
+    <div className="notif-wrap" style={{ position: 'relative' }}>
+      <button onClick={() => setIsOpen(!isOpen)}
+        style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 12, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none' }}>
         <span style={{ fontSize: 18 }}>🔔</span>
-        {unreadCount > 0 && (
-          <span className="notification-badge">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
+        {unreadCount > 0 && <span style={{ position: 'absolute', top: -6, right: -6, background: NOTIFICATION_BADGE, color: 'white', fontSize: 10, fontWeight: 600, borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
       </button>
-
       {isOpen && (
-        <div className="notification-dropdown" style={{ 
-          position: 'absolute',
-          top: '50px',
-          [isAr ? 'left' : 'right']: 0,
-          width: 360,
-          maxWidth: 'calc(100vw - 20px)',
-          background: CARD_BG,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 16,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-          zIndex: 1000,
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: `1px solid ${BORDER}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: PRIMARY_SOFT,
-          }}>
+        <div className="notification-dropdown" style={{ position: 'absolute', top: 50, [isAr ? 'left' : 'right']: 0, width: 340, maxWidth: 'calc(100vw - 20px)', background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', zIndex: 1000, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: PRIMARY_SOFT }}>
             <h4 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{t.notifications}</h4>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => notifications.forEach(n => !n.read && onMarkAsRead(n.id))}
-                style={{ background: 'transparent', border: 'none', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}
-              >
-                {t.markAllRead}
-              </button>
-            )}
+            {unreadCount > 0 && <button onClick={() => notifications.forEach(n => !n.read && onMarkAsRead(n.id))} style={{ background: 'transparent', border: 'none', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}>{t.markAllRead}</button>}
           </div>
-
-          <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
             {notifications.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: TEXT_MUTED }}>
                 <span style={{ fontSize: 32, opacity: 0.5 }}>🔕</span>
                 <p style={{ fontSize: 13, marginTop: 8 }}>{t.noNotifications}</p>
               </div>
-            ) : (
-              notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => onMarkAsRead(notif.id)}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: `1px solid ${BORDER}`,
-                    display: 'flex',
-                    gap: 12,
-                    cursor: 'pointer',
-                    background: notif.read ? 'transparent' : PRIMARY_SOFT,
-                  }}
-                >
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: `${PRIMARY}15`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18,
-                  }}>
-                    {getNotificationIcon(notif.type)}
+            ) : notifications.map(notif => (
+              <div key={notif.id} onClick={() => onMarkAsRead(notif.id)}
+                style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 12, cursor: 'pointer', background: notif.read ? 'transparent' : PRIMARY_SOFT }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${PRIMARY}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{getIcon(notif.type)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: notif.read ? 500 : 600, color: TEXT_DARK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{notif.title}</span>
+                    <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0 }}>{notif.time}</span>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: notif.read ? 500 : 600, color: TEXT_DARK }}>{notif.title}</span>
-                      <span style={{ fontSize: 10, color: TEXT_MUTED }}>{notif.time}</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
-                  </div>
-                  {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: NOTIFICATION_BADGE, alignSelf: 'center' }} />}
+                  <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
                 </div>
-              ))
-            )}
+                {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: NOTIFICATION_BADGE, alignSelf: 'center', flexShrink: 0 }} />}
+              </div>
+            ))}
           </div>
-
           {notifications.length > 0 && (
             <div style={{ padding: '10px 16px', borderTop: `1px solid ${BORDER}`, textAlign: 'center' }}>
-              <button onClick={onViewAll} style={{ background: 'transparent', border: 'none', fontSize: 12, color: PRIMARY, cursor: 'pointer' }}>
-                {t.viewAll} →
-              </button>
+              <button onClick={onViewAll} style={{ background: 'transparent', border: 'none', fontSize: 12, color: PRIMARY, cursor: 'pointer' }}>{t.viewAll} →</button>
             </div>
           )}
         </div>
@@ -813,36 +266,179 @@ const NotificationBell = ({
   )
 }
 
-// ─── Main Dashboard Component ─────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+const StatCard = ({ icon, value, label, btnLabel, onBtnClick, onClick, showBtn }: {
+  icon: string; value: number; label: string; btnLabel: string
+  onBtnClick: () => void; onClick: () => void; showBtn: boolean
+}) => (
+  <div className="stat-card" onClick={onClick}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`, backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }} />
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ width: 48, height: 48, borderRadius: 16, background: PRIMARY_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{icon}</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>{value?.toLocaleString() || 0}</div>
+    </div>
+    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{label}</p>
+    {showBtn && (
+      <button onClick={e => { e.stopPropagation(); onBtnClick() }}
+        style={{ marginTop: 12, padding: '8px 12px', background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: 12, fontWeight: 500, color: PRIMARY, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', transition: 'all 0.2s ease' }}
+        onMouseEnter={e => { e.currentTarget.style.background = PRIMARY; e.currentTarget.style.color = 'white' }}
+        onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFA'; e.currentTarget.style.color = PRIMARY }}>
+        <span>+</span> {btnLabel}
+      </button>
+    )}
+  </div>
+)
+
+// ─── SuperAdmin Dashboard ─────────────────────────────────────────────────────
+const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: (p: string) => void }) => {
+  const isAr = lang === 'ar'
+  const [clinics, setClinics] = useState<any[]>([])
+  const [plans, setPlans] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
+
+  useEffect(() => {
+    Promise.all([api.get('/clinics'), api.get('/plans')])
+      .then(([c, p]) => { setClinics(c.data); setPlans(p.data) })
+      .catch(() => navigate('/login'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken')
+    try { await api.post('/auth/logout', { refreshToken }) } finally { localStorage.clear(); navigate('/login') }
+  }
+
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><p style={{ color: TEXT_MUTED }}>جاري التحميل...</p></div>
+
+  const activeClinics = clinics.filter(c => c.isActive).length
+
+  return (
+    <div dir={isAr ? 'rtl' : 'ltr'} style={{ background: '#F8FAFA', minHeight: '100vh', padding: '16px 20px', fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif" }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+
+        {/* Header */}
+        <div style={{ background: CARD_BG, borderRadius: 20, padding: '16px 20px', marginBottom: 24, border: `1px solid ${BORDER}` }}>
+          <div className="sa-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY_SOFT, borderRadius: 100, padding: '4px 14px', fontSize: 11, fontWeight: 600, color: PRIMARY, marginBottom: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY }} />SuperAdmin
+              </div>
+              <h2 style={{ fontFamily: "'DM Serif Display','Georgia',serif", fontSize: 24, fontWeight: 500, color: TEXT_DARK, margin: 0 }}>
+                🏥 {isAr ? 'لوحة تحكم المنصة' : 'Platform Dashboard'}
+              </h2>
+              <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '4px 0 0' }}>{isAr ? `مرحباً ${user.fullName || ''} 👋` : `Welcome ${user.fullName || ''} 👋`}</p>
+            </div>
+            <div className="sa-header-btns" style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => navigate('/superadmin/clinics')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🏥 {isAr ? 'العيادات' : 'Clinics'}</button>
+              <button onClick={() => navigate('/superadmin/plans')} style={{ background: PRIMARY_SOFT, color: PRIMARY, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>💎 {isAr ? 'الخطط' : 'Plans'}</button>
+              <button onClick={handleLogout} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 12, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#C4A77D', flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="sa-stats-grid">
+          {[
+            { icon: '🏥', label: isAr ? 'إجمالي العيادات' : 'Total Clinics', value: clinics.length, color: PRIMARY },
+            { icon: '✅', label: isAr ? 'عيادات نشطة' : 'Active Clinics', value: activeClinics, color: '#4A7679' },
+            { icon: '⏸️', label: isAr ? 'عيادات موقوفة' : 'Inactive', value: clinics.length - activeClinics, color: '#C4A77D' },
+            { icon: '💎', label: isAr ? 'الخطط المتاحة' : 'Plans', value: plans.length, color: PRIMARY },
+          ].map((s, i) => (
+            <div key={i} style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16 }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{s.icon}</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
+              <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '4px 0 0' }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Clinics & Plans */}
+        <div className="sa-two-col">
+          {/* Clinics */}
+          <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: PRIMARY_SOFT }}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>🏥 {isAr ? 'العيادات' : 'Clinics'}</h3>
+              <button onClick={() => navigate('/superadmin/clinics')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>{isAr ? 'عرض الكل' : 'View All'}</button>
+            </div>
+            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+              {clinics.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 20px', color: TEXT_MUTED }}>
+                  <p style={{ fontSize: 13 }}>{isAr ? 'لا توجد عيادات بعد' : 'No clinics yet'}</p>
+                </div>
+              ) : clinics.map((clinic: any) => (
+                <div key={clinic.id} style={{ padding: '12px 18px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clinic.name}</p>
+                    <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>{clinic.ownerName || '—'} · {clinic.phone || '—'}</p>
+                  </div>
+                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 100, flexShrink: 0, background: clinic.isActive ? '#4A767915' : '#C4A77D15', color: clinic.isActive ? '#4A7679' : '#C4A77D' }}>
+                    {clinic.isActive ? (isAr ? '✅ نشطة' : '✅ Active') : (isAr ? '⏸️ موقوفة' : '⏸️ Inactive')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: '10px 18px', borderTop: `1px solid ${BORDER}`, textAlign: 'center' }}>
+              <button onClick={() => navigate('/superadmin/clinics')} style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '6px 16px', fontSize: 12, color: PRIMARY, cursor: 'pointer' }}>+ {isAr ? 'إضافة عيادة' : 'Add Clinic'}</button>
+            </div>
+          </div>
+
+          {/* Plans */}
+          <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: PRIMARY_SOFT }}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>💎 {isAr ? 'الخطط' : 'Plans'}</h3>
+              <button onClick={() => navigate('/superadmin/plans')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>{isAr ? 'إدارة' : 'Manage'}</button>
+            </div>
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {plans.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>
+                  <p style={{ fontSize: 32, margin: 0 }}>💎</p>
+                  <p style={{ fontSize: 13, marginTop: 8 }}>{isAr ? 'لا توجد خطط بعد' : 'No plans yet'}</p>
+                  <button onClick={() => navigate('/superadmin/plans')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 20px', fontSize: 12, cursor: 'pointer', marginTop: 8 }}>🚀 {isAr ? 'إنشاء الخطط' : 'Create Plans'}</button>
+                </div>
+              ) : plans.map((plan: any) => (
+                <div key={plan.id} style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>
+                      {plan.name === 'Basic' ? '🥉' : plan.name === 'Standard' ? '🥈' : '🥇'} {plan.name}
+                    </p>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: plan.isActive ? '#4A767915' : '#C4A77D15', color: plan.isActive ? '#4A7679' : '#C4A77D' }}>
+                      {plan.isActive ? (isAr ? 'نشطة' : 'Active') : (isAr ? 'موقوفة' : 'Inactive')}
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                    {[
+                      { label: isAr ? 'شهري' : 'Monthly', value: `${plan.monthlyPrice} ${isAr ? 'د.أ' : 'JD'}` },
+                      { label: isAr ? 'سنوي' : 'Yearly', value: `${plan.yearlyPrice} ${isAr ? 'د.أ' : 'JD'}` },
+                      { label: isAr ? 'أطباء' : 'Doctors', value: plan.maxDoctors === -1 ? '∞' : plan.maxDoctors },
+                      { label: isAr ? 'مرضى' : 'Patients', value: plan.maxPatients === -1 ? '∞' : plan.maxPatients },
+                    ].map(item => (
+                      <div key={item.label} style={{ background: CARD_BG, borderRadius: 8, padding: '5px 6px', textAlign: 'center' }}>
+                        <p style={{ fontSize: 9, color: TEXT_MUTED, margin: 0, textTransform: 'uppercase' }}>{item.label}</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_DARK, margin: '2px 0 0' }}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctorsToday, setDoctorsToday] = useState<DoctorTodayAppointment[]>([])
-  
-  // التاريخ والوقت المحلي
-  const getLocalDateTime = () => {
-    const now = new Date()
-    const dateOptions: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    }
-    const timeOptions: Intl.DateTimeFormatOptions = { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    }
-    const date = now.toLocaleDateString(lang === 'ar' ? 'ar-SA' : undefined, dateOptions)
-    const time = now.toLocaleTimeString(lang === 'ar' ? 'ar-SA' : undefined, timeOptions)
-    return { date, time }
-  }
-  
-  const [currentDateTime, setCurrentDateTime] = useState(getLocalDateTime())
-  
-  // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([
     { id: 1, title: 'موعد جديد', message: 'تم إضافة موعد جديد مع د. أحمد السيد', time: 'منذ 5 دقائق', read: false, type: 'appointment' },
     { id: 2, title: 'تنبيه الحصة', message: 'اقتربت من الحد الأقصى لعدد المرضى (85%)', time: 'منذ ساعة', read: false, type: 'alert' },
@@ -850,496 +446,112 @@ export default function Dashboard() {
   ])
 
   const unreadCount = notifications.filter(n => !n.read).length
-
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem('user') || '{}') }
-    catch { return {} }
-  })()
-
-  // جلب بيانات مواعيد اليوم لكل طبيب
-  const fetchDoctorsTodayAppointments = async () => {
-    try {
-      const response = await api.get('/appointments/today-by-doctor')
-      setDoctorsToday(response.data)
-    } catch (error) {
-      console.error('Error fetching doctors appointments:', error)
-      
-    }
-  }
+  const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
+  const isSuperAdmin = user.role === 'SuperAdmin'
 
   useEffect(() => {
     const styleId = 'cura-dash-css'
     if (!document.getElementById(styleId)) {
-      const style = document.createElement('style')
-      style.id = styleId
-      style.textContent = globalCss + `
-        @keyframes pulse-soft {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.2); }
-        }
-      `
-      document.head.appendChild(style)
+      const style = document.createElement('style'); style.id = styleId; style.textContent = globalCss; document.head.appendChild(style)
     }
-
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
 
-    const startTime = Date.now()
-    const minLoadingTime = 1500
+    if (isSuperAdmin) { setLoading(false); return () => window.removeEventListener('cura-lang-change', handleLangChange) }
 
+    const startTime = Date.now()
     Promise.all([
       api.get('/dashboard'),
-      fetchDoctorsTodayAppointments()
+      api.get('/appointments/today-by-doctor').then(r => setDoctorsToday(r.data)).catch(() => {}),
     ])
-      .then(([dashboardRes]) => {
-        setData(dashboardRes.data)
-      })
+      .then(([r]) => setData(r.data))
       .catch(() => navigate('/login'))
-      .finally(() => {
-        const elapsed = Date.now() - startTime
-        if (elapsed < minLoadingTime) {
-          setTimeout(() => setLoading(false), minLoadingTime - elapsed)
-        } else {
-          setLoading(false)
-        }
-      })
-      
-    const timer = setInterval(() => {
-      setCurrentDateTime(getLocalDateTime())
-    }, 1000)
+      .finally(() => { const e = Date.now() - startTime; setTimeout(() => setLoading(false), Math.max(0, 1200 - e)) })
 
-    return () => {
-      window.removeEventListener('cura-lang-change', handleLangChange)
-      clearInterval(timer)
-    }
+    return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }, [navigate, lang])
-
-  const handleMarkAsRead = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-  }
-
-  const handleViewAllNotifications = () => {
-    navigate('/appointments')
-  }
-
-  const handleLogout = async () => {
-    const refreshToken = localStorage.getItem('refreshToken')
-    try {
-      await api.post('/auth/logout', { refreshToken })
-    } finally {
-      localStorage.clear()
-      navigate('/login')
-    }
-  }
 
   const t = T[lang]
   const isAr = lang === 'ar'
-  const font = isAr ? "'Cairo', 'Tajawal', sans-serif" : "'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif"
+  const font = isAr ? "'Cairo','Tajawal',sans-serif" : "'Inter','DM Sans',sans-serif"
 
-  if (loading) {
-    return <DashboardLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
-  }
+  if (loading) return <DashboardLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
+  if (isSuperAdmin) return <SuperAdminDashboard lang={lang} navigate={navigate} />
 
   const sub = data?.subscription
-  
-  const getDaysColor = (days: number) => {
-    if (days <= 3) return '#C4A77D'
-    if (days <= 7) return '#8BAFB1'
-    return '#5B8C8F'
+  const daysColor = sub ? (sub.daysRemaining <= 3 ? '#C4A77D' : sub.daysRemaining <= 7 ? '#8BAFB1' : PRIMARY) : PRIMARY
+
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken')
+    try { await api.post('/auth/logout', { refreshToken }) } finally { localStorage.clear(); navigate('/login') }
   }
-  
-  const daysColor = sub ? getDaysColor(sub.daysRemaining) : PRIMARY
 
   return (
-    <div className="dash-shell" style={{ 
-      fontFamily: font, 
-      direction: isAr ? 'rtl' : 'ltr',
-      background: '#F8FAFA',
-      minHeight: '100vh',
-      padding: '24px',
-    }}>
+    <div className="dash-shell" style={{ fontFamily: font, direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '16px 20px' }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
-
-        {/* ── Top Bar ── */}
-        <div className="dashboard-top-bar">
-          <div className="top-bar-left">
-            <div className="brand-badge">
-              <span />
-              CURA
-            </div>
-            <h1>{t.title}</h1>
-            <p>{t.welcome} 👋</p>
-          </div>
-
-          <div className="top-bar-right">
-            <div className="datetime-card">
-              <div className="date">{currentDateTime.date}</div>
-              <div className="time">{currentDateTime.time}</div>
+        {/* Top Bar */}
+        <div style={{ background: CARD_BG, borderRadius: 20, padding: '14px 20px', marginBottom: 24, border: `1px solid ${BORDER}`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div className="top-bar-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY_SOFT, borderRadius: 100, padding: '4px 14px', fontSize: 11, fontWeight: 600, color: PRIMARY, marginBottom: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: 'soft-pulse 2s infinite' }} />CURA
+              </div>
+              <h1 style={{ fontSize: 22, fontWeight: 600, color: TEXT_DARK, margin: 0, letterSpacing: '-0.3px' }}>{t.title}</h1>
+              <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.welcome} {user.fullName ? `${user.fullName} 👋` : '👋'}</p>
             </div>
 
-            <div className="action-buttons">
-              <NotificationBell
-                notifications={notifications}
-                onMarkAsRead={handleMarkAsRead}
-                onViewAll={handleViewAllNotifications}
-                lang={lang}
-                unreadCount={unreadCount}
-              />
-
-              <button className="user-btn" onClick={() => navigate('/profile')}>
-                <div className="user-avatar-small">
-                  {(user.fullName || 'U')[0].toUpperCase()}
-                </div>
-                <div className="user-info-small">
-                  <p className="user-name-small">{user.fullName || '---'}</p>
-                  <p className="user-role-small">{user.role || ''}</p>
-                </div>
-              </button>
-
-              <button className="logout-btn-icon" onClick={handleLogout}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
 
-       {/* ── Stats Grid with Quick Actions ── */}
-{/* ── Stats Grid with Quick Actions ── */}
-<div style={{
-  display: 'grid',
-  gridTemplateColumns: `repeat(${hasPermission('doctors.view') ? 4 : 3}, 1fr)`,
-  gap: 20,
-  marginBottom: 32,
-}}>  {/* بطاقة المرضى */}
-  <div className="stat-card" style={{
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
-    borderRadius: 20,
-    padding: '20px',
-    position: 'relative',
-    overflow: 'hidden',
-    animationDelay: '0.05s',
-    cursor: 'pointer',
-  }} onClick={() => navigate('/patients')}>
-    <div style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, height: '3px',
-      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
-      backgroundSize: '200% auto',
-      animation: 'shimmer 3s linear infinite',
-    }} />
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div style={{
-        width: 48, height: 48, borderRadius: 16,
-        background: PRIMARY_SOFT,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 22,
-      }}>👥</div>
-      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
-        {data?.totalPatients?.toLocaleString() || 0}
-      </div>
-    </div>
-    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.patients}</p>
-    
-    {/* زر الإضافة السريع */}
-    {hasPermission('patients.create') && (
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          <StatCard icon="👥" value={data?.totalPatients || 0} label={t.patients}
+            btnLabel={t.addPatient} showBtn={hasPermission('patients.create')}
+            onClick={() => navigate('/patients')} onBtnClick={() => navigate('/patients/add')} />
+          {hasPermission('doctors.view') && (
+            <StatCard icon="⚕️" value={data?.totalDoctors || 0} label={t.doctors}
+              btnLabel={t.addDoctor} showBtn={hasPermission('doctors.create')}
+              onClick={() => navigate('/doctors')} onBtnClick={() => navigate('/doctors/add')} />
+          )}
+          <StatCard icon="📅" value={data?.todayAppointments || 0} label={t.todayAppts}
+            btnLabel={t.quickVisit} showBtn={hasPermission('appointments.create')}
+            onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/quick-visit')} />
+          <StatCard icon="⏰" value={data?.upcomingAppointments || 0} label={t.upcomingAppts}
+            btnLabel={t.bookAppointment} showBtn={hasPermission('appointments.create')}
+            onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/appointments/add')} />
+        </div>
 
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        navigate('/patients/add')
-      }}
-      style={{
-        marginTop: '12px',
-        padding: '8px 12px',
-        background: '#F8FAFA',
-        border: `1px solid ${BORDER}`,
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '500',
-        color: PRIMARY,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        width: '100%',
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = PRIMARY
-        e.currentTarget.style.color = 'white'
-        e.currentTarget.style.borderColor = PRIMARY
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = '#F8FAFA'
-        e.currentTarget.style.color = PRIMARY
-        e.currentTarget.style.borderColor = BORDER
-      }}
-    >
-      <span>+</span> {isAr ? 'إضافة مريض' : 'Add Patient'}
-    </button>
-    )}
-  </div>
-
-  {/* بطاقة الأطباء */}
-{/* بطاقة الأطباء */}
-{hasPermission('doctors.view') && (
-  <div className="stat-card" style={{
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
-    borderRadius: 20,
-    padding: '20px',
-    position: 'relative',
-    overflow: 'hidden',
-    animationDelay: '0.1s',
-    cursor: 'pointer',
-  }} onClick={() => navigate('/doctors')}>
-    <div style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, height: '3px',
-      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
-      backgroundSize: '200% auto',
-      animation: 'shimmer 3s linear infinite',
-    }} />
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div style={{
-        width: 48, height: 48, borderRadius: 16,
-        background: PRIMARY_SOFT,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 22,
-      }}>⚕️</div>
-      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
-        {data?.totalDoctors?.toLocaleString() || 0}
-      </div>
-    </div>
-    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.doctors}</p>
-
-    {hasPermission('doctors.create') && (
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          navigate('/doctors/add', { replace: true })
-        }}
-        style={{
-          marginTop: '12px',
-          padding: '8px 12px',
-          background: '#F8FAFA',
-          border: `1px solid ${BORDER}`,
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: '500',
-          color: PRIMARY,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          width: '100%',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = PRIMARY
-          e.currentTarget.style.color = 'white'
-          e.currentTarget.style.borderColor = PRIMARY
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#F8FAFA'
-          e.currentTarget.style.color = PRIMARY
-          e.currentTarget.style.borderColor = BORDER
-        }}
-      >
-        <span>+</span> {isAr ? 'إضافة طبيب' : 'Add Doctor'}
-      </button>
-    )}
-  </div>
-)}
-
-  {/* بطاقة مواعيد اليوم */}
-  <div className="stat-card" style={{
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
-    borderRadius: 20,
-    padding: '20px',
-    position: 'relative',
-    overflow: 'hidden',
-    animationDelay: '0.15s',
-    cursor: 'pointer',
-  }} onClick={() => navigate('/appointments?filter=today')}>
-    <div style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, height: '3px',
-      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
-      backgroundSize: '200% auto',
-      animation: 'shimmer 3s linear infinite',
-    }} />
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div style={{
-        width: 48, height: 48, borderRadius: 16,
-        background: PRIMARY_SOFT,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 22,
-      }}>📅</div>
-      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
-        {data?.todayAppointments?.toLocaleString() || 0}
-      </div>
-    </div>
-    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.todayAppts}</p>
-    
-    {/* زر الإضافة السريع */}
-    {hasPermission('appointments.create') && (
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        navigate('/quick-visit')
-      }}
-      style={{
-        marginTop: '12px',
-        padding: '8px 12px',
-        background: '#F8FAFA',
-        border: `1px solid ${BORDER}`,
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '500',
-        color: PRIMARY,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        width: '100%',
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = PRIMARY
-        e.currentTarget.style.color = 'white'
-        e.currentTarget.style.borderColor = PRIMARY
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = '#F8FAFA'
-        e.currentTarget.style.color = PRIMARY
-        e.currentTarget.style.borderColor = BORDER
-      }}
-    >
-<span>+</span> {isAr ? 'زيارة سريعة' : 'Quick Visit'}
-    </button>
-    )}
-  </div>
-
-  {/* بطاقة مواعيد القادمة */}
-  <div className="stat-card" style={{
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
-    borderRadius: 20,
-    padding: '20px',
-    position: 'relative',
-    overflow: 'hidden',
-    animationDelay: '0.2s',
-    cursor: 'pointer',
-  }} onClick={() => navigate('/appointments?filter=upcoming')}>
-    <div style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, height: '3px',
-      background: `linear-gradient(90deg, ${PRIMARY}, ${PRIMARY_LIGHT}, ${PRIMARY})`,
-      backgroundSize: '200% auto',
-      animation: 'shimmer 3s linear infinite',
-    }} />
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div style={{
-        width: 48, height: 48, borderRadius: 16,
-        background: PRIMARY_SOFT,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 22,
-      }}>⏰</div>
-      <div style={{ fontSize: 32, fontWeight: 700, color: TEXT_DARK }}>
-        {data?.upcomingAppointments?.toLocaleString() || 0}
-      </div>
-    </div>
-    <p style={{ fontSize: 13, fontWeight: 500, color: TEXT_MUTED, margin: '16px 0 0' }}>{t.upcomingAppts}</p>
-    
-    {/* زر الإضافة السريع - نفس زر مواعيد اليوم */}
-    {hasPermission('appointments.create') && (
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        navigate('/appointments/add')
-      }}
-      style={{
-        marginTop: '12px',
-        padding: '8px 12px',
-        background: '#F8FAFA',
-        border: `1px solid ${BORDER}`,
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '500',
-        color: PRIMARY,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        width: '100%',
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = PRIMARY
-        e.currentTarget.style.color = 'white'
-        e.currentTarget.style.borderColor = PRIMARY
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = '#F8FAFA'
-        e.currentTarget.style.color = PRIMARY
-        e.currentTarget.style.borderColor = BORDER
-      }}
-    >
-      <span>+</span> {isAr ? 'حجز موعد' : 'Book Appointment'}
-    </button>
-    )}
-  </div>
-</div>
-
-        {/* ── Doctors Today Appointments Section ── */}
-        <div className="doctors-today-section">
-          <div className="section-header">
-            <div className="section-title">
-              <span>👨‍⚕️</span>
-              {t.doctorsTodayTitle}
+        {/* Doctors Today */}
+        <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20, marginBottom: 24 }}>
+          <div className="section-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${PRIMARY_SOFT}`, gap: 8 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 22 }}>👨‍⚕️</span>{t.doctorsTodayTitle}
             </div>
-            <div className="view-all-link" onClick={() => navigate('/appointments?filter=today')}>
-              {t.viewAllAppointments} →
-            </div>
+            <span onClick={() => navigate('/appointments')} style={{ fontSize: 12, color: PRIMARY, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t.viewAllAppointments} →</span>
           </div>
-
           {doctorsToday.length === 0 ? (
-            <div className="empty-doctors">
+            <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED, background: '#F8FAFA', borderRadius: 14 }}>
               <span style={{ fontSize: 32, opacity: 0.5 }}>📅</span>
-              <p style={{ marginTop: 12 }}>{t.noAppointmentsToday}</p>
+              <p style={{ marginTop: 10, fontSize: 13 }}>{t.noAppointmentsToday}</p>
             </div>
           ) : (
             <div className="doctors-grid">
-              {doctorsToday.map((doctor) => (
-                <div 
-                  key={doctor.doctorId} 
-                  className="doctor-today-card"
-                  onClick={() => navigate(`/appointments?doctorId=${doctor.doctorId}&filter=today`)}
-                >
-                  <div className="doctor-today-header">
-                    <div className="doctor-avatar">
-                      👨‍⚕️
-                    </div>
-                    <div className="doctor-info">
-                      <h4 className="doctor-name">{doctor.doctorName}</h4>
-                      <p className="doctor-specialty">{doctor.doctorSpecialty || (isAr ? 'طبيب عام' : 'General Physician')}</p>
+              {doctorsToday.map(doctor => (
+                <div key={doctor.doctorId} onClick={() => navigate('/appointments')}
+                  style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 16, padding: 14, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = PRIMARY }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = BORDER }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: `linear-gradient(135deg, ${PRIMARY} 0%, ${PRIMARY_LIGHT} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: 'white', flexShrink: 0 }}>👨‍⚕️</div>
+                    <div style={{ minWidth: 0 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doctor.doctorName}</h4>
+                      <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{doctor.doctorSpecialty || (isAr ? 'طبيب عام' : 'General')}</p>
                     </div>
                   </div>
-                  <div className="appointment-count">
-                    <span className="count-badge">{doctor.appointmentCount}</span>
-                    <span className="count-label">{t.totalAppointments}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
+                    <span style={{ background: PRIMARY_SOFT, borderRadius: 20, padding: '3px 12px', fontSize: 18, fontWeight: 700, color: PRIMARY }}>{doctor.appointmentCount}</span>
+                    <span style={{ fontSize: 12, color: TEXT_MUTED }}>{t.totalAppointments}</span>
                   </div>
                 </div>
               ))}
@@ -1347,79 +559,36 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ── Subscription Card ── */}
+        {/* Subscription */}
         {sub && (
-          <div style={{
-            background: CARD_BG,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 24,
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '20px 28px',
-              borderBottom: `1px solid ${BORDER}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
+            <div className="sub-header-inner" style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>💎</span> {t.subscription}
               </h3>
-              <div style={{
-                background: PRIMARY_SOFT,
-                border: `1px solid ${BORDER}`,
-                borderRadius: 40,
-                padding: '6px 16px',
-                fontSize: 13,
-                fontWeight: 500,
-                color: daysColor,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}>
+              <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 40, padding: '5px 14px', fontSize: 12, fontWeight: 500, color: daysColor, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <span>📅</span> {t.remaining} {sub.daysRemaining} {t.day}
               </div>
             </div>
-
-            <div style={{ padding: '24px 28px' }}>
-              <div className="dash-grid-4-sub">
+            <div style={{ padding: '20px' }}>
+              <div className="sub-grid" style={{ marginBottom: 20 }}>
                 {[
                   { label: t.plan, value: sub.planName, suffix: '', isText: true },
                   { label: t.daysLeft, value: `${sub.daysRemaining}`, suffix: t.day, isText: false },
                   { label: t.patients, value: `${sub.currentPatients}`, suffix: `/ ${sub.maxPatients === -1 ? '∞' : sub.maxPatients}`, isText: false },
                   { label: t.doctors, value: `${sub.currentDoctors}`, suffix: `/ ${sub.maxDoctors === -1 ? '∞' : sub.maxDoctors}`, isText: false },
                 ].map((item, i) => (
-                  <div key={i} style={{
-                    background: PRIMARY_SOFT,
-                    border: `1px solid ${BORDER}`,
-                    borderRadius: 16,
-                    padding: '14px 16px',
-                  }}>
-                    <p style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 8 }}>
-                      {item.label}
-                    </p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ 
-                        fontSize: item.isText ? 15 : 24, 
-                        fontWeight: 600, 
-                        color: TEXT_DARK, 
-                        lineHeight: 1.2 
-                      }}>{item.value}</span>
-                      {item.suffix && <span style={{ fontSize: 13, color: TEXT_MUTED }}>{item.suffix}</span>}
+                  <div key={i} style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 14px' }}>
+                    <p style={{ fontSize: 10, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 6 }}>{item.label}</p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: item.isText ? 14 : 22, fontWeight: 600, color: TEXT_DARK }}>{item.value}</span>
+                      {item.suffix && <span style={{ fontSize: 12, color: TEXT_MUTED }}>{item.suffix}</span>}
                     </p>
                   </div>
                 ))}
               </div>
-
-              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 20, marginTop: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                  <span style={{ fontSize: 18 }}>📊</span>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', margin: 0 }}>
-                    {t.usage}
-                  </p>
-                </div>
+              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 14 }}>📊 {t.usage}</p>
                 <ProgressBar label={t.patients} current={sub.currentPatients} max={sub.maxPatients} />
                 <ProgressBar label={t.doctors} current={sub.currentDoctors} max={sub.maxDoctors} />
               </div>

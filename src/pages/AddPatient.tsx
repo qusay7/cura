@@ -38,6 +38,29 @@ const globalCss = `
   box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1) !important;
 }
 
+/* Date input styling */
+.date-input {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.5);
+}
+
+.date-input::-webkit-datetime-edit {
+  direction: ltr;
+}
+
+.date-input::-webkit-datetime-edit-fields-wrapper {
+  direction: ltr;
+}
+
+.date-input::-webkit-datetime-edit-text {
+  padding: 0 2px;
+}
+
 /* Section card animation */
 .form-section {
   animation: slide-in 0.3s ease both;
@@ -65,6 +88,7 @@ input[type=number] {
 
 // Comfortable color palette
 const PRIMARY = '#5B8C8F'
+const PRIMARY_DARK = '#4A7679'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -183,6 +207,70 @@ const T = {
   },
 }
 
+// ─── Loading Screen ──────────────────────────────────────────────────────────
+const FormLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(255,255,255,0.95)',
+    backdropFilter: 'blur(8px)',
+    zIndex: 9999,
+  }}>
+    <div style={{
+      textAlign: 'center',
+      padding: '2rem',
+      maxWidth: 400,
+      width: '100%',
+    }}>
+      <div style={{
+        background: PRIMARY_SOFT,
+        borderRadius: 20,
+        padding: '20px 24px',
+        marginBottom: '1.5rem',
+        border: `1px solid ${BORDER}`,
+      }}>
+        <ECGAnimation height={100} showLetters={true} speed={0.7} />
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: 12,
+          fontSize: 9,
+          color: TEXT_MUTED,
+          letterSpacing: '0.5px',
+        }}>
+          <span>📋 LOADING FORM</span>
+          <span>⚡ PREPARING</span>
+          <span>📊 SECURE</span>
+        </div>
+      </div>
+      <h3 style={{
+        fontSize: 18,
+        fontWeight: 600,
+        color: TEXT_DARK,
+        marginBottom: 8,
+        fontFamily: "'Playfair Display', serif",
+      }}>
+        {msg}
+      </h3>
+      <p style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 24 }}>{subMsg}</p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 6, height: 6, borderRadius: '50%', background: PRIMARY,
+            animation: `pulse-soft 1.5s ${i * 0.2}s infinite`,
+          }} />
+        ))}
+      </div>
+    </div>
+  </div>
+)
+
 // ─── Form Field Component ────────────────────────────────────────────────────
 const FormField = ({ label, required, children, error }: { 
   label: string; 
@@ -234,11 +322,58 @@ const FormSection = ({ title, children }: { title: string; children: React.React
     </div>
   </div>
 )
+// ─── Date Picker Component ─────────────────────────── خارج AddPatient ──────
+const DatePicker = ({ value, onChange, isAr }: { value: string; onChange: (val: string) => void; isAr: boolean }) => {
+  const parts = value ? value.split('-') : ['', '', '']
+  const [year, setYear] = useState(parts[0])
+  const [month, setMonth] = useState(parts[1])
+  const [day, setDay] = useState(parts[2])
+
+  const update = (y: string, m: string, d: string) => {
+    if (y && m && d) onChange(`${y}-${m}-${d}`)
+    else onChange('')
+  }
+
+  const months_ar = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
+  const months_en = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const months = isAr ? months_ar : months_en
+
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 100 }, (_, i) => currentYear - i)
+  const days = Array.from({ length: 31 }, (_, i) => i + 1)
+
+  const selectStyle: React.CSSProperties = {
+    flex: 1, padding: '10px 12px', border: `1px solid ${BORDER}`,
+    borderRadius: 12, fontSize: 13, color: TEXT_DARK, background: CARD_BG,
+    outline: 'none', cursor: 'pointer',
+    fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      <select value={day} onChange={e => { setDay(e.target.value); update(year, month, e.target.value) }} style={selectStyle}>
+        <option value="">{isAr ? 'يوم' : 'Day'}</option>
+        {days.map(d => <option key={d} value={String(d).padStart(2,'0')}>{d}</option>)}
+      </select>
+      <select value={month} onChange={e => { setMonth(e.target.value); update(year, e.target.value, day) }} style={{ ...selectStyle, flex: 2 }}>
+        <option value="">{isAr ? 'الشهر' : 'Month'}</option>
+        {months.map((m, i) => <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+      </select>
+      <select value={year} onChange={e => { setYear(e.target.value); update(e.target.value, month, day) }} style={selectStyle}>
+        <option value="">{isAr ? 'سنة' : 'Year'}</option>
+        {years.map(y => <option key={y} value={String(y)}>{y}</option>)}
+      </select>
+    </div>
+  )
+}
+
+
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function AddPatient() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(false)
   const [error, setError] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
 
@@ -370,13 +505,36 @@ export default function AddPatient() {
     { value: 'widowed', label: t.widowed },
   ]
 
-  // Max date for date of birth (must be at least 0 years old)
+  // Get minimum date for date of birth (100 years ago)
+  const getMinDate = () => {
+    const today = new Date()
+    const year = today.getFullYear() - 100
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // Get maximum date for date of birth (must be at least 0 years old)
   const getMaxDate = () => {
     const today = new Date()
     const year = today.getFullYear()
     const month = String(today.getMonth() + 1).padStart(2, '0')
     const day = String(today.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
+  }
+
+  // Format date for display (optional helper)
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  }
+
+  if (loadingData) {
+    return <FormLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
   }
 
   return (
@@ -441,8 +599,17 @@ export default function AddPatient() {
               }} />
               {isAr ? 'مريض جديد' : 'New Patient'}
             </div>
-           
-           </div>
+            <h2 className="add-patient-title" style={{
+              fontFamily: "'DM Serif Display', 'Georgia', serif",
+              fontSize: 28,
+              fontWeight: 500,
+              color: TEXT_DARK,
+              margin: 0,
+              letterSpacing: '-0.3px',
+            }}>
+              {t.title}
+            </h2>
+          </div>
         </div>
 
         {/* ── Form ── */}
@@ -551,27 +718,12 @@ export default function AddPatient() {
                 </FormField>
 
                 <FormField label={t.dateOfBirth}>
-                  <input
-                    type="date"
-                    name="dateOfBirth"
-                    value={form.dateOfBirth}
-                    onChange={handleChange}
-                    max={getMaxDate()}
-                    className="form-input"
-                    style={{
-                      width: '100%',
-                      background: CARD_BG,
-                      border: `1px solid ${BORDER}`,
-                      borderRadius: 12,
-                      padding: '10px 14px',
-                      fontSize: 14,
-                      fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                      color: TEXT_DARK,
-                      outline: 'none',
-                      transition: 'all 0.2s ease',
-                    }}
-                  />
-                </FormField>
+  <DatePicker
+    value={form.dateOfBirth}
+    onChange={val => setForm(prev => ({ ...prev, dateOfBirth: val }))}
+    isAr={isAr}
+  />
+</FormField>
 
                 <FormField label={t.nationalId} error={validationErrors.nationalId}>
                   <input
@@ -884,7 +1036,7 @@ export default function AddPatient() {
                 gap: 8,
               }}
               onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.background = '#4A7679'
+                if (!loading) e.currentTarget.style.background = PRIMARY_DARK
               }}
               onMouseLeave={(e) => {
                 if (!loading) e.currentTarget.style.background = PRIMARY

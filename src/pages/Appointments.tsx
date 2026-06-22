@@ -4,96 +4,49 @@ import api from '../api/axios'
 import type { Appointment } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-// ─── Global CSS with Comfortable Colors ──────────────────────────────────────
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
-}
+@keyframes fade-up { from { opacity:0; transform:translateY(20px) scale(0.98);} to { opacity:1; transform:translateY(0) scale(1);} }
+@keyframes soft-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+@keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
+@keyframes slide-in { from{opacity:0;transform:translateX(-10px);} to{opacity:1;transform:translateX(0);} }
+@keyframes pulse-red { 0%,100%{background-color:#FFF0F0;} 50%{background-color:#FECACA;} }
 
-.appointments-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
-
-/* Table row animation */
-.appointment-row {
-  animation: slide-in 0.3s ease both;
-}
-.appointment-row:nth-child(1){ animation-delay:0.02s }
-.appointment-row:nth-child(2){ animation-delay:0.04s }
-.appointment-row:nth-child(3){ animation-delay:0.06s }
-.appointment-row:nth-child(4){ animation-delay:0.08s }
-.appointment-row:nth-child(5){ animation-delay:0.10s }
-
+.appointments-shell { animation: fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
+.appointment-row { animation: slide-in 0.3s ease both; }
+.appointment-row:nth-child(1){animation-delay:0.02s} .appointment-row:nth-child(2){animation-delay:0.04s}
+.appointment-row:nth-child(3){animation-delay:0.06s} .appointment-row:nth-child(4){animation-delay:0.08s}
+.appointment-row:nth-child(5){animation-delay:0.10s}
 .appointments-shell * { box-sizing:border-box; }
-
-/* Custom scrollbar */
-.appointments-shell ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-.appointments-shell ::-webkit-scrollbar-track {
-  background: #E8EDEE;
-  border-radius: 4px;
-}
-.appointments-shell ::-webkit-scrollbar-thumb {
-  background: #8BAFB1;
-  border-radius: 4px;
-}
-
-/* Table styles */
-.appointments-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-.appointments-table th {
-  position: sticky;
-  top: 0;
-  background: #F8FAFA;
-  z-index: 10;
-}
-.appointments-table td {
-  transition: background 0.2s ease;
-}
-
-/* Search input styles */
-.search-input:focus {
-  border-color: #5B8C8F !important;
-  box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1) !important;
-}
-
-@media(max-width: 768px) {
-  .appointments-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .appointments-title { font-size: 24px !important; }
-  .appointments-header { flex-direction: column !important; align-items: stretch !important; }
-  .search-filters { flex-direction: column !important; }
-}
+.appointments-shell ::-webkit-scrollbar{width:5px;height:5px;}
+.appointments-shell ::-webkit-scrollbar-track{background:#E8EDEE;border-radius:4px;}
+.appointments-shell ::-webkit-scrollbar-thumb{background:#8BAFB1;border-radius:4px;}
+.appointments-table{width:100%;border-collapse:separate;border-spacing:0;}
+.appointments-table th{position:sticky;top:0;background:#F8FAFA;z-index:10;}
+.appointments-table td{transition:background 0.2s ease;}
+.search-input:focus{border-color:#5B8C8F !important;box-shadow:0 0 0 3px rgba(91,140,143,0.1) !important;}
+.react-datepicker-wrapper{width:100%;} .react-datepicker__input-container{width:100%;}
+.react-datepicker__input-container input{width:100%;background:#FFFFFF;border:1px solid #DCE5E5;border-radius:12px;padding:10px 14px;font-size:13px;font-family:inherit;color:#2C3E3F;outline:none;transition:all 0.2s ease;cursor:pointer;direction:ltr !important;text-align:left !important;}
+.react-datepicker__input-container input:focus{border-color:#5B8C8F;box-shadow:0 0 0 3px rgba(91,140,143,0.1);}
+.react-datepicker{font-family:inherit;border-radius:16px;border-color:#DCE5E5;}
+.react-datepicker__header{background-color:#E8F0F0;border-bottom-color:#DCE5E5;}
+.react-datepicker__current-month{color:#2C3E3F;font-weight:600;}
+.react-datepicker__day-name{color:#6B8A8C;}
+.react-datepicker__day--selected{background-color:#5B8C8F;}
+.react-datepicker__day--selected:hover{background-color:#4A7679;}
+.react-datepicker__day:hover{background-color:#E8F0F0;}
+.action-btn{border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s ease;border:1px solid;white-space:nowrap;}
+.action-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.row-due{animation:pulse-red 1.2s ease-in-out infinite !important;}
 `
 
-// Comfortable color palette
 const PRIMARY = '#5B8C8F'
+const PRIMARY_DARK = '#4A7679'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -103,858 +56,528 @@ const SUCCESS = '#4A7679'
 const INFO = '#8BAFB1'
 const DANGER = '#C4A77D'
 
-// ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
   ar: {
-    title: 'المواعيد',
-    addAppointment: 'حجز موعد',
-    patient: 'المريض',
-    doctor: 'الطبيب',
-    date: 'التاريخ',
-    type: 'النوع',
-    price: 'السعر',
-    status: 'الحالة',
-    noAppointments: 'لا يوجد مواعيد',
-    patientNumber: 'رقم المريض',
-    scheduled: 'مجدول',
-    confirmed: 'مؤكد',
-    completed: 'مكتمل',
-    cancelled: 'ملغي',
-    riyal: 'ر.س',
-    loadingMessage: 'جاري تحميل المواعيد',
-    loadingSub: 'يرجى الانتظار أثناء تحميل جدول المواعيد',
-    today: 'اليوم',
-    tomorrow: 'غداً',
-    week: 'هذا الأسبوع',
-    filterAll: 'الكل',
-    filterUpcoming: 'القادمة',
-    filterToday: 'اليوم',
-    searchPatient: '🔍 بحث عن مريض...',
-    searchDoctor: '🔍 بحث عن طبيب...',
-    clearSearch: 'مسح',
-    allDoctors: 'جميع الأطباء',
-    allPatients: 'جميع المرضى',
+    title: 'المواعيد', addAppointment: 'حجز موعد', patient: 'المريض',
+    doctor: 'الطبيب', date: 'التاريخ والوقت', type: 'النوع', price: 'السعر',
+    status: 'الحالة', actions: 'إجراءات', noAppointments: 'لا يوجد مواعيد',
+    patientNumber: 'رقم المريض', scheduled: 'مجدول', confirmed: 'مؤكد',
+    completed: 'مكتمل', cancelled: 'ملغي', riyal: 'د.أ',
+    loadingMessage: 'جاري تحميل المواعيد', loadingSub: 'يرجى الانتظار أثناء تحميل جدول المواعيد',
+    today: 'اليوم', tomorrow: 'غداً', filterAll: 'الكل', filterUpcoming: 'القادمة', filterToday: 'اليوم',
+    searchPatient: 'بحث عن مريض...', searchDoctor: 'بحث عن طبيب...',
+    searchDateFrom: 'من تاريخ', searchDateTo: 'إلى تاريخ', clearDate: 'مسح التاريخ',
+    confirm: 'تأكيد', complete: 'مكتمل', cancel: 'إلغاء', edit: 'تعديل',
+    checkIn: 'دخول', checkOut: 'خروج',
+    noAppointmentsToday: 'لا توجد مواعيد اليوم', noAppointmentsTodayHint: 'يمكنك حجز موعد جديد للمرضى',
+    clearAllFilters: 'مسح جميع الفلاتر', totalAppointments: 'إجمالي المواعيد',
+    completedLabel: 'المكتملة', remainingLabel: 'المتبقية', cancelledLabel: 'الملغية',
+    revenueLabel: 'إجمالي الإيرادات', searchResults: 'نتائج البحث', schedule: 'جدول المواعيد',
+    appointments: 'موعد', allStatus: 'كل الحالات',
+    overdueLabel: 'فات الوقت', dueLabel: 'حان الموعد الآن!',
+    checkedIn: 'تم الدخول', checkedOut: 'تم الخروج',
   },
   en: {
-    title: 'Appointments',
-    addAppointment: 'Book Appointment',
-    patient: 'Patient',
-    doctor: 'Doctor',
-    date: 'Date',
-    type: 'Type',
-    price: 'Price',
-    status: 'Status',
-    noAppointments: 'No appointments found',
-    patientNumber: 'Patient ID',
-    scheduled: 'Scheduled',
-    confirmed: 'Confirmed',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    riyal: 'SAR',
-    loadingMessage: 'Loading Appointments',
-    loadingSub: 'Please wait while we load appointment data',
-    today: 'Today',
-    tomorrow: 'Tomorrow',
-    week: 'This Week',
-    filterAll: 'All',
-    filterUpcoming: 'Upcoming',
-    filterToday: 'Today',
-    searchPatient: '🔍 Search patient...',
-    searchDoctor: '🔍 Search doctor...',
-    clearSearch: 'Clear',
-    allDoctors: 'All Doctors',
-    allPatients: 'All Patients',
+    title: 'Appointments', addAppointment: 'Book Appointment', patient: 'Patient',
+    doctor: 'Doctor', date: 'Date & Time', type: 'Type', price: 'Price',
+    status: 'Status', actions: 'Actions', noAppointments: 'No appointments found',
+    patientNumber: 'Patient ID', scheduled: 'Scheduled', confirmed: 'Confirmed',
+    completed: 'Completed', cancelled: 'Cancelled', riyal: 'JD',
+    loadingMessage: 'Loading Appointments', loadingSub: 'Please wait while we load appointment data',
+    today: 'Today', tomorrow: 'Tomorrow', filterAll: 'All', filterUpcoming: 'Upcoming', filterToday: 'Today',
+    searchPatient: 'Search patient...', searchDoctor: 'Search doctor...',
+    searchDateFrom: 'From date', searchDateTo: 'To date', clearDate: 'Clear date',
+    confirm: 'Confirm', complete: 'Complete', cancel: 'Cancel', edit: 'Edit',
+    checkIn: 'Check In', checkOut: 'Check Out',
+    noAppointmentsToday: 'No appointments today', noAppointmentsTodayHint: 'You can book a new appointment for patients',
+    clearAllFilters: 'Clear all filters', totalAppointments: 'Total',
+    completedLabel: 'Completed', remainingLabel: 'Remaining', cancelledLabel: 'Cancelled',
+    revenueLabel: 'Total Revenue', searchResults: 'search results', schedule: 'Schedule',
+    appointments: 'appointments', allStatus: 'All Status',
+    overdueLabel: 'Overdue', dueLabel: 'Appointment Now!',
+    checkedIn: 'Checked In', checkedOut: 'Checked Out',
   },
 }
 
-// ─── Loading Screen with ECG ─────────────────────────────────────────────────
+// ─── Loading Screen ──────────────────────────────────────────────────────────
 const AppointmentsLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'rgba(255,255,255,0.95)',
-    backdropFilter: 'blur(8px)',
-    zIndex: 9999,
-  }}>
-    <div style={{
-      textAlign: 'center',
-      padding: '2rem',
-      maxWidth: 400,
-      width: '100%',
-    }}>
-      <div style={{
-        background: PRIMARY_SOFT,
-        borderRadius: 20,
-        padding: '20px 24px',
-        marginBottom: '1.5rem',
-        border: `1px solid ${BORDER}`,
-      }}>
+  <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.95)', backdropFilter:'blur(8px)', zIndex:9999 }}>
+    <div style={{ textAlign:'center', padding:'2rem', maxWidth:400, width:'100%' }}>
+      <div style={{ background:PRIMARY_SOFT, borderRadius:20, padding:'20px 24px', marginBottom:'1.5rem', border:`1px solid ${BORDER}` }}>
         <ECGAnimation height={100} showLetters={true} speed={0.7} />
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginTop: 12,
-          fontSize: 9,
-          color: TEXT_MUTED,
-          letterSpacing: '0.5px',
-        }}>
-          <span>📅 FETCHING DATA</span>
-          <span>⚡ LOADING</span>
-          <span>📊 SECURE</span>
+        <div style={{ display:'flex', justifyContent:'space-between', marginTop:12, fontSize:9, color:TEXT_MUTED }}>
+          <span>📅 FETCHING DATA</span><span>⚡ LOADING</span><span>📊 SECURE</span>
         </div>
       </div>
-
-      <h3 style={{
-        fontSize: 18,
-        fontWeight: 600,
-        color: TEXT_DARK,
-        marginBottom: 8,
-        fontFamily: "'Playfair Display', serif",
-      }}>
-        {msg}
-      </h3>
-      <p style={{
-        fontSize: 13,
-        color: TEXT_MUTED,
-        marginBottom: 24,
-      }}>
-        {subMsg}
-      </p>
-
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: 8,
-      }}>
-        {[0, 1, 2].map(i => (
-          <div
-            key={i}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: PRIMARY,
-              animation: `pulse-soft 1.5s ${i * 0.2}s infinite`,
-            }}
-          />
-        ))}
+      <h3 style={{ fontSize:18, fontWeight:600, color:TEXT_DARK, marginBottom:8, fontFamily:"'Playfair Display', serif" }}>{msg}</h3>
+      <p style={{ fontSize:13, color:TEXT_MUTED, marginBottom:24 }}>{subMsg}</p>
+      <div style={{ display:'flex', justifyContent:'center', gap:8 }}>
+        {[0,1,2].map(i => <div key={i} style={{ width:6, height:6, borderRadius:'50%', background:PRIMARY, animation:`pulse-soft 1.5s ${i*0.2}s infinite` }} />)}
       </div>
     </div>
   </div>
 )
 
-// ─── Status Badge Component ─────────────────────────────────────────────────
+// ─── Status Badge ────────────────────────────────────────────────────────────
 const StatusBadge = ({ status, lang }: { status: string; lang: 'ar' | 'en' }) => {
   const t = T[lang]
-  
-  const getStatusConfig = () => {
+  const config = (() => {
     switch (status) {
-      case 'scheduled':
-        return { color: INFO, bg: `${INFO}15`, label: t.scheduled, icon: '⏰' }
-      case 'confirmed':
-        return { color: SUCCESS, bg: `${SUCCESS}15`, label: t.confirmed, icon: '✓' }
-      case 'completed':
-        return { color: PRIMARY, bg: `${PRIMARY}15`, label: t.completed, icon: '✔️' }
-      case 'cancelled':
-        return { color: DANGER, bg: `${DANGER}15`, label: t.cancelled, icon: '✕' }
-      default:
-        return { color: TEXT_MUTED, bg: `${TEXT_MUTED}15`, label: status, icon: '📋' }
+      case 'scheduled': return { color:INFO,      bg:`${INFO}20`,       label:t.scheduled, icon:'⏰' }
+      case 'confirmed': return { color:SUCCESS,   bg:`${SUCCESS}20`,    label:t.confirmed, icon:'✓'  }
+      case 'completed': return { color:PRIMARY,   bg:`${PRIMARY}20`,    label:t.completed, icon:'✔️' }
+      case 'cancelled': return { color:DANGER,    bg:`${DANGER}20`,     label:t.cancelled, icon:'✕'  }
+      default:          return { color:TEXT_MUTED, bg:`${TEXT_MUTED}20`, label:status,     icon:'📋' }
     }
-  }
-
-  const config = getStatusConfig()
-
+  })()
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 5,
-      padding: '4px 10px',
-      borderRadius: 100,
-      fontSize: 11,
-      fontWeight: 500,
-      background: config.bg,
-      color: config.color,
-    }}>
-      <span style={{ fontSize: 10 }}>{config.icon}</span>
-      {config.label}
+    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:100, fontSize:11, fontWeight:600, background:config.bg, color:config.color }}>
+      <span style={{ fontSize:10 }}>{config.icon}</span>{config.label}
     </span>
   )
 }
 
-// ─── Filter Bar Component (معدل مع البحث) ───────────────────────────────────
-const FilterBar = ({ 
-  currentFilter, 
-  onFilterChange, 
-  searchPatient,
-  onSearchPatientChange,
-  searchDoctor,
-  onSearchDoctorChange,
-  lang 
-}: { 
-  currentFilter: string; 
-  onFilterChange: (filter: string) => void;
-  searchPatient: string;
-  onSearchPatientChange: (value: string) => void;
-  searchDoctor: string;
-  onSearchDoctorChange: (value: string) => void;
-  lang: 'ar' | 'en' 
-}) => {
-  const t = T[lang]
-  const isAr = lang === 'ar'
-  
-  const filters = [
-    { value: 'all', label: t.filterAll, icon: '📋' },
-    { value: 'upcoming', label: t.filterUpcoming, icon: '⏰' },
-    { value: 'today', label: t.filterToday, icon: '📅' },
-  ]
+// ─── Custom Date Input ───────────────────────────────────────────────────────
+const CustomDateInput = ({ value, onClick, placeholder }: { value?: string; onClick?: () => void; placeholder?: string }) => (
+  <input type="text" value={value||''} onClick={onClick} placeholder={placeholder||'dd/mm/yyyy'} readOnly
+    style={{ width:'100%', background:'#FFFFFF', border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 14px', fontSize:13, fontFamily:'inherit', color:TEXT_DARK, outline:'none', cursor:'pointer', direction:'ltr', textAlign:'left' }} />
+)
 
+// ─── Filter Bar ──────────────────────────────────────────────────────────────
+const FilterBar = ({
+  currentFilter, onFilterChange, statusFilter, onStatusFilterChange,
+  searchPatient, onSearchPatientChange, searchDoctor, onSearchDoctorChange,
+  searchDateFrom, onSearchDateFromChange, searchDateTo, onSearchDateToChange, lang,
+}: {
+  currentFilter: string; onFilterChange: (f:string)=>void;
+  statusFilter: string; onStatusFilterChange: (f:string)=>void;
+  searchPatient: string; onSearchPatientChange: (v:string)=>void;
+  searchDoctor: string; onSearchDoctorChange: (v:string)=>void;
+  searchDateFrom: Date|null; onSearchDateFromChange: (v:Date|null)=>void;
+  searchDateTo: Date|null; onSearchDateToChange: (v:Date|null)=>void;
+  lang: 'ar'|'en';
+}) => {
+  const t = T[lang]; const isAr = lang==='ar'; const hasDateFilter = searchDateFrom||searchDateTo
+  const periodFilters = [
+    { value:'all',      label:t.filterAll,     icon:'📋' },
+    { value:'upcoming', label:t.filterUpcoming, icon:'⏰' },
+    { value:'today',    label:t.filterToday,    icon:'📅' },
+  ]
+  const statusFilters = [
+    { value:'all_status', label:t.allStatus,  icon:'📋', activeColor:PRIMARY,   activeBg:PRIMARY_SOFT },
+    { value:'scheduled',  label:t.scheduled,  icon:'⏰', activeColor:'#F59E0B', activeBg:'#FFF8E1'   },
+    { value:'confirmed',  label:t.confirmed,  icon:'✓',  activeColor:'#22C55E', activeBg:'#E8F5E9'   },
+    { value:'completed',  label:t.completed,  icon:'✔️', activeColor:PRIMARY,   activeBg:PRIMARY_SOFT },
+    { value:'cancelled',  label:t.cancelled,  icon:'✕',  activeColor:'#EF4444', activeBg:'#FFF5F5'   },
+  ]
   return (
-    <div style={{ marginBottom: 20 }}>
-      {/* فلتر الحالة */}
-      <div style={{
-        display: 'flex',
-        gap: 8,
-        background: CARD_BG,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
-        padding: 4,
-        marginBottom: 16,
-      }}>
-        {filters.map(filter => (
-          <button
-            key={filter.value}
-            onClick={() => onFilterChange(filter.value)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              padding: '8px 16px',
-              borderRadius: 10,
-              fontSize: 12,
-              fontWeight: currentFilter === filter.value ? 600 : 500,
-              background: currentFilter === filter.value ? PRIMARY_SOFT : 'transparent',
-              color: currentFilter === filter.value ? PRIMARY : TEXT_MUTED,
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <span style={{ fontSize: 12 }}>{filter.icon}</span>
-            <span>{filter.label}</span>
+    <div style={{ marginBottom:20 }}>
+      <div style={{ display:'flex', gap:8, background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:4, marginBottom:12 }}>
+        {periodFilters.map(f => (
+          <button key={f.value} onClick={()=>onFilterChange(f.value)} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 16px', borderRadius:10, fontSize:12, fontWeight:currentFilter===f.value?600:500, background:currentFilter===f.value?PRIMARY_SOFT:'transparent', color:currentFilter===f.value?PRIMARY:TEXT_MUTED, border:'none', cursor:'pointer', transition:'all 0.2s ease' }}>
+            <span>{f.icon}</span><span>{f.label}</span>
           </button>
         ))}
       </div>
-
-      {/* حقول البحث */}
-      <div className="search-filters" style={{
-        display: 'flex',
-        gap: 12,
-        flexWrap: 'wrap',
-      }}>
-        {/* بحث المريض */}
-        <div style={{ flex: 1, position: 'relative' }}>
-          <input
-            type="text"
-            value={searchPatient}
-            onChange={(e) => onSearchPatientChange(e.target.value)}
-            placeholder={t.searchPatient}
-            className="search-input"
-            style={{
-              width: '100%',
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 12,
-              padding: '10px 16px 10px 40px',
-              fontSize: 13,
-              fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-              color: TEXT_DARK,
-              outline: 'none',
-              transition: 'all 0.2s ease',
-            }}
-          />
-          <span style={{
-            position: 'absolute',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            left: 14,
-            fontSize: 14,
-            color: TEXT_MUTED,
-          }}>👤</span>
-          {searchPatient && (
-            <button
-              onClick={() => onSearchPatientChange('')}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                right: 12,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 12,
-                color: TEXT_MUTED,
-                padding: 4,
-              }}
-            >
-              ✕
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
+        {statusFilters.map(f => {
+          const isActive = statusFilter===f.value
+          return (
+            <button key={f.value} onClick={()=>onStatusFilterChange(f.value)} style={{ padding:'6px 14px', borderRadius:100, fontSize:12, fontWeight:600, border:`1px solid ${isActive?f.activeColor:BORDER}`, background:isActive?f.activeBg:'#FFF', color:isActive?f.activeColor:TEXT_MUTED, cursor:'pointer', transition:'all 0.2s ease', display:'flex', alignItems:'center', gap:5 }}>
+              <span>{f.icon}</span><span>{f.label}</span>
             </button>
-          )}
-        </div>
-
-        {/* بحث الطبيب */}
-        <div style={{ flex: 1, position: 'relative' }}>
-          <input
-            type="text"
-            value={searchDoctor}
-            onChange={(e) => onSearchDoctorChange(e.target.value)}
-            placeholder={t.searchDoctor}
-            className="search-input"
-            style={{
-              width: '100%',
-              background: CARD_BG,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 12,
-              padding: '10px 16px 10px 40px',
-              fontSize: 13,
-              fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-              color: TEXT_DARK,
-              outline: 'none',
-              transition: 'all 0.2s ease',
-            }}
-          />
-          <span style={{
-            position: 'absolute',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            left: 14,
-            fontSize: 14,
-            color: TEXT_MUTED,
-          }}>👨‍⚕️</span>
-          {searchDoctor && (
-            <button
-              onClick={() => onSearchDoctorChange('')}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                right: 12,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 12,
-                color: TEXT_MUTED,
-                padding: 4,
-              }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+          )
+        })}
+      </div>
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:12 }}>
+        {[
+          { value:searchPatient, onChange:onSearchPatientChange, placeholder:t.searchPatient, icon:'👤' },
+          { value:searchDoctor,  onChange:onSearchDoctorChange,  placeholder:t.searchDoctor,  icon:'👨‍⚕️' },
+        ].map((field,i) => (
+          <div key={i} style={{ flex:1, position:'relative', minWidth:160 }}>
+            <input type="text" value={field.value} onChange={e=>field.onChange(e.target.value)} placeholder={field.placeholder} className="search-input"
+              style={{ width:'100%', background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 36px 10px 40px', fontSize:13, fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif", color:TEXT_DARK, outline:'none', transition:'all 0.2s ease' }} />
+            <span style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', left:14, fontSize:14, color:TEXT_MUTED }}>{field.icon}</span>
+            {field.value && <button onClick={()=>field.onChange('')} style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', right:12, background:'none', border:'none', cursor:'pointer', fontSize:12, color:TEXT_MUTED, padding:4 }}>✕</button>}
+          </div>
+        ))}
+      </div>
+      <div style={{ display:'flex', gap:12, alignItems:'flex-start', flexWrap:'wrap', background:hasDateFilter?PRIMARY_SOFT:'transparent', padding:hasDateFilter?'12px':'0', borderRadius:12, transition:'all 0.2s ease' }}>
+        {[
+          { label:t.searchDateFrom, value:searchDateFrom, onChange:onSearchDateFromChange },
+          { label:t.searchDateTo,   value:searchDateTo,   onChange:onSearchDateToChange  },
+        ].map((field,i) => (
+          <div key={i} style={{ flex:1, minWidth:140 }}>
+            <label style={{ display:'block', fontSize:11, fontWeight:600, color:TEXT_MUTED, marginBottom:4 }}>{field.label}</label>
+            <DatePicker selected={field.value} onChange={(d:Date|null)=>field.onChange(d)} dateFormat="dd/MM/yyyy" placeholderText="dd/mm/yyyy" customInput={<CustomDateInput placeholder="dd/mm/yyyy" />} />
+          </div>
+        ))}
+        {hasDateFilter && (
+          <button onClick={()=>{onSearchDateFromChange(null);onSearchDateToChange(null)}}
+            style={{ marginTop:18, background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 16px', fontSize:12, color:PRIMARY, cursor:'pointer', whiteSpace:'nowrap' }}
+            onMouseEnter={e=>{e.currentTarget.style.background=PRIMARY_SOFT;e.currentTarget.style.borderColor=PRIMARY}}
+            onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor=BORDER}}>
+            ✕ {t.clearDate}
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-// ─── Main Appointments Component ────────────────────────────────────────────
+// ─── Main Component ──────────────────────────────────────────────────────────
 export default function Appointments() {
   const navigate = useNavigate()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('today')
+  const [statusFilter, setStatusFilter] = useState('all_status')
   const [searchPatient, setSearchPatient] = useState('')
   const [searchDoctor, setSearchDoctor] = useState('')
+  const [searchDateFrom, setSearchDateFrom] = useState<Date | null>(null)
+  const [searchDateTo, setSearchDateTo] = useState<Date | null>(null)
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
+  const [changingStatus, setChangingStatus] = useState<string | null>(null)
+  const [now, setNow] = useState(new Date())
 
-  // Inject global styles
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     const styleId = 'cura-appointments-css'
     if (!document.getElementById(styleId)) {
-      const style = document.createElement('style')
-      style.id = styleId
-      style.textContent = globalCss + `
-        @keyframes pulse-soft {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.2); }
-        }
-      `
-      document.head.appendChild(style)
+      const style = document.createElement('style'); style.id = styleId; style.textContent = globalCss; document.head.appendChild(style)
     }
-
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
-
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }, [])
 
-  // Fetch appointments
   const fetchAppointments = () => {
     const startTime = Date.now()
-    const minLoadingTime = 800
-
     api.get('/appointments')
-      .then(res => {
-        console.log('📊 Raw appointments data:', res.data)
-        
-        if (res.data && Array.isArray(res.data)) {
-          if (res.data.length > 0) {
-            console.log('📋 First appointment fields:', Object.keys(res.data[0]))
-          }
-          setAppointments(res.data)
-        } else {
-          setAppointments([])
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching appointments:', err)
-        navigate('/login')
-      })
-      .finally(() => {
-        const elapsed = Date.now() - startTime
-        if (elapsed < minLoadingTime) {
-          setTimeout(() => setLoading(false), minLoadingTime - elapsed)
-        } else {
-          setLoading(false)
-        }
-      })
+      .then(res => setAppointments(Array.isArray(res.data) ? res.data : []))
+      .catch(() => navigate('/login'))
+      .finally(() => { setTimeout(() => setLoading(false), Math.max(0, 800 - (Date.now() - startTime))) })
   }
 
-  useEffect(() => {
-    fetchAppointments()
-  }, [])
+  useEffect(() => { fetchAppointments() }, [])
 
-  // ✅ دالة للحصول على اسم المريض (للبحث)
-  const getPatientName = (appointment: Appointment): string => {
-    return appointment.patientName || ''
+  const handleStatusChange = async (id: string, newStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation(); setChangingStatus(id)
+    try {
+      const appointment = appointments.find(a => a.id === id)
+      if (!appointment) return
+      await api.put(`/appointments/${id}`, { patientId: appointment.patientId, status: newStatus })
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
+    } catch { console.error('Failed to update status') }
+    finally { setChangingStatus(null) }
   }
 
-  // ✅ دالة للحصول على اسم الطبيب (للبحث)
+  // ✅ CheckIn
+  const handleCheckIn = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); setChangingStatus(id)
+    try {
+      const res = await api.post(`/appointments/${id}/checkin`)
+      setAppointments(prev => prev.map(a => a.id === id
+        ? { ...a, status: 'confirmed', checkInTime: res.data.checkInTime } : a))
+    } catch { console.error('CheckIn failed') }
+    finally { setChangingStatus(null) }
+  }
+
+  // ✅ CheckOut
+  const handleCheckOut = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); setChangingStatus(id)
+    try {
+      const res = await api.post(`/appointments/${id}/checkout`)
+      setAppointments(prev => prev.map(a => a.id === id
+        ? { ...a, status: 'completed', checkOutTime: res.data.checkOutTime } : a))
+    } catch { console.error('CheckOut failed') }
+    finally { setChangingStatus(null) }
+  }
+
+  const formatTime = (dateStr: string) => {
+    const [datePart, timePart] = dateStr.split('T')
+    const [y, mo, d] = datePart.split('-').map(Number)
+    const [h, mi] = (timePart||'00:00').split(':').map(Number)
+    return `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`
+  }
+
   const getDoctorName = (appointment: Appointment): string => {
-    // 1. جرب doctorName أولاً
-    if (appointment.doctorName && appointment.doctorName.trim() !== '') {
-      return appointment.doctorName
-    }
-    
-    // 2. جرب doctor ككائن
-    const doctorObj = (appointment as any).doctor
-    if (doctorObj && typeof doctorObj === 'object' && doctorObj !== null) {
-      if (doctorObj.fullName && typeof doctorObj.fullName === 'string') {
-        return doctorObj.fullName
-      }
-      if (doctorObj.name && typeof doctorObj.name === 'string') {
-        return doctorObj.name
-      }
-    }
-    
+    if (appointment.doctorName?.trim()) return appointment.doctorName
+    const d = (appointment as any).doctor
+    if (d?.fullName) return d.fullName
     return '—'
   }
 
-  // Filter appointments
   const getFilteredAppointments = () => {
     const today = new Date().toDateString()
     let filtered = appointments
-    
-    // فلتر حسب الحالة
     switch (filter) {
-      case 'today':
-        filtered = filtered.filter(a => 
-          new Date(a.appointmentDate).toDateString() === today
-        )
-        break
-      case 'upcoming':
-        filtered = filtered.filter(a => 
-          new Date(a.appointmentDate) > new Date() && a.status !== 'cancelled'
-        )
-        break
-      default:
-        break
+      case 'today':    filtered = filtered.filter(a => new Date(a.appointmentDate).toDateString() === today); break
+      case 'upcoming': filtered = filtered.filter(a => new Date(a.appointmentDate) > new Date() && a.status !== 'cancelled'); break
     }
-    
-    // فلتر حسب اسم المريض (بحث)
-    if (searchPatient.trim() !== '') {
-      const searchTerm = searchPatient.toLowerCase().trim()
-      filtered = filtered.filter(a => 
-        getPatientName(a).toLowerCase().includes(searchTerm) ||
-        a.patientNumber?.toString().includes(searchTerm)
-      )
-    }
-    
-    // فلتر حسب اسم الطبيب (بحث)
-    if (searchDoctor.trim() !== '') {
-      const searchTerm = searchDoctor.toLowerCase().trim()
-      filtered = filtered.filter(a => 
-        getDoctorName(a).toLowerCase().includes(searchTerm)
-      )
-    }
-    
+    if (statusFilter !== 'all_status') filtered = filtered.filter(a => a.status === statusFilter)
+    if (searchPatient.trim()) { const term = searchPatient.toLowerCase(); filtered = filtered.filter(a => (a.patientName||'').toLowerCase().includes(term) || a.patientNumber?.toString().includes(term)) }
+    if (searchDoctor.trim())  { const term = searchDoctor.toLowerCase();  filtered = filtered.filter(a => getDoctorName(a).toLowerCase().includes(term)) }
+    if (searchDateFrom) { const from = new Date(searchDateFrom); from.setHours(0,0,0,0); filtered = filtered.filter(a => new Date(a.appointmentDate) >= from) }
+    if (searchDateTo)   { const to = new Date(searchDateTo); to.setHours(23,59,59,999); filtered = filtered.filter(a => new Date(a.appointmentDate) <= to) }
     return filtered
   }
 
+  const t = T[lang]; const isAr = lang === 'ar'
   const filteredAppointments = getFilteredAppointments()
-  const t = T[lang]
-  const isAr = lang === 'ar'
+  const hasActiveFilters = searchPatient || searchDoctor || searchDateFrom || searchDateTo || statusFilter !== 'all_status'
 
-  if (loading) {
-    return (
-      <AppointmentsLoadingScreen 
-        msg={t.loadingMessage} 
-        subMsg={t.loadingSub}
-      />
-    )
-  }
-
-  // Format date nicely
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const today = new Date()
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    
-    if (date.toDateString() === today.toDateString()) {
-      return `${t.today} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return `${t.tomorrow} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    }
-    return date.toLocaleString(isAr ? 'ar-SA' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    const [datePart, timePart] = dateStr.split('T')
+    const [year, month, day] = datePart.split('-').map(Number)
+    const [hour, minute] = (timePart||'00:00').split(':').map(Number)
+    const date = new Date(year, month-1, day, hour, minute)
+    const today = new Date(); const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1)
+    const time = `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`
+    if (date.toDateString() === today.toDateString())     return `${t.today} — ${time}`
+    if (date.toDateString() === tomorrow.toDateString()) return `${t.tomorrow} — ${time}`
+    return `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year} — ${time}`
   }
+
+  if (loading) return <AppointmentsLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
 
   return (
-    <div 
-      className="appointments-shell" 
-      style={{
-        direction: isAr ? 'rtl' : 'ltr',
-        background: '#F8FAFA',
-        minHeight: '100vh',
-        padding: '24px',
-      }}
-    >
-      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+    <div className="appointments-shell" style={{ direction:isAr?'rtl':'ltr', background:'#F8FAFA', minHeight:'100vh', padding:'24px' }}>
+      <div style={{ maxWidth:1400, margin:'0 auto' }}>
 
-        {/* ── Header ── */}
-        <div className="appointments-header" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 16,
-          marginBottom: 24,
-        }}>
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16, marginBottom:24 }}>
           <div>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: PRIMARY_SOFT,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 100,
-              padding: '4px 16px',
-              fontSize: 11,
-              fontWeight: 600,
-              color: PRIMARY,
-              letterSpacing: '0.3px',
-              marginBottom: 12,
-            }}>
-              <span style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: PRIMARY,
-                animation: 'soft-pulse 2s infinite',
-              }} />
-              {isAr ? 'جدول المواعيد' : 'Schedule'}
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:PRIMARY_SOFT, border:`1px solid ${BORDER}`, borderRadius:100, padding:'4px 16px', fontSize:11, fontWeight:600, color:PRIMARY, marginBottom:12 }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background:PRIMARY, animation:'soft-pulse 2s infinite' }} />{t.schedule}
             </div>
-            <h2 className="appointments-title" style={{
-              fontFamily: "'DM Serif Display', 'Georgia', serif",
-              fontSize: 32,
-              fontWeight: 500,
-              color: TEXT_DARK,
-              margin: 0,
-              letterSpacing: '-0.3px',
-            }}>
-              {t.title}
-            </h2>
-            <p style={{
-              fontSize: 14,
-              color: TEXT_MUTED,
-              marginTop: 8,
-            }}>
-              📊 {filteredAppointments.length} {isAr ? 'موعد' : 'appointments'}
-              {filter !== 'all' && ` (${filter === 'today' ? t.today : filter === 'upcoming' ? t.filterUpcoming : ''})`}
-              {(searchPatient || searchDoctor) && (
-                <span style={{ marginRight: 8, fontSize: 11, color: PRIMARY }}>
-                  • {isAr ? 'نتائج البحث' : 'search results'}
-                </span>
-              )}
+            <h2 style={{ fontFamily:"'DM Serif Display','Georgia',serif", fontSize:32, fontWeight:500, color:TEXT_DARK, margin:0, letterSpacing:'-0.3px' }}>{t.title}</h2>
+            <p style={{ fontSize:14, color:TEXT_MUTED, marginTop:8 }}>
+              📊 {filteredAppointments.length} {t.appointments}
+              {filter!=='all' && ` (${filter==='today'?t.today:t.filterUpcoming})`}
+              {hasActiveFilters && <span style={{ marginRight:8, fontSize:11, color:PRIMARY }}> • {t.searchResults}</span>}
             </p>
           </div>
-{hasPermission('appointments.create') && (
-
-          <button
-            onClick={() => navigate('/appointments/add')}
-            style={{
-              background: PRIMARY,
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: 12,
-              padding: '10px 20px',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 8px rgba(91, 140, 143, 0.2)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#4A7679'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = PRIMARY
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
-          >
-            <span style={{ fontSize: 16 }}>+</span>
-            {t.addAppointment}
-          </button>
-        )}
-      </div>
-
-        {/* ── Filter Bar with Search ── */}
-        <FilterBar 
-          currentFilter={filter} 
-          onFilterChange={setFilter}
-          searchPatient={searchPatient}
-          onSearchPatientChange={setSearchPatient}
-          searchDoctor={searchDoctor}
-          onSearchDoctorChange={setSearchDoctor}
-          lang={lang}
-        />
-
-        {/* ── Appointments Table ── */}
-        <div className="appointments-table-container" style={{
-          background: CARD_BG,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 20,
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-        }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="appointments-table" style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              minWidth: 600,
-            }}>
-              <thead>
-                <tr style={{
-                  borderBottom: `1px solid ${BORDER}`,
-                  background: PRIMARY_SOFT,
-                }}>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.patient}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.doctor}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.date}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.type}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.price}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.status}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                   {isAr ? 'إجراءات' : 'Actions'}
-                      </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAppointments.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{
-                      padding: '48px 24px',
-                      textAlign: 'center',
-                    }}>
-                      <span style={{ fontSize: 48, opacity: 0.5 }}>📅</span>
-                      <p style={{
-                        fontSize: 14,
-                        color: TEXT_MUTED,
-                        marginTop: 12,
-                      }}>
-                        {t.noAppointments}
-                      </p>
-                      {(searchPatient || searchDoctor || filter !== 'all') && (
-                        <button
-                          onClick={() => {
-                            setFilter('all')
-                            setSearchPatient('')
-                            setSearchDoctor('')
-                          }}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: PRIMARY,
-                            fontSize: 12,
-                            cursor: 'pointer',
-                            marginTop: 8,
-                            textDecoration: 'underline',
-                          }}
-                        >
-                          {isAr ? 'مسح جميع الفلاتر' : 'Clear all filters'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAppointments.map((appointment) => (
-                    <tr 
-                      key={appointment.id} 
-                      className="appointment-row"
-                      style={{
-                        borderBottom: `1px solid ${BORDER}`,
-                        transition: 'background 0.2s ease',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = PRIMARY_SOFT
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent'
-                      }}
-                      onClick={() => navigate(`/appointments/${appointment.id}`)}
-                    >
-                      <td style={{ padding: '14px 16px' }}>
-                        <p style={{
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: TEXT_DARK,
-                          margin: 0,
-                          marginBottom: 2,
-                        }}>
-                          {appointment.patientName}
-                        </p>
-                        <p style={{
-                          fontSize: 10,
-                          color: TEXT_MUTED,
-                          margin: 0,
-                        }}>
-                          #{appointment.patientNumber}
-                        </p>
-                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
-                        {getDoctorName(appointment)}
-                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
-                        {formatDate(appointment.appointmentDate)}
-                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
-                        {appointment.type || '—'}
-                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 500, color: TEXT_DARK }}>
-                        {appointment.price ? `${appointment.price} ${t.riyal}` : '—'}
-                       </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <StatusBadge status={appointment.status} lang={lang} />
-                       </td>
-                       <td style={{ padding: '14px 16px' }}>
-  <div style={{ display: 'flex', gap: 8 }}>
-    {/* زر التعديل */}
-    {hasPermission('appointments.edit') && (
-  <button
-    onClick={(e) => {
-      e.stopPropagation()
-      navigate(`/appointments/${appointment.id}/edit`)
-    }}
-    style={{
-      background: PRIMARY_SOFT,
-      border: `1px solid ${BORDER}`,
-      borderRadius: 8,
-      padding: '6px 12px',
-      fontSize: 12,
-      color: PRIMARY,
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = PRIMARY
-      e.currentTarget.style.color = '#FFFFFF'
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = PRIMARY_SOFT
-      e.currentTarget.style.color = PRIMARY
-    }}
-  >
-    ✏️ {isAr ? 'تعديل' : 'Edit'}
-  </button>
-)}
-  </div>
-</td>
-                    </tr>
-                    
-                    
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {hasPermission('appointments.create') && (
+            <button onClick={()=>navigate('/appointments/add')}
+              style={{ background:PRIMARY, color:'#FFFFFF', border:'none', borderRadius:12, padding:'10px 20px', fontSize:13, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:8, transition:'all 0.2s ease', boxShadow:'0 2px 8px rgba(91,140,143,0.2)' }}
+              onMouseEnter={e=>{e.currentTarget.style.background=PRIMARY_DARK;e.currentTarget.style.transform='translateY(-1px)'}}
+              onMouseLeave={e=>{e.currentTarget.style.background=PRIMARY;e.currentTarget.style.transform='translateY(0)'}}>
+              <span style={{ fontSize:16 }}>+</span> {t.addAppointment}
+            </button>
+          )}
         </div>
 
-        {/* ── Summary Stats ── */}
-        {filteredAppointments.length > 0 && (
-          <div style={{
-            display: 'flex',
-            gap: 16,
-            marginTop: 20,
-            padding: '12px 16px',
-            background: PRIMARY_SOFT,
-            borderRadius: 16,
-            border: `1px solid ${BORDER}`,
-            flexWrap: 'wrap',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 14 }}>📊</span>
-              <span style={{ fontSize: 12, color: TEXT_MUTED }}>
-                {isAr ? 'إجمالي القادمة' : 'Total Upcoming'}:
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
-                {filteredAppointments.filter(a => a.status === 'scheduled' || a.status === 'confirmed').length}
-              </span>
+        {/* Filter Bar */}
+        <FilterBar currentFilter={filter} onFilterChange={setFilter} statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
+          searchPatient={searchPatient} onSearchPatientChange={setSearchPatient} searchDoctor={searchDoctor} onSearchDoctorChange={setSearchDoctor}
+          searchDateFrom={searchDateFrom} onSearchDateFromChange={setSearchDateFrom} searchDateTo={searchDateTo} onSearchDateToChange={setSearchDateTo} lang={lang} />
+
+        {/* رسالة لا مواعيد */}
+        {filter==='today' && filteredAppointments.length===0 && !hasActiveFilters && (
+          <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, padding:'60px 24px', textAlign:'center', marginBottom:20 }}>
+            <span style={{ fontSize:64, opacity:0.5 }}>📅</span>
+            <h3 style={{ fontSize:18, fontWeight:600, color:TEXT_DARK, marginTop:16, marginBottom:8 }}>{t.noAppointmentsToday}</h3>
+            <p style={{ fontSize:13, color:TEXT_MUTED, marginBottom:20 }}>{t.noAppointmentsTodayHint}</p>
+            {hasPermission('appointments.create') && (
+              <button onClick={()=>navigate('/appointments/add')}
+                style={{ background:PRIMARY, color:'#FFFFFF', border:'none', borderRadius:12, padding:'10px 24px', fontSize:13, fontWeight:500, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:8 }}
+                onMouseEnter={e=>e.currentTarget.style.background=PRIMARY_DARK} onMouseLeave={e=>e.currentTarget.style.background=PRIMARY}>
+                <span>+</span> {t.addAppointment}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* الجدول */}
+        {(filter!=='today' || filteredAppointments.length>0 || hasActiveFilters) && (
+          <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div style={{ overflowX:'auto' }}>
+              <table className="appointments-table" style={{ width:'100%', borderCollapse:'collapse', minWidth:780 }}>
+                <thead>
+                  <tr style={{ borderBottom:`1px solid ${BORDER}`, background:PRIMARY_SOFT }}>
+                    {[t.patient, t.doctor, t.date, t.type, t.price, t.status, t.actions].map((h,i) => (
+                      <th key={i} style={{ padding:'14px 16px', textAlign:isAr?'right':'left', fontSize:12, fontWeight:600, color:TEXT_MUTED }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAppointments.length===0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding:'48px 24px', textAlign:'center' }}>
+                        <span style={{ fontSize:48, opacity:0.5 }}>📅</span>
+                        <p style={{ fontSize:14, color:TEXT_MUTED, marginTop:12 }}>{t.noAppointments}</p>
+                        {hasActiveFilters && (
+                          <button onClick={()=>{setFilter('all');setStatusFilter('all_status');setSearchPatient('');setSearchDoctor('');setSearchDateFrom(null);setSearchDateTo(null)}}
+                            style={{ background:'none', border:'none', color:PRIMARY, fontSize:12, cursor:'pointer', marginTop:8, textDecoration:'underline' }}>
+                            {t.clearAllFilters}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ) : filteredAppointments.map((appointment) => {
+                    const apptDate = new Date(appointment.appointmentDate)
+                    const diffMins = (apptDate.getTime() - now.getTime()) / 60000
+                    const isDue     = diffMins >= -2 && diffMins <= 2 && appointment.status === 'scheduled'
+                    const isOverdue = diffMins < -2  && appointment.status === 'scheduled'
+                    const hasCheckedIn  = !!(appointment as any).checkInTime
+                    const hasCheckedOut = !!(appointment as any).checkOutTime
+
+                    const rowBg = (() => {
+                      if (appointment.status==='confirmed') return '#F0FDF4'
+                      if (appointment.status==='cancelled') return '#FFF5F5'
+                      if (isDue)     return '#FFF0F0'
+                      if (isOverdue) return '#FFFBEB'
+                      if (appointment.status==='scheduled') return '#FFF8E1'
+                      return 'transparent'
+                    })()
+                    const rowHoverBg = (() => {
+                      if (appointment.status==='confirmed') return '#DCFCE7'
+                      if (appointment.status==='cancelled') return '#FEE2E2'
+                      if (isDue)     return '#FFE4E4'
+                      if (isOverdue) return '#FEF3C7'
+                      if (appointment.status==='scheduled') return '#FEF9C3'
+                      return PRIMARY_SOFT
+                    })()
+                    const sideColor = (() => {
+                      if (appointment.status==='confirmed') return '#22C55E'
+                      if (appointment.status==='cancelled') return '#EF4444'
+                      if (isDue)     return '#EF4444'
+                      if (isOverdue) return '#F59E0B'
+                      if (appointment.status==='scheduled') return '#FCD34D'
+                      return 'transparent'
+                    })()
+
+                    return (
+                      <tr key={appointment.id}
+                        className={`appointment-row${isDue?' row-due':''}`}
+                        style={{ borderBottom:`1px solid ${BORDER}`, transition:isDue?'none':'all 0.2s ease', cursor:'pointer', background:isDue?undefined:rowBg, borderRight:`4px solid ${sideColor}` }}
+                        onMouseEnter={e=>{if(!isDue) e.currentTarget.style.background=rowHoverBg}}
+                        onMouseLeave={e=>{if(!isDue) e.currentTarget.style.background=rowBg}}
+                        onClick={()=>navigate(`/appointments/${appointment.id}`)}>
+
+                        {/* المريض */}
+                        <td style={{ padding:'14px 16px' }}>
+                          <p style={{ fontSize:14, fontWeight:500, color:TEXT_DARK, margin:0, marginBottom:2 }}>{appointment.patientName}</p>
+                          <p style={{ fontSize:10, color:TEXT_MUTED, margin:0 }}>#{appointment.patientNumber}</p>
+                        </td>
+
+                        {/* الطبيب */}
+                        <td style={{ padding:'14px 16px', fontSize:13, color:TEXT_MUTED }}>{getDoctorName(appointment)}</td>
+
+                        {/* التاريخ */}
+                        <td style={{ padding:'14px 16px' }}>
+                          <span style={{ fontSize:13, fontWeight:500, color:isDue?'#EF4444':isOverdue?'#F59E0B':TEXT_DARK }}>
+                            {formatDate(appointment.appointmentDate)}
+                          </span>
+                          {isDue     && <span style={{ display:'block', fontSize:10, color:'#EF4444', fontWeight:700, marginTop:2, animation:'soft-pulse 1s infinite' }}>🔔 {t.dueLabel}</span>}
+                          {isOverdue && <span style={{ display:'block', fontSize:10, color:'#F59E0B', fontWeight:700, marginTop:2 }}>⚠️ {t.overdueLabel}</span>}
+                          {/* ✅ وقت الدخول والخروج */}
+                          {hasCheckedIn && (
+                            <span style={{ display:'block', fontSize:10, color:'#22C55E', marginTop:2 }}>
+                              🟢 {t.checkedIn}: {formatTime((appointment as any).checkInTime)}
+                            </span>
+                          )}
+                          {hasCheckedOut && (
+                            <span style={{ display:'block', fontSize:10, color:PRIMARY, marginTop:1 }}>
+                              🏁 {t.checkedOut}: {formatTime((appointment as any).checkOutTime)}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* النوع */}
+                        <td style={{ padding:'14px 16px', fontSize:13, color:TEXT_MUTED }}>{appointment.type||'—'}</td>
+
+                        {/* السعر */}
+                        <td style={{ padding:'14px 16px', fontSize:13, fontWeight:500, color:TEXT_DARK }}>
+                          {appointment.price ? `${appointment.price} ${t.riyal}` : '—'}
+                        </td>
+
+                        {/* الحالة */}
+                        <td style={{ padding:'14px 16px' }}>
+                          <StatusBadge status={appointment.status} lang={lang} />
+                        </td>
+
+                        {/* الإجراءات */}
+                        <td style={{ padding:'14px 16px' }}>
+                          <div style={{ display:'flex', gap:5, flexWrap:'wrap', alignItems:'center' }}>
+
+                            {/* ✅ CheckIn — للمواعيد المجدولة أو المؤكدة التي لم يتم دخولها */}
+                            {['scheduled','confirmed'].includes(appointment.status) && !hasCheckedIn && (
+                              <button className="action-btn" onClick={e=>handleCheckIn(appointment.id,e)}
+                                disabled={changingStatus===appointment.id}
+                                style={{ background:'#E8F5E9', color:'#22C55E', borderColor:'#86EFAC' }}>
+                                🟢 {t.checkIn}
+                              </button>
+                            )}
+
+                            {/* ✅ CheckOut — للمواعيد التي تم دخولها ولم يتم خروجها */}
+                            {hasCheckedIn && !hasCheckedOut && appointment.status !== 'completed' && (
+                              <button className="action-btn" onClick={e=>handleCheckOut(appointment.id,e)}
+                                disabled={changingStatus===appointment.id}
+                                style={{ background:PRIMARY_SOFT, color:PRIMARY, borderColor:BORDER }}>
+                                🏁 {t.checkOut}
+                              </button>
+                            )}
+
+                            {/* تأكيد / إلغاء للمجدول */}
+                            {appointment.status==='scheduled' && !hasCheckedIn && (
+                              <>
+                                <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'confirmed',e)} disabled={changingStatus===appointment.id} style={{ background:'#E8F5E9', color:'#22C55E', borderColor:'#86EFAC' }}>✓ {t.confirm}</button>
+                                <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'cancelled',e)} disabled={changingStatus===appointment.id} style={{ background:'#FFF5F5', color:'#EF4444', borderColor:'#FCA5A5' }}>✕ {t.cancel}</button>
+                              </>
+                            )}
+
+                            {/* مكتمل / إلغاء للمؤكد */}
+                            {appointment.status==='confirmed' && !hasCheckedIn && (
+                              <>
+                                <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'completed',e)} disabled={changingStatus===appointment.id} style={{ background:PRIMARY_SOFT, color:PRIMARY, borderColor:BORDER }}>✔ {t.complete}</button>
+                                <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'cancelled',e)} disabled={changingStatus===appointment.id} style={{ background:'#FFF5F5', color:'#EF4444', borderColor:'#FCA5A5' }}>✕ {t.cancel}</button>
+                              </>
+                            )}
+
+                            {/* تعديل */}
+                            {hasPermission('appointments.edit') && (
+                              <button className="action-btn" onClick={e=>{e.stopPropagation();navigate(`/appointments/${appointment.id}/edit`)}}
+                                style={{ background:PRIMARY_SOFT, color:PRIMARY, borderColor:BORDER }}
+                                onMouseEnter={e=>{e.currentTarget.style.background=PRIMARY;e.currentTarget.style.color='#FFF'}}
+                                onMouseLeave={e=>{e.currentTarget.style.background=PRIMARY_SOFT;e.currentTarget.style.color=PRIMARY}}>
+                                ✏️ {t.edit}
+                              </button>
+                            )}
+
+                            {changingStatus===appointment.id && <span style={{ fontSize:14, color:TEXT_MUTED }}>⏳</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-            <div style={{ width: 1, background: BORDER }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 14 }}>💰</span>
-              <span style={{ fontSize: 12, color: TEXT_MUTED }}>
-                {isAr ? 'إجمالي الإيرادات' : 'Total Revenue'}:
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
-                {filteredAppointments
-                  .filter(a => a.status === 'completed')
-                  .reduce((sum, a) => {
-                    const price = typeof a.price === 'string' ? parseFloat(a.price) : (a.price || 0)
-                    return sum + (isNaN(price) ? 0 : price)
-                  }, 0)} {t.riyal}
-              </span>
-            </div>
+          </div>
+        )}
+
+        {/* الإحصائيات */}
+        {filteredAppointments.length>0 && (
+          <div style={{ display:'flex', gap:12, marginTop:20, flexWrap:'wrap' }}>
+            {[
+              { icon:'📊', label:t.totalAppointments, value:filteredAppointments.length, bg:PRIMARY_SOFT, color:PRIMARY, border:BORDER },
+              { icon:'✔️', label:t.completedLabel, value:filteredAppointments.filter(a=>a.status==='completed').length, bg:'#E8F5E9', color:'#22C55E', border:'#86EFAC' },
+              { icon:'⏰', label:t.remainingLabel, value:filteredAppointments.filter(a=>a.status==='scheduled'||a.status==='confirmed').length, bg:'#FFF8E1', color:'#F59E0B', border:'#FCD34D' },
+              { icon:'✕',  label:t.cancelledLabel, value:filteredAppointments.filter(a=>a.status==='cancelled').length, bg:'#FFF5F5', color:'#EF4444', border:'#FCA5A5' },
+              { icon:'💰', label:t.revenueLabel, value:`${filteredAppointments.filter(a=>a.status==='completed').reduce((sum,a)=>sum+(Number(a.price)||0),0).toFixed(2)} ${t.riyal}`, bg:'#E8F0F0', color:PRIMARY, border:BORDER },
+            ].map((stat,i) => (
+              <div key={i} style={{ flex:1, minWidth:120, display:'flex', flexDirection:'column', alignItems:'center', padding:'16px 12px', borderRadius:16, background:stat.bg, border:`1px solid ${stat.border}` }}>
+                <span style={{ fontSize:22, marginBottom:6 }}>{stat.icon}</span>
+                <span style={{ fontSize:24, fontWeight:700, color:stat.color, lineHeight:1 }}>{stat.value}</span>
+                <span style={{ fontSize:11, color:TEXT_MUTED, marginTop:4, textAlign:'center' }}>{stat.label}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>

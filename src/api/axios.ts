@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const API_BASE_URL = '/api'
+// ✅ إذا فُتح من IP خارجي — اتصل بالـ Backend مباشرة
+const API_BASE_URL = window.location.hostname === 'localhost'
+  ? '/api'
+  : `http://${window.location.hostname}:5192/api`
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -20,36 +23,15 @@ api.interceptors.request.use((config) => {
 
 // ─── Response Interceptor ────────────────────────────────────────────────
 api.interceptors.response.use(
-  async (response) => {
-    // ✅ تحديث الصلاحيات كل 5 دقائق
-    // تجنب الـ loop — لا تحدّث عند استدعاء my-permissions نفسه
-    const isPermsRequest = response.config.url?.includes('my-permissions')
-
-    if (!isPermsRequest) {
-      const lastUpdate = localStorage.getItem('perms_updated_at')
-      const now = Date.now()
-      const fiveMinutes = 5 * 60 * 1000
-
-      if (!lastUpdate || now - Number(lastUpdate) > fiveMinutes) {
-        try {
-          // ✅ استخدم axios مباشرة بدل api لتجنب الـ loop
-          const token = localStorage.getItem('token')
-          const res = await axios.get(`${API_BASE_URL}/roles/my-permissions`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          localStorage.setItem('permissions', JSON.stringify(res.data.permissions))
-          localStorage.setItem('perms_updated_at', String(now))
-        } catch {
-          // تجاهل الخطأ — لا نوقف الطلب الأصلي
-        }
-      }
-    }
-
-    return response
-  },
+  (response) => response,
 
   async (error) => {
     const originalRequest = error.config
+
+    const url = originalRequest?.url || ''
+    if (url.includes('/auth/') || url.includes('my-permissions')) {
+      return Promise.reject(error)
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true

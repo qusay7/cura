@@ -1,58 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
-import { ECGAnimation } from '../components/ECGAnimation'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-// ─── Global CSS with Comfortable Colors ──────────────────────────────────────
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-
-.add-doctor-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
-
+@keyframes fade-up { from { opacity:0; transform:translateY(20px) scale(0.98);} to { opacity:1; transform:translateY(0) scale(1);} }
+@keyframes soft-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+@keyframes spin { to { transform:rotate(360deg);} }
+@keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
+.add-doctor-shell { animation: fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .add-doctor-shell * { box-sizing:border-box; }
-
-/* Form focus styles */
-.form-input:focus, .form-textarea:focus {
+.form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: #5B8C8F !important;
-  box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(91,140,143,0.1) !important;
+  outline: none;
 }
-
-/* Remove number input arrows */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type=number] {
-  -moz-appearance: textfield;
-}
-
-@media(max-width: 768px) {
-  .add-doctor-title { font-size: 24px !important; }
-  .form-container { padding: 20px !important; }
+@media(max-width:768px) {
+  .form-container { padding:16px !important; }
+  .action-row { flex-direction:column !important; }
 }
 `
 
-// Comfortable color palette
 const PRIMARY = '#5B8C8F'
-const PRIMARY_LIGHT = '#8BAFB1'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -60,197 +31,158 @@ const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
-const SUCCESS = '#4A7679'
 
-// ─── Translations ─────────────────────────────────────────────────────────────
+const SPECIALTIES = {
+  ar: [
+    'طب عام', 'طب أسنان', 'قلبية', 'جلدية', 'أطفال', 'أعصاب',
+    'عظام وكسور', 'عيون', 'أنف وأذن وحنجرة', 'نساء وتوليد',
+    'مسالك بولية', 'جراحة عامة', 'جراحة تجميل', 'أورام',
+    'غدد صماء', 'روماتيزم', 'كلى', 'رئة وجهاز تنفسي',
+    'هضمي وكبد', 'دم وأورام دموية', 'طب طوارئ', 'تخدير',
+    'طب نفسي', 'طب أسرة', 'طب رياضي', 'علاج طبيعي',
+    'تغذية وحمية', 'طب مخبري', 'أشعة وتصوير', 'طب شيخوخة',
+  ],
+  en: [
+    'General Practice', 'Dentistry', 'Cardiology', 'Dermatology',
+    'Pediatrics', 'Neurology', 'Orthopedics', 'Ophthalmology',
+    'ENT', 'Obstetrics & Gynecology', 'Urology', 'General Surgery',
+    'Plastic Surgery', 'Oncology', 'Endocrinology', 'Rheumatology',
+    'Nephrology', 'Pulmonology', 'Gastroenterology', 'Hematology',
+    'Emergency Medicine', 'Anesthesiology', 'Psychiatry',
+    'Family Medicine', 'Sports Medicine', 'Physiotherapy',
+    'Nutrition & Dietetics', 'Laboratory Medicine', 'Radiology', 'Geriatrics',
+  ],
+}
+
+const WORK_TYPES = {
+  ar: [
+    { value: 'appointments', label: '📅 حجز مواعيد فقط' },  // ✅ أول
+    { value: 'queue',        label: '🔢 قائمة انتظار فقط' },
+  //  { value: 'both',         label: '✅ كلاهما' },
+  ],
+  en: [
+    { value: 'appointments', label: '📅 Appointments Only' }, // ✅ أول
+    { value: 'queue',        label: '🔢 Queue Only' },
+   // { value: 'both',         label: '✅ Both' },
+  ],
+}
+
 const T = {
   ar: {
-    title: 'إضافة طبيب جديد',
-    back: 'رجوع',
-    fullName: 'الاسم الكامل',
-    fullNamePlaceholder: 'أدخل الاسم الكامل للطبيب',
-    specialty: 'التخصص',
-    specialtyPlaceholder: 'طب عام، طب أسنان، قلبية، ...',
-    phone: 'الهاتف',
-    phonePlaceholder: '05xxxxxxxx',
-    email: 'البريد الإلكتروني',
-    emailPlaceholder: 'doctor@clinic.com',
-    notes: 'ملاحظات',
-    notesPlaceholder: 'أضف ملاحظات إضافية عن الطبيب...',
-    submit: 'حفظ الطبيب',
-    cancel: 'إلغاء',
-    saving: 'جارٍ الحفظ...',
-    error: 'حدث خطأ غير متوقع',
-    required: 'هذا الحقل مطلوب',
-    emailInvalid: 'البريد الإلكتروني غير صالح',
-    phoneInvalid: 'رقم الهاتف غير صالح',
-    loadingMessage: 'جاري تجهيز النموذج',
-    loadingSub: 'يرجى الانتظار...',
-    specializations: {
-      general: 'طب عام',
-      dentistry: 'طب أسنان',
-      cardiology: 'قلبية',
-      dermatology: 'جلدية',
-      pediatrics: 'أطفال',
-      neurology: 'أعصاب',
-      orthopedics: 'عظام',
-      ophthalmology: 'عيون',
-    }
+    title: 'إضافة طبيب جديد', back: 'رجوع',
+    fullName: 'الاسم الكامل', fullNamePlaceholder: 'أدخل الاسم الكامل للطبيب',
+    specialty: 'التخصص', specialtyPlaceholder: 'ابحث أو اختر التخصص...',
+    department: 'القسم', departmentPlaceholder: 'اختر القسم...',
+    workType: 'نوع العمل',
+    phone: 'الهاتف', phonePlaceholder: '05xxxxxxxx',
+    email: 'البريد الإلكتروني', emailPlaceholder: 'doctor@clinic.com',
+    notes: 'ملاحظات', notesPlaceholder: 'أضف ملاحظات إضافية عن الطبيب...',
+    submit: 'حفظ الطبيب', cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
+    error: 'حدث خطأ غير متوقع', required: 'هذا الحقل مطلوب',
+    emailInvalid: 'البريد الإلكتروني غير صالح', phoneInvalid: 'رقم الهاتف غير صالح',
+    noDepartments: 'لا توجد أقسام — أضف أقساماً أولاً من صفحة الأقسام',
   },
   en: {
-    title: 'Add New Doctor',
-    back: 'Back',
-    fullName: 'Full Name',
-    fullNamePlaceholder: 'Enter doctor\'s full name',
-    specialty: 'Specialty',
-    specialtyPlaceholder: 'General, Dentistry, Cardiology, ...',
-    phone: 'Phone',
-    phonePlaceholder: '05xxxxxxxx',
-    email: 'Email',
-    emailPlaceholder: 'doctor@clinic.com',
-    notes: 'Notes',
-    notesPlaceholder: 'Add additional notes about the doctor...',
-    submit: 'Save Doctor',
-    cancel: 'Cancel',
-    saving: 'Saving...',
-    error: 'An unexpected error occurred',
-    required: 'This field is required',
-    emailInvalid: 'Invalid email address',
-    phoneInvalid: 'Invalid phone number',
-    loadingMessage: 'Preparing Form',
-    loadingSub: 'Please wait...',
-    specializations: {
-      general: 'General Practice',
-      dentistry: 'Dentistry',
-      cardiology: 'Cardiology',
-      dermatology: 'Dermatology',
-      pediatrics: 'Pediatrics',
-      neurology: 'Neurology',
-      orthopedics: 'Orthopedics',
-      ophthalmology: 'Ophthalmology',
-    }
+    title: 'Add New Doctor', back: 'Back',
+    fullName: 'Full Name', fullNamePlaceholder: "Enter doctor's full name",
+    specialty: 'Specialty', specialtyPlaceholder: 'Search or select specialty...',
+    department: 'Department', departmentPlaceholder: 'Select department...',
+    workType: 'Work Type',
+    phone: 'Phone', phonePlaceholder: '05xxxxxxxx',
+    email: 'Email', emailPlaceholder: 'doctor@clinic.com',
+    notes: 'Notes', notesPlaceholder: 'Add additional notes about the doctor...',
+    submit: 'Save Doctor', cancel: 'Cancel', saving: 'Saving...',
+    error: 'An unexpected error occurred', required: 'This field is required',
+    emailInvalid: 'Invalid email address', phoneInvalid: 'Invalid phone number',
+    noDepartments: 'No departments — add departments first from Departments page',
   },
 }
 
-// ─── Form Field Component ────────────────────────────────────────────────────
-const FormField = ({ label, required, children, error }: { 
-  label: string; 
-  required?: boolean; 
-  children: React.ReactNode;
-  error?: string;
+interface Department { id: string; name: string; isActive: boolean }
+
+const FormField = ({ label, required, children, error }: {
+  label: string; required?: boolean; children: React.ReactNode; error?: string
 }) => (
-  <div style={{ marginBottom: 20 }}>
-    <label style={{
-      display: 'block',
-      fontSize: 12,
-      fontWeight: 600,
-      color: TEXT_MUTED,
-      marginBottom: 8,
-      letterSpacing: '0.5px',
-    }}>
+  <div style={{ marginBottom: 18 }}>
+    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6, letterSpacing: '0.5px' }}>
       {label} {required && <span style={{ color: ERROR_TEXT }}>*</span>}
     </label>
     {children}
-    {error && (
-      <p style={{ fontSize: 11, color: ERROR_TEXT, marginTop: 5, marginBottom: 0 }}>
-        {error}
-      </p>
-    )}
+    {error && <p style={{ fontSize: 11, color: ERROR_TEXT, marginTop: 5, marginBottom: 0 }}>{error}</p>}
   </div>
 )
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+const inputStyle = (isAr: boolean) => ({
+  width: '100%', background: CARD_BG, border: `1px solid ${BORDER}`,
+  borderRadius: 12, padding: '10px 14px', fontSize: 14,
+  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
+  color: TEXT_DARK, outline: 'none', transition: 'all 0.2s ease',
+})
+
 export default function AddDoctor() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
-
+  const [departments, setDepartments] = useState<Department[]>([])
   const [form, setForm] = useState({
-    fullName: '',
-    specialty: '',
-    phone: '',
-    email: '',
-    notes: '',
+    fullName: '', specialty: '', phone: '', email: '', notes: '',
+    departmentId: '',   workType: 'appointments',
   })
-
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  // Inject global styles and handle language changes
   useEffect(() => {
     const styleId = 'cura-add-doctor-css'
     if (!document.getElementById(styleId)) {
-      const style = document.createElement('style')
-      style.id = styleId
-      style.textContent = globalCss + `
-        @keyframes pulse-soft {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.2); }
-        }
-      `
-      document.head.appendChild(style)
+      const style = document.createElement('style'); style.id = styleId; style.textContent = globalCss; document.head.appendChild(style)
     }
-
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
+
+    // جلب الأقسام
+    api.get('/departments')
+      .then(res => setDepartments(res.data.filter((d: Department) => d.isActive)))
+      .catch(() => {})
 
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }, [])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
-    // Clear validation error for this field
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({ ...prev, [name]: '' }))
-    }
+    if (validationErrors[name]) setValidationErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
     const t = T[lang]
-
-    if (!form.fullName.trim()) {
-      errors.fullName = t.required
-    }
-
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = t.emailInvalid
-    }
-
-    if (form.phone && !/^[\d\s\+-]{8,}$/.test(form.phone.replace(/\s/g, ''))) {
-      errors.phone = t.phoneInvalid
-    }
-
+    if (!form.fullName.trim()) errors.fullName = t.required
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = t.emailInvalid
+    if (form.phone && !/^[\d\s\+-]{8,}$/.test(form.phone.replace(/\s/g, ''))) errors.phone = t.phoneInvalid
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
-
-    setError('')
-    setLoading(true)
-
+    if (!validateForm()) return
+    setError(''); setLoading(true)
     try {
-      const payload = Object.fromEntries(
-        Object.entries(form).filter(([_, v]) => v !== '')
-      )
+      const payload: Record<string, any> = {
+        fullName: form.fullName,
+        workType: form.workType,
+      }
+      if (form.specialty)    payload.specialty    = form.specialty
+      if (form.phone)        payload.phone        = form.phone
+      if (form.email)        payload.email        = form.email
+      if (form.notes)        payload.notes        = form.notes
+      if (form.departmentId) payload.departmentId = form.departmentId
+
       await api.post('/doctors', payload)
       navigate('/doctors')
     } catch (err: any) {
       const errData = err.response?.data
-      if (typeof errData === 'string') {
-        setError(errData)
-      } else if (errData?.message) {
-        setError(errData.message)
-      } else {
-        setError(T[lang].error)
-      }
+      setError(typeof errData === 'string' ? errData : errData?.message || T[lang].error)
     } finally {
       setLoading(false)
     }
@@ -259,304 +191,115 @@ export default function AddDoctor() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  // Get specialty options
-  const getSpecialtyOptions = () => {
-    const specializations = T[lang].specializations
-    return Object.entries(specializations).map(([key, value]) => ({
-      value: isAr ? value : key,
-      label: value
-    }))
-  }
-
   return (
-    <div 
-      className="add-doctor-shell" 
-      style={{
-        direction: isAr ? 'rtl' : 'ltr',
-        background: '#F8FAFA',
-        minHeight: '100vh',
-        padding: '24px',
-      }}
-    >
+    <div className="add-doctor-shell" style={{ direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '24px' }}>
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <button
-            onClick={() => navigate('/doctors')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'none',
-              border: 'none',
-              color: TEXT_MUTED,
-              fontSize: 13,
-              cursor: 'pointer',
-              marginBottom: 16,
-              transition: 'color 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = PRIMARY
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = TEXT_MUTED
-            }}
-          >
+          <button onClick={() => navigate('/doctors')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: TEXT_MUTED, fontSize: 13, cursor: 'pointer', marginBottom: 16, transition: 'color 0.2s ease' }}
+            onMouseEnter={e => e.currentTarget.style.color = PRIMARY}
+            onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}>
             <span>←</span> {t.back}
           </button>
-
-          <div>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: PRIMARY_SOFT,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 100,
-              padding: '4px 16px',
-              fontSize: 11,
-              fontWeight: 600,
-              color: PRIMARY,
-              letterSpacing: '0.3px',
-              marginBottom: 12,
-            }}>
-              <span style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: PRIMARY,
-                animation: 'soft-pulse 2s infinite',
-              }} />
-              {isAr ? 'طبيب جديد' : 'New Doctor'}
-            </div>
-
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 100, padding: '4px 16px', fontSize: 11, fontWeight: 600, color: PRIMARY }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: 'soft-pulse 2s infinite' }} />
+            {isAr ? 'طبيب جديد' : 'New Doctor'}
           </div>
         </div>
 
-        {/* ── Form ── */}
+        {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div className="form-container" style={{
-            background: CARD_BG,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 24,
-            padding: '28px',
-          }}>
+          <div className="form-container" style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 24, padding: '28px' }}>
 
-            {/* Full Name Field */}
+            {/* الاسم */}
             <FormField label={t.fullName} required error={validationErrors.fullName}>
-              <input
-                name="fullName"
-                value={form.fullName}
-                onChange={handleChange}
-                placeholder={t.fullNamePlaceholder}
-                className="form-input"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              />
+              <input name="fullName" value={form.fullName} onChange={handleChange}
+                placeholder={t.fullNamePlaceholder} className="form-input" style={inputStyle(isAr)} />
             </FormField>
 
-            {/* Specialty Field */}
+            {/* التخصص — datalist للبحث */}
             <FormField label={t.specialty}>
-              <input
-                name="specialty"
-                value={form.specialty}
-                onChange={handleChange}
-                placeholder={t.specialtyPlaceholder}
-                list="specialties"
-                className="form-input"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              />
-              <datalist id="specialties">
-                {getSpecialtyOptions().map(opt => (
-                  <option key={opt.value} value={opt.label} />
-                ))}
+              <input name="specialty" value={form.specialty} onChange={handleChange}
+                placeholder={t.specialtyPlaceholder} list="specialties-list"
+                className="form-input" autoComplete="off" style={inputStyle(isAr)} />
+              <datalist id="specialties-list">
+                {SPECIALTIES[lang].map(s => <option key={s} value={s} />)}
               </datalist>
             </FormField>
 
-            {/* Phone Field */}
+            {/* القسم */}
+            <FormField label={t.department}>
+              {departments.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#F59E0B', margin: '4px 0 0' }}>⚠️ {t.noDepartments}</p>
+              ) : (
+                <select name="departmentId" value={form.departmentId} onChange={handleChange}
+                  className="form-select"
+                  style={{ ...inputStyle(isAr), cursor: 'pointer', color: form.departmentId ? TEXT_DARK : TEXT_MUTED }}>
+                  <option value="">{t.departmentPlaceholder}</option>
+                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              )}
+            </FormField>
+
+            {/* نوع العمل */}
+            <FormField label={t.workType}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {WORK_TYPES[lang].map(wt => (
+                  <button key={wt.value} type="button"
+                    onClick={() => setForm(prev => ({ ...prev, workType: wt.value }))}
+                    style={{
+                      flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 12, fontSize: 13, fontWeight: 600,
+                      border: `2px solid ${form.workType === wt.value ? PRIMARY : BORDER}`,
+                      background: form.workType === wt.value ? PRIMARY_SOFT : CARD_BG,
+                      color: form.workType === wt.value ? PRIMARY : TEXT_MUTED,
+                      cursor: 'pointer', transition: 'all 0.2s ease',
+                    }}>
+                    {wt.label}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+
+            {/* الهاتف */}
             <FormField label={t.phone} error={validationErrors.phone}>
-              <input
-                type="tel"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                placeholder={t.phonePlaceholder}
-                className="form-input"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              />
+              <input type="tel" name="phone" value={form.phone} onChange={handleChange}
+                placeholder={t.phonePlaceholder} className="form-input" style={inputStyle(isAr)} />
             </FormField>
 
-            {/* Email Field */}
+            {/* البريد */}
             <FormField label={t.email} error={validationErrors.email}>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder={t.emailPlaceholder}
-                className="form-input"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              />
+              <input type="email" name="email" value={form.email} onChange={handleChange}
+                placeholder={t.emailPlaceholder} className="form-input" style={inputStyle(isAr)} />
             </FormField>
 
-            {/* Notes Field */}
+            {/* ملاحظات */}
             <FormField label={t.notes}>
-              <textarea
-                name="notes"
-                value={form.notes}
-                onChange={handleChange}
-                rows={3}
-                placeholder={t.notesPlaceholder}
-                className="form-textarea"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  resize: 'vertical',
-                }}
-              />
+              <textarea name="notes" value={form.notes} onChange={handleChange}
+                rows={3} placeholder={t.notesPlaceholder} className="form-textarea"
+                style={{ ...inputStyle(isAr), resize: 'vertical' }} />
             </FormField>
 
-            {/* Error Message */}
+            {/* خطأ */}
             {error && (
-              <div style={{
-                background: ERROR_BG,
-                border: `1px solid ${ERROR_TEXT}40`,
-                borderRadius: 12,
-                padding: '12px 16px',
-                marginBottom: 20,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}>
-                <span style={{ fontSize: 14 }}>⚠️</span>
-                <span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
+              <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span>⚠️</span><span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
               </div>
             )}
 
-            {/* Actions */}
-            <div style={{
-              display: 'flex',
-              gap: 12,
-              marginTop: 8,
-            }}>
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  flex: 1,
-                  background: PRIMARY,
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: 12,
-                  padding: '12px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: loading ? 0.7 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading) e.currentTarget.style.background = '#4A7679'
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading) e.currentTarget.style.background = PRIMARY
-                }}
-              >
-                {loading ? (
-                  <>
-                    <span style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      border: `2px solid rgba(255,255,255,0.3)`,
-                      borderTopColor: '#FFFFFF',
-                      animation: 'spin 0.8s linear infinite',
-                    }} />
-                    {t.saving}
-                  </>
-                ) : (
-                  t.submit
-                )}
+            {/* أزرار */}
+            <div className="action-row" style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <button type="submit" disabled={loading}
+                style={{ flex: 1, background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s ease', fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif" }}
+                onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#4A7679' }}
+                onMouseLeave={e => { if (!loading) e.currentTarget.style.background = PRIMARY }}>
+                {loading ? <><span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', animation: 'spin 0.8s linear infinite' }} />{t.saving}</> : t.submit}
               </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/doctors')}
-                style={{
-                  padding: '12px 24px',
-                  background: 'transparent',
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: TEXT_MUTED,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = PRIMARY_SOFT
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                }}
-              >
+              <button type="button" onClick={() => navigate('/doctors')}
+                style={{ padding: '12px 24px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: 14, fontWeight: 500, color: TEXT_MUTED, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = PRIMARY_SOFT}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 {t.cancel}
               </button>
             </div>

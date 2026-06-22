@@ -397,19 +397,20 @@ export default function Login() {
     }
   }, [])
 
- const handleLogin = async (e: React.FormEvent) => {
+const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault()
   setError('')
   setLoading(true)
 
   try {
     const response = await api.post<AuthResponse>('/auth/login', {
-      emailOrUsername,  // ✅ بدل email
+      emailOrUsername,
       password,
     })
 
     const data = response.data
 
+    // ✅ احفظ التوكن أولاً
     localStorage.setItem('token', data.token)
     localStorage.setItem('refreshToken', data.refreshToken)
     localStorage.setItem('user', JSON.stringify({
@@ -420,8 +421,14 @@ export default function Login() {
       clinicName: data.clinicName,
     }))
 
-    const permRes = await api.get('/roles/my-permissions')
-    localStorage.setItem('permissions', JSON.stringify(permRes.data.permissions))
+    // ✅ ثم اجلب الصلاحيات
+    try {
+      const permRes = await api.get('/roles/my-permissions')
+      localStorage.setItem('permissions', JSON.stringify(permRes.data.permissions))
+    } catch {
+      // SuperAdmin لا يحتاج permissions من الـ API
+      localStorage.setItem('permissions', JSON.stringify([]))
+    }
 
     navigate('/dashboard')
 

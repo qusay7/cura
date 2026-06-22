@@ -36,6 +36,8 @@ export interface Doctor {
   gender?: string  // ✅ أضف
   userId?: string
   departmentId?: string
+  departmentName?: string
+  workType?: 'appointments' | 'queue' | 'both' // ✅ أضف
 }
 
 export interface Appointment {

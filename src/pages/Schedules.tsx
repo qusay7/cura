@@ -539,7 +539,7 @@ export default function Schedules() {
     selectDoctor: lang === 'ar' ? 'اختر الطبيب' : 'Select Doctor',
     noData: lang === 'ar' ? 'لا توجد بيانات' : 'No data found',
     minute: lang === 'ar' ? 'دقيقة' : 'min',
-    riyal: lang === 'ar' ? 'ر.س' : 'SAR',
+    riyal: lang === 'ar' ? 'د.أ' : 'JD',
   }
 
   const isAr = lang === 'ar'
