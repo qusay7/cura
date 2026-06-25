@@ -27,11 +27,13 @@ import SuperAdminPlans from './pages/SuperAdmin/Plans'
 import Queue from './pages/Queue'
 import AppointmentDetail from './pages/AppointmentDetail'
 import PatientVisitNotes from './pages/PatientVisitNotes'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   return (
     <>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         {/* ── عام ── */}
         <Route path="/login" element={<Login />} />
 
@@ -184,7 +186,7 @@ function App() {
         } />
 
         {/* ── Redirects ── */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+<Route path="/" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
 

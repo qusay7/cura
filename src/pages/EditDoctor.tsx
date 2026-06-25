@@ -55,7 +55,102 @@ const SPECIALTIES = {
     'Nutrition & Dietetics', 'Laboratory Medicine', 'Radiology', 'Geriatrics',
   ],
 }
+// ─── Department Search Select ────────────────────────────────────────────────
+const DepartmentSelect = ({ departments, value, onChange, placeholder, isAr }: {
+  departments: Department[]
+  value: string
+  onChange: (id: string) => void
+  placeholder: string
+  isAr: boolean
+}) => {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
 
+  const filtered = departments.filter(d => {
+    const name = isAr ? d.name : (d.nameEn || d.name)
+    return name.toLowerCase().includes(search.toLowerCase())
+  })
+
+  const selected = departments.find(d => d.id === value)
+  const selectedLabel = selected ? (isAr ? selected.name : (selected.nameEn || selected.name)) : ''
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{
+        width: '100%', background: '#FFFFFF', border: `1px solid #DCE5E5`,
+        borderRadius: 12, padding: '10px 14px', fontSize: 14,
+        fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif",
+        color: value ? '#2C3E3F' : '#6B8A8C', cursor: 'pointer',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}
+        onClick={() => setOpen(prev => !prev)}>
+        <span>{selectedLabel || placeholder}</span>
+        <span style={{ fontSize: 10, color: '#6B8A8C' }}>{open ? '▲' : '▼'}</span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+          background: '#FFFFFF', border: '1px solid #DCE5E5', borderRadius: 12,
+          marginTop: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden',
+        }}>
+          {/* بحث */}
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid #DCE5E5' }}>
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={isAr ? 'ابحث...' : 'Search...'}
+              style={{
+                width: '100%', border: '1px solid #DCE5E5', borderRadius: 8,
+                padding: '6px 10px', fontSize: 13, outline: 'none',
+                fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif",
+              }}
+            />
+          </div>
+
+          {/* بدون قسم */}
+          <div
+            onClick={() => { onChange(''); setOpen(false); setSearch('') }}
+            style={{
+              padding: '9px 14px', fontSize: 13, cursor: 'pointer', color: '#6B8A8C',
+              background: !value ? '#E8F0F0' : 'transparent',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#F8FAFA'}
+            onMouseLeave={e => e.currentTarget.style.background = !value ? '#E8F0F0' : 'transparent'}>
+            {isAr ? 'بدون قسم' : 'No department'}
+          </div>
+
+          {/* النتائج */}
+          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '10px 14px', fontSize: 13, color: '#6B8A8C', textAlign: 'center' }}>
+                {isAr ? 'لا نتائج' : 'No results'}
+              </div>
+            ) : filtered.map(d => {
+              const label = isAr ? d.name : (d.nameEn || d.name)
+              const isSelected = d.id === value
+              return (
+                <div key={d.id}
+                  onClick={() => { onChange(d.id); setOpen(false); setSearch('') }}
+                  style={{
+                    padding: '9px 14px', fontSize: 13, cursor: 'pointer',
+                    background: isSelected ? '#E8F0F0' : 'transparent',
+                    color: isSelected ? '#5B8C8F' : '#2C3E3F',
+                    fontWeight: isSelected ? 600 : 400,
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F8FAFA' }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
+                  {label}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 const WORK_TYPES = {
   ar: [
     { value: 'appointments', label: '📅 حجز مواعيد فقط' },  // ✅ أول
@@ -102,7 +197,7 @@ const T = {
   },
 }
 
-interface Department { id: string; name: string; isActive: boolean }
+interface Department { id: string; name: string; nameEn?: string; isActive: boolean }
 
 const FormField = ({ label, required, children, error }: {
   label: string; required?: boolean; children: React.ReactNode; error?: string
@@ -263,19 +358,20 @@ export default function EditDoctor() {
               </datalist>
             </FormField>
 
-            {/* القسم */}
-            <FormField label={t.department}>
-              {departments.length === 0 ? (
-                <p style={{ fontSize: 12, color: '#F59E0B', margin: '4px 0 0' }}>⚠️ {t.noDepartments}</p>
-              ) : (
-                <select name="departmentId" value={form.departmentId} onChange={handleChange}
-                  className="form-select"
-                  style={{ ...inputStyle(isAr), cursor: 'pointer', color: form.departmentId ? TEXT_DARK : TEXT_MUTED }}>
-                  <option value="">{t.departmentPlaceholder}</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              )}
-            </FormField>
+           {/* القسم */}
+<FormField label={t.department}>
+  {departments.length === 0 ? (
+    <p style={{ fontSize: 12, color: '#F59E0B', margin: '4px 0 0' }}>⚠️ {t.noDepartments}</p>
+  ) : (
+    <DepartmentSelect
+      departments={departments}
+      value={form.departmentId}
+      onChange={id => setForm(prev => ({ ...prev, departmentId: id }))}
+      placeholder={t.departmentPlaceholder}
+      isAr={isAr}
+    />
+  )}
+</FormField>
 
             {/* نوع العمل */}
             <FormField label={t.workType}>

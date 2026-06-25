@@ -112,6 +112,7 @@ const T = {
     name: 'الاسم',
     phone: 'الهاتف',
     gender: 'الجنس',
+    age: 'العمر',
     createdAt: 'تاريخ الإنشاء',
     actions: 'إجراءات',
     view: 'عرض',
@@ -121,6 +122,7 @@ const T = {
     loadingSub: 'يرجى الانتظار أثناء تحميل بيانات المرضى',
     totalPatients: 'إجمالي المرضى',
     activePatients: 'مرضى نشطون',
+    yearsOld: 'سنة',
   },
   en: {
     title: 'Patients',
@@ -131,6 +133,7 @@ const T = {
     name: 'Name',
     phone: 'Phone',
     gender: 'Gender',
+    age: 'Age',
     createdAt: 'Created At',
     actions: 'Actions',
     view: 'View',
@@ -140,6 +143,7 @@ const T = {
     loadingSub: 'Please wait while we load patient data',
     totalPatients: 'Total Patients',
     activePatients: 'Active Patients',
+    yearsOld: 'years',
   },
 }
 
@@ -225,8 +229,28 @@ const PatientsLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string })
   </div>
 )
 
+// ─── Age Calculation Helper ──────────────────────────────────────────────────
+const calculateAge = (dateOfBirth?: string | null): number | null => {
+  if (!dateOfBirth) return null
+  
+  const birthDate = new Date(dateOfBirth)
+  // Check if date is valid
+  if (isNaN(birthDate.getTime())) return null
+  
+  const today = new Date()
+  
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  
+  return age
+}
+
 // ─── Gender Badge Component ─────────────────────────────────────────────────
-const GenderBadge = ({ gender, lang }: { gender?: string; lang: 'ar' | 'en' }) => {
+const GenderBadge = ({ gender, lang }: { gender?: string | null; lang: 'ar' | 'en' }) => {
   const t = T[lang]
   const isMale = gender === 'male' || gender === 'ذكر'
   const isFemale = gender === 'female' || gender === 'أنثى'
@@ -249,6 +273,54 @@ const GenderBadge = ({ gender, lang }: { gender?: string; lang: 'ar' | 'en' }) =
     }}>
       <span style={{ fontSize: 10 }}>{isMale ? '👨' : '👩'}</span>
       {isMale ? t.male : t.female}
+    </span>
+  )
+}
+
+// ─── Age Badge Component ─────────────────────────────────────────────────────
+const AgeBadge = ({ dateOfBirth, lang }: { dateOfBirth?: string | null; lang: 'ar' | 'en' }) => {
+  const t = T[lang]
+  const age = calculateAge(dateOfBirth)
+  
+  if (age === null) {
+    return <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
+  }
+  
+  // Color code based on age group
+  let color = PRIMARY
+  let bg = PRIMARY_SOFT
+  
+  if (age < 12) {
+    color = '#22C55E' // Children - green
+    bg = '#E8F5E9'
+  } else if (age < 18) {
+    color = '#F59E0B' // Teenagers - amber
+    bg = '#FFF8E1'
+  } else if (age < 40) {
+    color = PRIMARY // Adults - primary
+    bg = PRIMARY_SOFT
+  } else if (age < 60) {
+    color = '#8B5CF6' // Middle age - purple
+    bg = '#F3E8FF'
+  } else {
+    color = '#EF4444' // Elderly - red
+    bg = '#FFF5F5'
+  }
+  
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      padding: '2px 10px',
+      borderRadius: 100,
+      fontSize: 12,
+      fontWeight: 600,
+      background: bg,
+      color: color,
+    }}>
+      <span style={{ fontSize: 10 }}>🎂</span>
+      {age} {t.yearsOld}
     </span>
   )
 }
@@ -396,38 +468,37 @@ export default function Patients() {
             </p>
           </div>
 
-
-{hasPermission('patients.create') && (
-  <button
-    onClick={() => navigate('/patients/add')}
-    style={{
-      background: PRIMARY,
-      color: '#FFFFFF',
-      border: 'none',
-      borderRadius: 12,
-      padding: '10px 20px',
-      fontSize: 13,
-      fontWeight: 500,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      transition: 'all 0.2s ease',
-      boxShadow: '0 2px 8px rgba(91, 140, 143, 0.2)',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = '#4A7679'
-      e.currentTarget.style.transform = 'translateY(-1px)'
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = PRIMARY
-      e.currentTarget.style.transform = 'translateY(0)'
-    }}
-  >
-    <span style={{ fontSize: 16 }}>+</span>
-    {t.addPatient}
-  </button>
-)}
+          {hasPermission('patients.create') && (
+            <button
+              onClick={() => navigate('/patients/add')}
+              style={{
+                background: PRIMARY,
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 12,
+                padding: '10px 20px',
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(91, 140, 143, 0.2)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#4A7679'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = PRIMARY
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              <span style={{ fontSize: 16 }}>+</span>
+              {t.addPatient}
+            </button>
+          )}
         </div>
 
         {/* ── Search Bar ── */}
@@ -496,7 +567,7 @@ export default function Patients() {
             <table className="patients-table" style={{
               width: '100%',
               borderCollapse: 'collapse',
-              minWidth: 600,
+              minWidth: 700,
             }}>
               <thead>
                 <tr style={{
@@ -516,6 +587,9 @@ export default function Patients() {
                     {t.gender}
                   </th>
                   <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
+                    {t.age}
+                  </th>
+                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
                     {t.createdAt}
                   </th>
                   <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
@@ -526,7 +600,7 @@ export default function Patients() {
               <tbody>
                 {filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{
+                    <td colSpan={7} style={{
                       padding: '48px 24px',
                       textAlign: 'center',
                     }}>
@@ -600,7 +674,10 @@ export default function Patients() {
                         {patient.phone || '—'}
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <GenderBadge gender={patient.gender ?? undefined} lang={lang} />
+                        <GenderBadge gender={patient.gender} lang={lang} />
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <AgeBadge dateOfBirth={patient.dateOfBirth} lang={lang} />
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
                         {formatDate(patient.createdAt)}
@@ -682,6 +759,23 @@ export default function Patients() {
               </span>
               <span style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
                 {filteredPatients.filter(p => p.gender === 'female' || p.gender === 'أنثى').length}
+              </span>
+            </div>
+            <div style={{ width: 1, background: BORDER }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>🎂</span>
+              <span style={{ fontSize: 12, color: TEXT_MUTED }}>
+                {isAr ? 'متوسط العمر' : 'Avg Age'}:
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
+                {(() => {
+                  const ages = filteredPatients
+                    .map(p => calculateAge(p.dateOfBirth))
+                    .filter((age): age is number => age !== null)
+                  if (ages.length === 0) return '—'
+                  const avg = ages.reduce((a, b) => a + b, 0) / ages.length
+                  return `${Math.round(avg)} ${t.yearsOld}`
+                })()}
               </span>
             </div>
           </div>

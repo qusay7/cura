@@ -87,6 +87,7 @@ const T = {
     male: 'ذكر',
     female: 'أنثى',
     dateOfBirth: 'تاريخ الميلاد',
+    age: 'العمر',
     nationalId: 'الرقم الوطني',
     bloodType: 'فصيلة الدم',
     maritalStatus: 'الحالة الاجتماعية',
@@ -102,6 +103,7 @@ const T = {
     notFound: 'المريض غير موجود',
     loadingMessage: 'جاري تحميل بيانات المريض',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات',
+    yearsOld: 'سنة',
   },
   en: {
     back: 'Back',
@@ -121,6 +123,7 @@ const T = {
     male: 'Male',
     female: 'Female',
     dateOfBirth: 'Date of Birth',
+    age: 'Age',
     nationalId: 'National ID',
     bloodType: 'Blood Type',
     maritalStatus: 'Marital Status',
@@ -136,6 +139,7 @@ const T = {
     notFound: 'Patient not found',
     loadingMessage: 'Loading Patient Data',
     loadingSub: 'Please wait while we load patient information',
+    yearsOld: 'years',
   },
 }
 
@@ -160,6 +164,25 @@ interface PatientDetail {
   notes: string | null
   stopped: boolean
   createdAt: string
+}
+
+// ─── Age Calculation Helper ──────────────────────────────────────────────────
+const calculateAge = (dateOfBirth?: string | null): number | null => {
+  if (!dateOfBirth) return null
+  
+  const birthDate = new Date(dateOfBirth)
+  if (isNaN(birthDate.getTime())) return null
+  
+  const today = new Date()
+  
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  
+  return age
 }
 
 // ─── Loading Screen with ECG ─────────────────────────────────────────────────
@@ -330,6 +353,54 @@ const StatusBadge = ({ stopped, isAr }: { stopped: boolean; isAr: boolean }) => 
   )
 }
 
+// ─── Age Badge Component ─────────────────────────────────────────────────────
+const AgeBadge = ({ dateOfBirth, lang }: { dateOfBirth?: string | null; lang: 'ar' | 'en' }) => {
+  const t = T[lang]
+  const age = calculateAge(dateOfBirth)
+  
+  if (age === null) {
+    return <span style={{ fontSize: 13, color: TEXT_MUTED }}>—</span>
+  }
+  
+  // Color code based on age group
+  let color = PRIMARY
+  let bg = PRIMARY_SOFT
+  
+  if (age < 12) {
+    color = '#22C55E' // Children - green
+    bg = '#E8F5E9'
+  } else if (age < 18) {
+    color = '#F59E0B' // Teenagers - amber
+    bg = '#FFF8E1'
+  } else if (age < 40) {
+    color = PRIMARY // Adults - primary
+    bg = PRIMARY_SOFT
+  } else if (age < 60) {
+    color = '#8B5CF6' // Middle age - purple
+    bg = '#F3E8FF'
+  } else {
+    color = '#EF4444' // Elderly - red
+    bg = '#FFF5F5'
+  }
+  
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '4px 12px',
+      borderRadius: 100,
+      fontSize: 13,
+      fontWeight: 600,
+      background: bg,
+      color: color,
+    }}>
+      <span style={{ fontSize: 12 }}>🎂</span>
+      {age} {t.yearsOld}
+    </span>
+  )
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function PatientDetail() {
   const { id } = useParams()
@@ -451,6 +522,9 @@ export default function PatientDetail() {
 
   if (!patient) return null
 
+  // Calculate age for display
+  const age = calculateAge(patient.dateOfBirth)
+
   return (
     <div 
       className="patient-detail-shell" 
@@ -516,16 +590,21 @@ export default function PatientDetail() {
                 }} />
                 #{patient.patientNumber}
               </div>
-              <h2 className="patient-detail-title" style={{
-                fontFamily: "'DM Serif Display', 'Georgia', serif",
-                fontSize: 28,
-                fontWeight: 500,
-                color: TEXT_DARK,
-                margin: 0,
-                letterSpacing: '-0.3px',
-              }}>
-                {patient.fullName}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <h2 className="patient-detail-title" style={{
+                  fontFamily: "'DM Serif Display', 'Georgia', serif",
+                  fontSize: 28,
+                  fontWeight: 500,
+                  color: TEXT_DARK,
+                  margin: 0,
+                  letterSpacing: '-0.3px',
+                }}>
+                  {patient.fullName}
+                </h2>
+                {age !== null && (
+                  <AgeBadge dateOfBirth={patient.dateOfBirth} lang={lang} />
+                )}
+              </div>
             </div>
           </div>
 
@@ -533,64 +612,59 @@ export default function PatientDetail() {
             display: 'flex',
             gap: 10,
           }}>
+            {hasPermission('patients.edit') && (
+              <button
+                onClick={() => navigate(`/patients/${id}/edit`)}
+                style={{
+                  background: PRIMARY,
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '8px 20px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#4A7679' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = PRIMARY }}
+              >
+                ✏️ {t.edit}
+              </button>
+            )}
 
-<div className="action-buttons" style={{ display: 'flex', gap: 10 }}>
-
-  {hasPermission('patients.edit') && (
-    <button
-      onClick={() => navigate(`/patients/${id}/edit`)}
-      style={{
-        background: PRIMARY,
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: 10,
-        padding: '8px 20px',
-        fontSize: 13,
-        fontWeight: 500,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#4A7679' }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = PRIMARY }}
-    >
-      ✏️ {t.edit}
-    </button>
-  )}
-
-  {hasPermission('patients.delete') && (
-    <button
-      onClick={handleDelete}
-      style={{
-        background: 'transparent',
-        border: `1px solid ${DANGER}40`,
-        borderRadius: 10,
-        padding: '8px 20px',
-        fontSize: 13,
-        fontWeight: 500,
-        color: DANGER,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = `${DANGER}10`
-        e.currentTarget.style.borderColor = DANGER
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent'
-        e.currentTarget.style.borderColor = `${DANGER}40`
-      }}
-    >
-      🗑️ {t.delete}
-    </button>
-  )}
-
-</div>
+            {hasPermission('patients.delete') && (
+              <button
+                onClick={handleDelete}
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${DANGER}40`,
+                  borderRadius: 10,
+                  padding: '8px 20px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: DANGER,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `${DANGER}10`
+                  e.currentTarget.style.borderColor = DANGER
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.borderColor = `${DANGER}40`
+                }}
+              >
+                🗑️ {t.delete}
+              </button>
+            )}
           </div>
         </div>
 
@@ -608,6 +682,7 @@ export default function PatientDetail() {
             <InfoRow label={t.phone2} value={patient.phone2} isAr={isAr} />
             <InfoRow label={t.gender} value={formatGender(patient.gender)} isAr={isAr} />
             <InfoRow label={t.dateOfBirth} value={formatDate(patient.dateOfBirth)} isAr={isAr} />
+            <InfoRow label={t.age} value={age !== null ? `${age} ${t.yearsOld}` : null} isAr={isAr} />
             <InfoRow label={t.nationalId} value={patient.nationalId} isAr={isAr} />
             <InfoRow label={t.bloodType} value={patient.bloodType} isAr={isAr} />
             <InfoRow label={t.maritalStatus} value={patient.maritalStatus} isAr={isAr} />

@@ -144,6 +144,7 @@ const CustomDateInput = ({ value, onClick, placeholder }: { value?: string; onCl
 )
 
 // ─── Filter Bar ──────────────────────────────────────────────────────────────
+// ─── Filter Bar ──────────────────────────────────────────────────────────────
 const FilterBar = ({
   currentFilter, onFilterChange, statusFilter, onStatusFilterChange,
   searchPatient, onSearchPatientChange, searchDoctor, onSearchDoctorChange,
@@ -158,69 +159,299 @@ const FilterBar = ({
   lang: 'ar'|'en';
 }) => {
   const t = T[lang]; const isAr = lang==='ar'; const hasDateFilter = searchDateFrom||searchDateTo
+  
   const periodFilters = [
     { value:'all',      label:t.filterAll,     icon:'📋' },
     { value:'upcoming', label:t.filterUpcoming, icon:'⏰' },
     { value:'today',    label:t.filterToday,    icon:'📅' },
   ]
+  
   const statusFilters = [
-    { value:'all_status', label:t.allStatus,  icon:'📋', activeColor:PRIMARY,   activeBg:PRIMARY_SOFT },
-    { value:'scheduled',  label:t.scheduled,  icon:'⏰', activeColor:'#F59E0B', activeBg:'#FFF8E1'   },
-    { value:'confirmed',  label:t.confirmed,  icon:'✓',  activeColor:'#22C55E', activeBg:'#E8F5E9'   },
-    { value:'completed',  label:t.completed,  icon:'✔️', activeColor:PRIMARY,   activeBg:PRIMARY_SOFT },
-    { value:'cancelled',  label:t.cancelled,  icon:'✕',  activeColor:'#EF4444', activeBg:'#FFF5F5'   },
+    { value:'all_status', label:t.allStatus,  icon:'📋', color:'#6B8A8C', bg:'#F1F4F4' },
+    { value:'scheduled',  label:t.scheduled,  icon:'⏰', color:'#F59E0B', bg:'#FFF8E1' },
+    { value:'confirmed',  label:t.confirmed,  icon:'✓',  color:'#22C55E', bg:'#E8F5E9' },
+    { value:'completed',  label:t.completed,  icon:'✔️', color:PRIMARY,   bg:PRIMARY_SOFT },
+    { value:'cancelled',  label:t.cancelled,  icon:'✕',  color:'#EF4444', bg:'#FFF5F5' },
   ]
+
   return (
-    <div style={{ marginBottom:20 }}>
-      <div style={{ display:'flex', gap:8, background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:4, marginBottom:12 }}>
-        {periodFilters.map(f => (
-          <button key={f.value} onClick={()=>onFilterChange(f.value)} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 16px', borderRadius:10, fontSize:12, fontWeight:currentFilter===f.value?600:500, background:currentFilter===f.value?PRIMARY_SOFT:'transparent', color:currentFilter===f.value?PRIMARY:TEXT_MUTED, border:'none', cursor:'pointer', transition:'all 0.2s ease' }}>
-            <span>{f.icon}</span><span>{f.label}</span>
-          </button>
-        ))}
-      </div>
-      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
-        {statusFilters.map(f => {
-          const isActive = statusFilter===f.value
-          return (
-            <button key={f.value} onClick={()=>onStatusFilterChange(f.value)} style={{ padding:'6px 14px', borderRadius:100, fontSize:12, fontWeight:600, border:`1px solid ${isActive?f.activeColor:BORDER}`, background:isActive?f.activeBg:'#FFF', color:isActive?f.activeColor:TEXT_MUTED, cursor:'pointer', transition:'all 0.2s ease', display:'flex', alignItems:'center', gap:5 }}>
+    <div style={{ marginBottom:24 }}>
+      {/* Period + Status Filters */}
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
+        {/* Period buttons */}
+        <div style={{ display:'flex', gap:6, background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:4 }}>
+          {periodFilters.map(f => (
+            <button key={f.value} onClick={()=>onFilterChange(f.value)} 
+              style={{ 
+                padding:'8px 18px', 
+                borderRadius:10, 
+                fontSize:12, 
+                fontWeight:currentFilter===f.value?600:500,
+                background:currentFilter===f.value?PRIMARY:'transparent', 
+                color:currentFilter===f.value?'#FFFFFF':TEXT_MUTED, 
+                border:'none', 
+                cursor:'pointer', 
+                transition:'all 0.2s ease',
+                display:'flex',
+                alignItems:'center',
+                gap:6,
+              }}>
               <span>{f.icon}</span><span>{f.label}</span>
             </button>
-          )
-        })}
+          ))}
+        </div>
+
+        {/* Status buttons */}
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          {statusFilters.map(f => {
+            const isActive = statusFilter===f.value
+            return (
+              <button key={f.value} onClick={()=>onStatusFilterChange(f.value)} 
+                style={{ 
+                  padding:'8px 16px', 
+                  borderRadius:100, 
+                  fontSize:11, 
+                  fontWeight:isActive?600:500, 
+                  border:`1px solid ${isActive?f.color:BORDER}`, 
+                  background:isActive?f.bg:'#FFFFFF', 
+                  color:isActive?f.color:TEXT_MUTED, 
+                  cursor:'pointer', 
+                  transition:'all 0.15s ease', 
+                  display:'flex', 
+                  alignItems:'center', 
+                  gap:5,
+                  boxShadow:isActive?'0 2px 4px rgba(0,0,0,0.05)':'none',
+                }}>
+                <span>{f.icon}</span><span>{f.label}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-      <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:12 }}>
-        {[
-          { value:searchPatient, onChange:onSearchPatientChange, placeholder:t.searchPatient, icon:'👤' },
-          { value:searchDoctor,  onChange:onSearchDoctorChange,  placeholder:t.searchDoctor,  icon:'👨‍⚕️' },
-        ].map((field,i) => (
-          <div key={i} style={{ flex:1, position:'relative', minWidth:160 }}>
-            <input type="text" value={field.value} onChange={e=>field.onChange(e.target.value)} placeholder={field.placeholder} className="search-input"
-              style={{ width:'100%', background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 36px 10px 40px', fontSize:13, fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif", color:TEXT_DARK, outline:'none', transition:'all 0.2s ease' }} />
-            <span style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', left:14, fontSize:14, color:TEXT_MUTED }}>{field.icon}</span>
-            {field.value && <button onClick={()=>field.onChange('')} style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', right:12, background:'none', border:'none', cursor:'pointer', fontSize:12, color:TEXT_MUTED, padding:4 }}>✕</button>}
-          </div>
-        ))}
-      </div>
-      <div style={{ display:'flex', gap:12, alignItems:'flex-start', flexWrap:'wrap', background:hasDateFilter?PRIMARY_SOFT:'transparent', padding:hasDateFilter?'12px':'0', borderRadius:12, transition:'all 0.2s ease' }}>
-        {[
-          { label:t.searchDateFrom, value:searchDateFrom, onChange:onSearchDateFromChange },
-          { label:t.searchDateTo,   value:searchDateTo,   onChange:onSearchDateToChange  },
-        ].map((field,i) => (
-          <div key={i} style={{ flex:1, minWidth:140 }}>
-            <label style={{ display:'block', fontSize:11, fontWeight:600, color:TEXT_MUTED, marginBottom:4 }}>{field.label}</label>
-            <DatePicker selected={field.value} onChange={(d:Date|null)=>field.onChange(d)} dateFormat="dd/MM/yyyy" placeholderText="dd/mm/yyyy" customInput={<CustomDateInput placeholder="dd/mm/yyyy" />} />
-          </div>
-        ))}
-        {hasDateFilter && (
-          <button onClick={()=>{onSearchDateFromChange(null);onSearchDateToChange(null)}}
-            style={{ marginTop:18, background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 16px', fontSize:12, color:PRIMARY, cursor:'pointer', whiteSpace:'nowrap' }}
-            onMouseEnter={e=>{e.currentTarget.style.background=PRIMARY_SOFT;e.currentTarget.style.borderColor=PRIMARY}}
-            onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor=BORDER}}>
-            ✕ {t.clearDate}
+
+      {/* Search & Date - All in one row */}
+      <div style={{ 
+        display:'grid', 
+        gridTemplateColumns:'1fr 1fr 1fr 1fr auto', 
+        gap:12, 
+        alignItems:'end',
+        background:CARD_BG,
+        border:`1px solid ${BORDER}`,
+        borderRadius:16,
+        padding:'16px 20px',
+        boxShadow:'0 1px 3px rgba(0,0,0,0.02)',
+      }}>
+        {/* Patient Search */}
+        <div style={{ position:'relative' }}>
+          <label style={{ display:'block', fontSize:10, fontWeight:600, color:TEXT_MUTED, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.5px' }}>
+            👤 {t.patient}
+          </label>
+          <input 
+            type="text" 
+            value={searchPatient} 
+            onChange={e=>onSearchPatientChange(e.target.value)} 
+            placeholder={t.searchPatient}
+            style={{ 
+              width:'100%', 
+              background:'#F8FAFA', 
+              border:`1px solid ${BORDER}`, 
+              borderRadius:10, 
+              padding:'9px 14px 9px 36px', 
+              fontSize:13, 
+              fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif", 
+              color:TEXT_DARK, 
+              outline:'none', 
+              transition:'all 0.2s ease',
+            }}
+            onFocus={e=>{e.currentTarget.style.borderColor=PRIMARY;e.currentTarget.style.background='#FFFFFF'}}
+            onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.background='#F8FAFA'}}
+          />
+          <span style={{ position:'absolute', bottom:'9px', left:12, fontSize:14, color:TEXT_MUTED }}>🔍</span>
+          {searchPatient && (
+            <button onClick={()=>onSearchPatientChange('')} 
+              style={{ position:'absolute', bottom:'8px', right:10, background:'none', border:'none', cursor:'pointer', fontSize:12, color:TEXT_MUTED, padding:4 }}>
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Doctor Search */}
+        <div style={{ position:'relative' }}>
+          <label style={{ display:'block', fontSize:10, fontWeight:600, color:TEXT_MUTED, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.5px' }}>
+            👨‍⚕️ {t.doctor}
+          </label>
+          <input 
+            type="text" 
+            value={searchDoctor} 
+            onChange={e=>onSearchDoctorChange(e.target.value)} 
+            placeholder={t.searchDoctor}
+            style={{ 
+              width:'100%', 
+              background:'#F8FAFA', 
+              border:`1px solid ${BORDER}`, 
+              borderRadius:10, 
+              padding:'9px 14px 9px 36px', 
+              fontSize:13, 
+              fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif", 
+              color:TEXT_DARK, 
+              outline:'none', 
+              transition:'all 0.2s ease',
+            }}
+            onFocus={e=>{e.currentTarget.style.borderColor=PRIMARY;e.currentTarget.style.background='#FFFFFF'}}
+            onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.background='#F8FAFA'}}
+          />
+          <span style={{ position:'absolute', bottom:'9px', left:12, fontSize:14, color:TEXT_MUTED }}>🔍</span>
+          {searchDoctor && (
+            <button onClick={()=>onSearchDoctorChange('')} 
+              style={{ position:'absolute', bottom:'8px', right:10, background:'none', border:'none', cursor:'pointer', fontSize:12, color:TEXT_MUTED, padding:4 }}>
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Date From */}
+        <div>
+          <label style={{ display:'block', fontSize:10, fontWeight:600, color:TEXT_MUTED, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.5px' }}>
+            📅 {t.searchDateFrom}
+          </label>
+          <DatePicker 
+            selected={searchDateFrom} 
+            onChange={(d:Date|null)=>onSearchDateFromChange(d)} 
+            dateFormat="dd/MM/yyyy" 
+            placeholderText="From"
+            customInput={
+              <input 
+                style={{ 
+                  width:'100%', 
+                  background:'#F8FAFA', 
+                  border:`1px solid ${BORDER}`, 
+                  borderRadius:10, 
+                  padding:'9px 14px', 
+                  fontSize:13, 
+                  fontFamily:'inherit', 
+                  color:TEXT_DARK, 
+                  outline:'none', 
+                  cursor:'pointer',
+                  transition:'all 0.2s ease',
+                }}
+                onFocus={e=>{e.currentTarget.style.borderColor=PRIMARY;e.currentTarget.style.background='#FFFFFF'}}
+                onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.background='#F8FAFA'}}
+              />
+            } 
+          />
+        </div>
+
+        {/* Date To */}
+        <div>
+          <label style={{ display:'block', fontSize:10, fontWeight:600, color:TEXT_MUTED, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.5px' }}>
+            📅 {t.searchDateTo}
+          </label>
+          <DatePicker 
+            selected={searchDateTo} 
+            onChange={(d:Date|null)=>onSearchDateToChange(d)} 
+            dateFormat="dd/MM/yyyy" 
+            placeholderText="To"
+            customInput={
+              <input 
+                style={{ 
+                  width:'100%', 
+                  background:'#F8FAFA', 
+                  border:`1px solid ${BORDER}`, 
+                  borderRadius:10, 
+                  padding:'9px 14px', 
+                  fontSize:13, 
+                  fontFamily:'inherit', 
+                  color:TEXT_DARK, 
+                  outline:'none', 
+                  cursor:'pointer',
+                  transition:'all 0.2s ease',
+                }}
+                onFocus={e=>{e.currentTarget.style.borderColor=PRIMARY;e.currentTarget.style.background='#FFFFFF'}}
+                onBlur={e=>{e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.background='#F8FAFA'}}
+              />
+            } 
+          />
+        </div>
+
+        {/* Clear Filters Button */}
+        <div style={{ display:'flex', alignItems:'center', paddingBottom:1 }}>
+          <button 
+            onClick={()=>{
+              onSearchPatientChange('')
+              onSearchDoctorChange('')
+              onSearchDateFromChange(null)
+              onSearchDateToChange(null)
+            }}
+            style={{ 
+              background:hasDateFilter || searchPatient || searchDoctor ? PRIMARY : '#F1F4F4',
+              color:hasDateFilter || searchPatient || searchDoctor ? '#FFFFFF' : TEXT_MUTED,
+              border:'none',
+              borderRadius:10,
+              padding:'9px 16px',
+              fontSize:12,
+              fontWeight:600,
+              cursor:hasDateFilter || searchPatient || searchDoctor ? 'pointer' : 'default',
+              transition:'all 0.2s ease',
+              whiteSpace:'nowrap',
+              display:'flex',
+              alignItems:'center',
+              gap:6,
+              opacity:hasDateFilter || searchPatient || searchDoctor ? 1 : 0.5,
+            }}
+            onMouseEnter={e=>{
+              if(hasDateFilter || searchPatient || searchDoctor) {
+                e.currentTarget.style.background=PRIMARY_DARK
+                e.currentTarget.style.transform='translateY(-1px)'
+              }
+            }}
+            onMouseLeave={e=>{
+              if(hasDateFilter || searchPatient || searchDoctor) {
+                e.currentTarget.style.background=PRIMARY
+                e.currentTarget.style.transform='translateY(0)'
+              }
+            }}
+            disabled={!hasDateFilter && !searchPatient && !searchDoctor}
+          >
+            <span>🔄</span> {t.clearAllFilters}
           </button>
-        )}
+        </div>
       </div>
+
+      {/* Active filters indicator */}
+      {(hasDateFilter || searchPatient || searchDoctor || statusFilter !== 'all_status') && (
+        <div style={{ marginTop:12, display:'flex', gap:6, flexWrap:'wrap' }}>
+          <span style={{ fontSize:11, color:TEXT_MUTED, display:'flex', alignItems:'center', gap:4 }}>
+            🔍 {t.searchResults}:
+          </span>
+          {searchPatient && (
+            <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY, display:'flex', alignItems:'center', gap:4 }}>
+              👤 {searchPatient}
+              <button onClick={()=>onSearchPatientChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:PRIMARY, padding:0, fontSize:12 }}>✕</button>
+            </span>
+          )}
+          {searchDoctor && (
+            <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY, display:'flex', alignItems:'center', gap:4 }}>
+              👨‍⚕️ {searchDoctor}
+              <button onClick={()=>onSearchDoctorChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:PRIMARY, padding:0, fontSize:12 }}>✕</button>
+            </span>
+          )}
+          {searchDateFrom && (
+            <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY }}>
+              📅 From: {searchDateFrom.toLocaleDateString('en-GB')}
+            </span>
+          )}
+          {searchDateTo && (
+            <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY }}>
+              📅 To: {searchDateTo.toLocaleDateString('en-GB')}
+            </span>
+          )}
+          {statusFilter !== 'all_status' && (
+            <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY }}>
+              {statusFilters.find(f=>f.value===statusFilter)?.label}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

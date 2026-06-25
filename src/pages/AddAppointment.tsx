@@ -285,7 +285,9 @@ export default function AddAppointment() {
         patientId: form.patientId,
         appointmentDate,
         status: 'scheduled',
+        lang: lang,
       }
+      
       if (form.doctorId) payload.doctorId = form.doctorId
       if (form.type) payload.type = form.type
       const finalPrice = form.appointmentPrice ?? (form.price ? parseFloat(form.price) : undefined)
