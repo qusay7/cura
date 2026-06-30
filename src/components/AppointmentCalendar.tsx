@@ -5,6 +5,7 @@ interface Slot {
   time: string
   dateTime: string
   isBooked: boolean
+  isAbsent?: boolean   
   isAvailable: boolean
 }
 
@@ -209,14 +210,15 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
 {slotsData.slots.map((slot, i) => {
   const isSelected = selectedSlot === slot.dateTime
   const isBooked = slot.isBooked
-  const isPast = !slot.isAvailable && !slot.isBooked
-  const isAvail = slot.isAvailable && !isBooked
+  const isAbsent = slot.isAbsent  // ✅
+  const isPast = !slot.isAvailable && !slot.isBooked && !slot.isAbsent
+  const isAvail = slot.isAvailable && !isBooked && !isAbsent
 
-  // 👇 أضف هذا مؤقتاً
-  console.log(slot.time, { isBooked, isAvail, isPast, isAvailable: slot.isAvailable })
   let bg, color, border, cursor
   if (isSelected) {
     bg = PRIMARY; color = '#FFF'; border = PRIMARY; cursor = 'pointer'
+  } else if (isAbsent) {  // ✅ جديد — لون مختلف للإجازة
+    bg = '#FEF3C7'; color = '#92400E'; border = '#FCD34D'; cursor = 'not-allowed'
   } else if (isBooked) {
     bg = '#FEE2E2'; color = '#DC2626'; border = '#FCA5A5'; cursor = 'not-allowed'
   } else if (isPast) {
@@ -228,51 +230,32 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
   }
 
   return (
-    <button
-      key={i}
-      type="button"
-      onClick={() => handleSlotSelect(slot)}
+    <button key={i} type="button" onClick={() => handleSlotSelect(slot)}
       disabled={!isAvail && !isSelected}
-      style={{
-        padding: '8px 4px', borderRadius: 10,
-        border: `1px solid ${border}`,
-        background: bg, color,
-        fontSize: 12, fontWeight: 600,
-        cursor, transition: 'all 0.15s',
-        fontFamily: "'Inter', monospace",
-        position: 'relative',
-      }}
-    >
+      title={isAbsent ? 'غير متاح — اجتماع أو استراحة' : ''}
+      style={{ padding:'8px 4px', borderRadius:10, border:`1px solid ${border}`, background:bg, color, fontSize:12, fontWeight:600, cursor, transition:'all 0.15s', fontFamily:"'Inter', monospace", position:'relative' }}>
       {slot.time}
-      {isBooked && (
-        <span style={{
-          position: 'absolute', top: -4, right: -4,
-          width: 8, height: 8, borderRadius: '50%',
-          background: '#DC2626', border: '1px solid #FFF',
-        }} />
-      )}
+      {isBooked && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'#DC2626', border:'1px solid #FFF' }} />}
+      {isAbsent && <span style={{ position:'absolute', top:-4, right:-4, fontSize:9 }}>🚫</span>}
     </button>
   )
 })}
           </div>
 
           {/* مفتاح الألوان */}
-          <div style={{ display: 'flex', gap: 16, fontSize: 11, color: TEXT_MUTED }}>
-            {[
-              { color: '#E8F5E9', border: '#A5D6A7', label: 'متاح' },
-              { color: '#FFF5F5', border: '#FECACA', label: 'محجوز' },
-              { color: PRIMARY, border: PRIMARY, label: 'مختار' },
-            ].map(item => (
-              <span key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{
-                  width: 12, height: 12, borderRadius: 4,
-                  background: item.color, border: `1px solid ${item.border}`,
-                  display: 'inline-block',
-                }} />
-                {item.label}
-              </span>
-            ))}
-          </div>
+         <div style={{ display:'flex', gap:16, fontSize:11, color:TEXT_MUTED, flexWrap:'wrap' }}>
+  {[
+    { color:'#E8F5E9', border:'#A5D6A7', label:'متاح' },
+    { color:'#FFF5F5', border:'#FECACA', label:'محجوز' },
+    { color:'#FEF3C7', border:'#FCD34D', label:'إجازة' },  // ✅ جديد
+    { color:PRIMARY, border:PRIMARY, label:'مختار' },
+  ].map(item => (
+    <span key={item.label} style={{ display:'flex', alignItems:'center', gap:5 }}>
+      <span style={{ width:12, height:12, borderRadius:4, background:item.color, border:`1px solid ${item.border}`, display:'inline-block' }} />
+      {item.label}
+    </span>
+  ))}
+</div>
         </>
       )}
     </div>

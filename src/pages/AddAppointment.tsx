@@ -69,6 +69,7 @@ const T = {
     selectDoctorFirst: 'اختر الطبيب أولاً',
     selectDoctorHint: 'يرجى اختيار الطبيب من القائمة أعلاه لعرض المواعيد المتاحة',
     queueBooking: 'حجز دور', queueBookingHint: 'سيتم تسجيل الموعد بوقت الحجز تلقائياً',
+    queueUnavailable: 'الطبيب غير متاح', checkingAvailability: 'جارٍ التحقق من التوفر...',
     type: 'نوع الزيارة', typePlaceholder: 'اختر نوع الزيارة...',
     typeConsultation: 'استشارة', typeFollowup: 'متابعة',
     typeEmergency: 'طوارئ', typeCheckup: 'كشف',
@@ -95,6 +96,7 @@ const T = {
     selectDoctorFirst: 'Select Doctor First',
     selectDoctorHint: 'Please select a doctor from above to see available time slots',
     queueBooking: 'Queue Booking', queueBookingHint: 'Appointment will be set to current time automatically',
+    queueUnavailable: 'Doctor Unavailable', checkingAvailability: 'Checking availability...',
     type: 'Visit Type', typePlaceholder: 'Select visit type...',
     typeConsultation: 'Consultation', typeFollowup: 'Follow-up',
     typeEmergency: 'Emergency', typeCheckup: 'Checkup',
@@ -194,6 +196,10 @@ export default function AddAppointment() {
   } | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(false)
 
+  // ✅ تحقق إجازة طبيب الدور
+  const [queueAbsence, setQueueAbsence] = useState<{ available: boolean; message?: string } | null>(null)
+  const [checkingAbsence, setCheckingAbsence] = useState(false)
+
   const [form, setForm] = useState({
     patientId: '', doctorId: '', appointmentDate: '',
     appointmentPrice: undefined as number | undefined,
@@ -252,6 +258,19 @@ export default function AddAppointment() {
   const isQueueOnly = selectedDoctor?.workType === 'queue'
   const isAppointmentsOnly = selectedDoctor?.workType === 'appointments'
 
+  // ✅ تحقق من إجازة طبيب الدور فور اختياره
+  useEffect(() => {
+    if (!isQueueOnly || !form.doctorId) { setQueueAbsence(null); return }
+    setCheckingAbsence(true)
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+    api.get(`/absences/check?doctorId=${form.doctorId}&date=${dateStr}&time=${timeStr}`)
+      .then(res => setQueueAbsence(res.data))
+      .catch(() => setQueueAbsence(null))
+      .finally(() => setCheckingAbsence(false))
+  }, [isQueueOnly, form.doctorId])
+
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
     const t = T[lang]
@@ -309,7 +328,11 @@ export default function AddAppointment() {
   const isAr = lang === 'ar'
   const isDoctorSelected = !!form.doctorId
   const isPatientSelected = !!form.patientId
-  const canSubmit = isPatientSelected && (isQueueOnly || !!form.appointmentDate)
+
+  // ✅ الإرسال معطّل إذا طبيب الدور في إجازة
+  const isQueueBlocked = isQueueOnly && queueAbsence?.available === false
+  const canSubmit = isPatientSelected
+    && (isQueueOnly ? !isQueueBlocked : !!form.appointmentDate)
 
   const selectStyle = {
     width:'100%', background:CARD_BG, border:`1px solid ${BORDER}`,
@@ -422,15 +445,30 @@ export default function AddAppointment() {
                   <p style={{ fontSize:'12px', margin:0, color:TEXT_MUTED }}>{t.selectDoctorHint}</p>
                 </div>
               ) : isQueueOnly ? (
-                // ✅ طبيب دور — لا تقويم
-                <div style={{ background:'#FFF8E1', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
-                  <span style={{ fontSize:40 }}>🔢</span>
-                  <p style={{ fontSize:15, fontWeight:700, color:'#F59E0B', margin:'10px 0 6px' }}>{t.queueBooking}</p>
-                  <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{t.queueBookingHint}</p>
-                  <div style={{ marginTop:12, padding:'8px 16px', background:'#FFFBEB', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#92400E' }}>
-                    🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit' })}
+                // ✅ طبيب دور — تحقق الإجازة أولاً
+                checkingAbsence ? (
+                  <div style={{ background:'#F8FAFA', border:`1px dashed ${BORDER}`, borderRadius:16, padding:'24px', textAlign:'center' }}>
+                    <div style={{ width:28, height:28, borderRadius:'50%', border:`3px solid ${PRIMARY_SOFT}`, borderTopColor:PRIMARY, animation:'spin 0.8s linear infinite', margin:'0 auto 10px' }} />
+                    <p style={{ fontSize:13, color:TEXT_MUTED, margin:0 }}>{t.checkingAvailability}</p>
                   </div>
-                </div>
+                ) : isQueueBlocked ? (
+                  // ✅ الطبيب في إجازة — منع الحجز
+                  <div style={{ background:'#FEF3C7', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
+                    <span style={{ fontSize:40 }}>🚫</span>
+                    <p style={{ fontSize:15, fontWeight:700, color:'#92400E', margin:'10px 0 6px' }}>{t.queueUnavailable}</p>
+                    <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{queueAbsence?.message}</p>
+                  </div>
+                ) : (
+                  // متاح — عرض زر حجز الدور العادي
+                  <div style={{ background:'#FFF8E1', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
+                    <span style={{ fontSize:40 }}>🔢</span>
+                    <p style={{ fontSize:15, fontWeight:700, color:'#F59E0B', margin:'10px 0 6px' }}>{t.queueBooking}</p>
+                    <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{t.queueBookingHint}</p>
+                    <div style={{ marginTop:12, padding:'8px 16px', background:'#FFFBEB', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#92400E' }}>
+                      🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit' })}
+                    </div>
+                  </div>
+                )
               ) : (
                 // طبيب مواعيد — التقويم
                 <div className="calendar-container">
