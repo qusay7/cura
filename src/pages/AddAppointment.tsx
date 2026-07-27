@@ -4,6 +4,7 @@ import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import AppointmentCalendar from '../components/AppointmentCalendar'
+import SearchableSelect from '../components/SearchableSelect'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -71,8 +72,7 @@ const T = {
     queueBooking: 'حجز دور', queueBookingHint: 'سيتم تسجيل الموعد بوقت الحجز تلقائياً',
     queueUnavailable: 'الطبيب غير متاح', checkingAvailability: 'جارٍ التحقق من التوفر...',
     type: 'نوع الزيارة', typePlaceholder: 'اختر نوع الزيارة...',
-    typeConsultation: 'استشارة', typeFollowup: 'متابعة',
-    typeEmergency: 'طوارئ', typeCheckup: 'كشف',
+    suggestedFromTemplate: 'السعر المقترح من القالب:',
     price: 'السعر', pricePlaceholder: '0.00',
     notes: 'ملاحظات', notesPlaceholder: 'أضف ملاحظات إضافية...',
     submit: 'حجز الموعد', submitQueue: 'حجز الدور',
@@ -98,8 +98,7 @@ const T = {
     queueBooking: 'Queue Booking', queueBookingHint: 'Appointment will be set to current time automatically',
     queueUnavailable: 'Doctor Unavailable', checkingAvailability: 'Checking availability...',
     type: 'Visit Type', typePlaceholder: 'Select visit type...',
-    typeConsultation: 'Consultation', typeFollowup: 'Follow-up',
-    typeEmergency: 'Emergency', typeCheckup: 'Checkup',
+    suggestedFromTemplate: 'Suggested price from template:',
     price: 'Price', pricePlaceholder: '0.00',
     notes: 'Notes', notesPlaceholder: 'Add additional notes...',
     submit: 'Book Appointment', submitQueue: 'Book Queue',
@@ -182,6 +181,16 @@ const getLocalNowString = (): string => {
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:00`
 }
 
+interface VisitTemplate {
+  id: string
+  name: string
+  nameEn: string | null
+  firstVisitPrice: number | null
+  followUpPrice: number | null
+  defaultSessionsCount: number   // ✅ جديد — >1 يعني قالب متعدد الجلسات (زي سحب عصب)
+  departmentId: string | null    // ✅ جديد — null يعني قالب عام لكل الأقسام
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function AddAppointment() {
   const navigate = useNavigate()
@@ -190,6 +199,9 @@ export default function AddAppointment() {
   const [error, setError] = useState('')
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [templates, setTemplates] = useState<VisitTemplate[]>([])
+  // ✅ استثناءات الطبيب المالية (من تبويب "الإعدادات المالية" بصفحة الطبيب)
+  const [doctorFinancialSettings, setDoctorFinancialSettings] = useState<any[]>([])
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctorStatus, setDoctorStatus] = useState<{
     isBusy: boolean; queueCount: number; currentPatient?: string; nextAppointmentTime?: string
@@ -200,10 +212,17 @@ export default function AddAppointment() {
   const [queueAbsence, setQueueAbsence] = useState<{ available: boolean; message?: string } | null>(null)
   const [checkingAbsence, setCheckingAbsence] = useState(false)
 
+  // ✅ التأمين
+  const [insurance, setInsurance] = useState<any>(null)
+  // ✅ يسمح للموظف يلغي تطبيق التأمين أو يغيّر النسبة — لحالات زي استثناء
+  // الأسنان، أو رد فعلي من شركة التأمين يخالف النسبة الافتراضية بالنظام
+  const [insuranceApplies, setInsuranceApplies] = useState(true)
+  const [overrideRate, setOverrideRate] = useState('')
+
   const [form, setForm] = useState({
     patientId: '', doctorId: '', appointmentDate: '',
     appointmentPrice: undefined as number | undefined,
-    type: '', price: '', notes: '',
+    type: '', templateId: '', price: '', notes: '',
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
@@ -217,9 +236,12 @@ export default function AddAppointment() {
 
     const fetchData = async () => {
       try {
-        const [patientsRes, doctorsRes] = await Promise.all([api.get('/patients'), api.get('/doctors')])
+        const [patientsRes, doctorsRes, templatesRes] = await Promise.all([
+          api.get('/patients'), api.get('/doctors'), api.get('/treatmentplans/templates'),
+        ])
         setPatients(patientsRes.data)
         setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
+        setTemplates(templatesRes.data)
       } catch { navigate('/login') }
       finally { setLoadingData(false) }
     }
@@ -242,6 +264,63 @@ export default function AddAppointment() {
     if (form.doctorId) setForm(prev => ({ ...prev, appointmentDate: '', appointmentPrice: undefined }))
   }, [form.doctorId])
 
+  // ✅ جلب استثناءات الطبيب المالية (سعر خاص لكل قالب) عند اختيار طبيب
+  useEffect(() => {
+    if (!form.doctorId) { setDoctorFinancialSettings([]); return }
+    api.get(`/doctors/${form.doctorId}/financial-settings`)
+      .then(res => setDoctorFinancialSettings(res.data))
+      .catch(() => setDoctorFinancialSettings([]))
+  }, [form.doctorId])
+
+  // ✅ يعيد حساب السعر المقترح كل ما تغيّر الطبيب أو القالب — بنفس أولوية
+  // الباك إند بالضبط: استثناء خاص للطبيب بهذا القالب أولاً، وإلا سعر القالب العام
+  useEffect(() => {
+    if (!form.templateId) return
+    const template = templates.find(tpl => tpl.id === form.templateId)
+    if (!template) return
+
+    // ✅ نفس أولوية الباك إند بالضبط:
+    // 1) استثناء الطبيب لهذا القالب بالذات
+    // 2) الإعداد العام للطبيب (سعره الشخصي الافتراضي لأي قالب بدون استثناء)
+    // 3) سعر القالب العام
+    const exception = doctorFinancialSettings.find((s: any) => s.templateId === form.templateId)
+    const doctorGeneral = doctorFinancialSettings.find((s: any) => s.isGeneral)
+    const suggested = exception?.firstVisitPrice ?? doctorGeneral?.firstVisitPrice ?? template.firstVisitPrice
+
+    if (suggested != null) {
+      setForm(prev => ({
+        ...prev,
+        appointmentPrice: suggested,
+        // ✅ السعر يتحدث دايمًا مع تغيّر نوع الزيارة — بدل ما يبقى عالق بقيمة قديمة
+        // من قالب سابق (كان يتحدث بس أول مرة لما الحقل فاضي)
+        price: String(suggested),
+      }))
+    }
+  }, [form.doctorId, form.templateId, templates, doctorFinancialSettings])
+
+  // ✅ جلب بيانات التأمين عند اختيار المريض
+  useEffect(() => {
+    if (!form.patientId) { setInsurance(null); return }
+    api.get(`/insurance/calculate?patientId=${form.patientId}&amount=${form.appointmentPrice || 0}`)
+      .then(r => {
+        setInsurance(r.data)
+        setInsuranceApplies(true)
+        if (r.data?.hasInsurance) setOverrideRate(String(r.data.coverageRate))
+      })
+      .catch(() => setInsurance(null))
+  }, [form.patientId])
+
+  // ✅ إعادة حساب التأمين عند تغيير السعر
+  useEffect(() => {
+    if (!form.patientId || !form.appointmentPrice) { return }
+    api.get(`/insurance/calculate?patientId=${form.patientId}&amount=${form.appointmentPrice}`)
+      .then(r => {
+        setInsurance(r.data)
+        if (r.data?.hasInsurance) setOverrideRate(prev => prev || String(r.data.coverageRate))
+      })
+      .catch(() => {})
+  }, [form.appointmentPrice])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
@@ -249,8 +328,23 @@ export default function AddAppointment() {
   }
 
   const handleSlotSelect = (dateTime: string, price?: number) => {
-    setForm(prev => ({ ...prev, appointmentDate: dateTime, appointmentPrice: price }))
-    if (validationErrors.appointmentDate) setValidationErrors(prev => ({ ...prev, appointmentDate: '' }))
+    setForm(prev => ({
+      ...prev,
+      appointmentDate: dateTime,
+      appointmentPrice: price,
+      price: price ? String(price) : prev.price  // ✅ ضع السعر في حقل التعديل
+    }))
+  }
+
+  // ✅ عند اختيار قالب الزيارة — نعبّي اسمه بحقل type (للعرض/التقارير).
+  // اقتراح السعر نفسه يتكفّل فيه useEffect منفصل (يراعي استثناء الطبيب الخاص أولاً).
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find(tpl => tpl.id === templateId)
+    setForm(prev => ({
+      ...prev,
+      templateId,
+      type: template ? (isAr ? template.name : (template.nameEn || template.name)) : prev.type,
+    }))
   }
 
   // ✅ تحديد نوع عمل الطبيب المختار
@@ -291,6 +385,31 @@ export default function AddAppointment() {
     return Object.keys(errors).length === 0
   }
 
+  const selectedTemplate = templates.find(tpl => tpl.id === form.templateId)
+  const isMultiSession = (selectedTemplate?.defaultSessionsCount ?? 1) > 1
+
+  // ✅ نستخدم قسم الطبيب المختار (selectedDoctor معرّفة أعلاه) لفلترة القوالب المتاحة
+  const selectedDoctorDeptId = (selectedDoctor as any)?.departmentId ?? null
+
+  // ✅ نعرض بس القوالب "العامة" (بدون قسم) أو القوالب المرتبطة بنفس قسم الطبيب المختار —
+  // لو ما فيه طبيب مختار بعد، نعرض كل القوالب (ما نقدر نفلتر بدون معرفة القسم)
+  const availableTemplates = selectedDoctorDeptId
+    ? templates.filter(tpl => tpl.departmentId === null || tpl.departmentId === selectedDoctorDeptId)
+    : templates
+
+  // ✅ لو تغيّر الطبيب وصار القالب المختار مو متاح لقسمه، نفضّي الاختيار عشان
+  // ما يفضل قالب من قسم ثاني محجوز بالغلط
+  useEffect(() => {
+    if (form.templateId && !availableTemplates.some(tpl => tpl.id === form.templateId)) {
+      setForm(prev => ({ ...prev, templateId: '' }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.doctorId])
+
+  // ✅ التباعد الزمني بين الجلسات — يُستخدم لحساب تواريخ باقي الجلسات تلقائياً
+  const [sessionIntervalValue, setSessionIntervalValue] = useState(1)
+  const [sessionIntervalUnit, setSessionIntervalUnit] = useState<'day' | 'week' | 'month'>('week')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
@@ -306,12 +425,99 @@ export default function AddAppointment() {
         status: 'scheduled',
         lang: lang,
       }
-      
+
       if (form.doctorId) payload.doctorId = form.doctorId
       if (form.type) payload.type = form.type
-      const finalPrice = form.appointmentPrice ?? (form.price ? parseFloat(form.price) : undefined)
-      if (finalPrice) payload.price = finalPrice
+      if (form.templateId) payload.templateId = form.templateId
+
+      // ✅ السعر: يقرأ من حقل التعديل اليدوي أولاً، ثم من السعر المقترح من الجدول.
+      // يستخدم '' كفحص بدل قيمة falsy حتى لا يُفقد السعر عندما يكون 0 (زيارة مجانية مثلاً).
+      const finalPrice = form.price !== '' ? parseFloat(form.price) : form.appointmentPrice
+      if (finalPrice !== undefined && finalPrice !== null && !Number.isNaN(finalPrice)) {
+        payload.price = finalPrice
+      }
+
       if (form.notes?.trim()) payload.notes = form.notes.trim()
+
+      // ✅ قالب متعدد الجلسات (زي سحب عصب) — نمر عبر نظام خطط العلاج، ونحجز كل الجلسات
+      // الباقية مرة وحدة، بتباعد زمني ثابت يحدده الموظف (يوم/أسبوع/شهر)
+      if (isMultiSession) {
+        // 1) هل عند المريض خطة نشطة بنفس القالب أصلاً؟ (لو نعم، نكمّل عليها بدل ما ننشئ وحدة جديدة)
+        let plan: any = null
+        try {
+          const plansRes = await api.get(`/treatmentplans/patient/${form.patientId}`)
+          plan = (plansRes.data as any[]).find(p => p.templateId === form.templateId && p.status === 'active')
+        } catch { /* ما قدرنا نجيب الخطط الموجودة — نكمل ونحاول ننشئ وحدة جديدة */ }
+
+        if (!plan) {
+          const createRes = await api.post('/treatmentplans', {
+            patientId: form.patientId,
+            doctorId: form.doctorId || null,
+            templateId: form.templateId,
+          })
+          plan = createRes.data
+        }
+
+        // 2) كل الجلسات الفاضية (مجدولة، بدون موعد مرتبط بعد)، مرتبة برقم الجلسة
+        const unlinkedSessions = (plan.sessions ?? [])
+          .filter((s: any) => s.status === 'scheduled' && !s.appointmentId)
+          .sort((a: any, b: any) => a.sessionNumber - b.sessionNumber)
+
+        if (unlinkedSessions.length === 0) {
+          setError(isAr ? 'كل جلسات هذي الخطة محجوزة أو مكتملة أصلاً — راجع خطة العلاج بملف المريض' : 'All sessions in this plan are already booked or completed — check the treatment plan in the patient file')
+          setLoading(false)
+          return
+        }
+
+        // ✅ نحسب عدد الأيام بين كل جلسة والثانية حسب اختيار الموظف
+        const intervalDays = sessionIntervalUnit === 'day' ? sessionIntervalValue
+          : sessionIntervalUnit === 'week' ? sessionIntervalValue * 7
+          : sessionIntervalValue * 30   // شهر تقريبي بالأيام — تقدر تُعدَّل يدوياً بعدين لو احتجت دقة تقويمية
+
+        const baseDate = new Date(appointmentDate.replace(' ', 'T'))
+        let bookedCount = 0
+        let failedCount = 0
+
+        for (let i = 0; i < unlinkedSessions.length; i++) {
+          const session = unlinkedSessions[i]
+          const sessionDate = new Date(baseDate)
+          sessionDate.setDate(sessionDate.getDate() + i * intervalDays)
+          const isoScheduledDate = sessionDate.toISOString()
+
+          try {
+            // 3) نحجز موعد فعلي لهذي الجلسة بالذات
+            const apptRes = await api.post('/appointments', { ...payload, appointmentDate: isoScheduledDate })
+            const newAppointmentId = apptRes.data.id
+
+            // 4) نربط الجلسة بموعدها
+            await api.put(`/treatmentplans/${plan.id}/sessions/${session.id}`, {
+              status: 'scheduled',
+              appointmentId: newAppointmentId,
+              scheduledDate: isoScheduledDate,
+            })
+            bookedCount++
+          } catch {
+            // ✅ فشل حجز هذي الجلسة بالذات (تعارض دوام مثلاً) — نكمل الباقي ونبلّغ بالنهاية،
+            // بدل ما نوقف كل العملية. الجلسة تفضل بدون موعد، تُحجز يدوياً لاحقاً من ملف المريض
+            failedCount++
+          }
+        }
+
+        if (bookedCount === 0) {
+          setError(isAr ? 'تعذّر حجز أي جلسة — تحقق من دوام الطبيب بالتواريخ المحسوبة' : 'Could not book any session — check the doctor\'s availability on the calculated dates')
+          setLoading(false)
+          return
+        }
+
+        if (failedCount > 0) {
+          alert(isAr
+            ? `تم حجز ${bookedCount} من ${unlinkedSessions.length} جلسة تلقائياً. ${failedCount} جلسة تحتاج حجز يدوي (تعارض بالموعد المحسوب) — راجع خطة العلاج بملف المريض.`
+            : `${bookedCount} of ${unlinkedSessions.length} sessions booked automatically. ${failedCount} session(s) need manual booking (schedule conflict) — check the treatment plan in the patient file.`)
+        }
+
+        navigate('/appointments')
+        return
+      }
 
       await api.post('/appointments', payload)
       navigate('/appointments')
@@ -476,61 +682,182 @@ export default function AddAppointment() {
                 </div>
               )}
 
-              {/* ملخص الموعد المختار */}
-              {form.appointmentDate && isDoctorSelected && !isQueueOnly && (
-                <div className="selected-appointment-info" style={{ marginTop:'16px', padding:'14px 18px',
-                  background:`linear-gradient(135deg,${SUCCESS}10 0%,${PRIMARY_SOFT} 100%)`,
-                  borderRadius:'12px', border:`1px solid ${SUCCESS}`,
-                  display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                    <div style={{ width:'36px', height:'36px', background:PRIMARY, borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <span style={{ fontSize:'18px' }}>✅</span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize:'10px', fontWeight:600, color:PRIMARY, textTransform:'uppercase', letterSpacing:'0.5px' }}>{t.selectedAppointment}</div>
-                      <div style={{ fontSize:'13px', fontWeight:600, color:TEXT_DARK }}>
-                        {formatAppointmentDate(form.appointmentDate, isAr)}
-                      </div>
-                      {form.appointmentPrice && (
-                        <div style={{ fontSize:'11px', color:PRIMARY, marginTop:'3px', fontWeight:500 }}>
-                          💰 {form.appointmentPrice} {isAr?'د.أ':'JD'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <button type="button" onClick={()=>setForm(prev=>({...prev, appointmentDate:'', appointmentPrice:undefined}))}
-                    style={{ background:'#FFFFFF', border:`1px solid ${BORDER}`, borderRadius:'10px', padding:'6px 14px', fontSize:'12px', fontWeight:500, cursor:'pointer', color:TEXT_MUTED }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='#FFE5E5';e.currentTarget.style.borderColor=ERROR_TEXT;e.currentTarget.style.color=ERROR_TEXT}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='#FFFFFF';e.currentTarget.style.borderColor=BORDER;e.currentTarget.style.color=TEXT_MUTED}}>
-                    🔄 {t.change}
-                  </button>
-                </div>
-              )}
+               
             </FormField>
 
-            {/* نوع الزيارة */}
+            {/* نوع الزيارة — من قوالب الزيارة الحقيقية */}
             <FormField label={t.type}>
-              <select name="type" value={form.type} onChange={handleChange} className="form-select" style={selectStyle}>
-                <option value="">{t.typePlaceholder}</option>
-                <option value="كشف">🩺 {t.typeCheckup}</option>
-                <option value="متابعة">📋 {t.typeFollowup}</option>
-                <option value="استشارة">💬 {t.typeConsultation}</option>
-                <option value="طوارئ">🚨 {t.typeEmergency}</option>
-              </select>
-            </FormField>
-
-            {/* السعر */}
-            <FormField label={t.price}>
-              <input type="number" name="price" value={form.price} onChange={handleChange}
-                min="0" step="0.01" placeholder={t.pricePlaceholder} disabled={!!form.appointmentPrice}
-                className="form-input"
-                style={{ width:'100%', background:form.appointmentPrice?'#F8FAFA':CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 14px', fontSize:14, fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif", color:TEXT_DARK, outline:'none', opacity:form.appointmentPrice?0.6:1, cursor:form.appointmentPrice?'not-allowed':'text' }} />
-              {form.appointmentPrice && (
-                <p style={{ fontSize:11, color:PRIMARY, marginTop:6, display:'flex', alignItems:'center', gap:6 }}>
-                  <span>ℹ️</span> {t.priceNote}
+              <SearchableSelect
+                isRtl={isAr}
+                value={form.templateId}
+                onChange={handleTemplateSelect}
+                placeholder={t.typePlaceholder}
+                options={availableTemplates.map(tpl => ({
+                  value: tpl.id,
+                  label: isAr ? tpl.name : (tpl.nameEn || tpl.name),
+                }))}
+              />
+              {selectedDoctorDeptId && availableTemplates.length < templates.length && (
+                <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '6px 0 0' }}>
+                  ℹ️ {isAr
+                    ? 'القوالب معروضة حسب قسم الطبيب المختار — قوالب أقسام ثانية مخفية'
+                    : "Templates are filtered by the selected doctor's department"}
                 </p>
               )}
             </FormField>
+
+            {/* ✅ التباعد الزمني بين الجلسات — يظهر بس لو القالب متعدد الجلسات */}
+            {isMultiSession && (
+              <FormField label={isAr ? `التباعد بين الجلسات (${selectedTemplate?.defaultSessionsCount} جلسات)` : `Interval Between Sessions (${selectedTemplate?.defaultSessionsCount} sessions)`}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="number" min={1} value={sessionIntervalValue}
+                    onChange={e => setSessionIntervalValue(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ width: 70, padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: "'Inter',sans-serif", color: TEXT_DARK }} />
+                  <SearchableSelect
+                    isRtl={isAr}
+                    value={sessionIntervalUnit}
+                    onChange={v => setSessionIntervalUnit(v as 'day' | 'week' | 'month')}
+                    options={[
+                      { value: 'day', label: isAr ? 'يوم' : 'Day(s)' },
+                      { value: 'week', label: isAr ? 'أسبوع' : 'Week(s)' },
+                      { value: 'month', label: isAr ? 'شهر' : 'Month(s)' },
+                    ]}
+                  />
+                </div>
+                <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '6px 0 0' }}>
+                  💡 {isAr
+                    ? `هيتحجز ${selectedTemplate?.defaultSessionsCount} مواعيد تلقائياً، كل وحدة بعد اللي قبلها بـ${sessionIntervalValue} ${sessionIntervalUnit === 'day' ? 'يوم' : sessionIntervalUnit === 'week' ? 'أسبوع' : 'شهر'} — تقدر تعدّل أي موعد لحاله بعدين`
+                    : `${selectedTemplate?.defaultSessionsCount} appointments will be booked automatically, each ${sessionIntervalValue} ${sessionIntervalUnit}(s) apart — you can edit any of them individually later`}
+                </p>
+              </FormField>
+            )}
+
+            {/* السعر */}
+            <FormField label={t.price}>
+              {form.appointmentPrice && (() => {
+                const hasDoctorException = doctorFinancialSettings.some(
+                  (s: any) => (s.templateId === form.templateId || s.isGeneral) && s.firstVisitPrice != null
+                )
+                return (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, padding:'6px 12px', background:PRIMARY_SOFT, borderRadius:8, fontSize:12 }}>
+                    <span>💰</span>
+                    <span style={{ color:TEXT_MUTED }}>
+                      {hasDoctorException
+                        ? (isAr ? 'سعر خاص لهذا الطبيب:' : "Doctor's special price:")
+                        : t.suggestedFromTemplate}
+                    </span>
+                    <span style={{ fontWeight:700, color:PRIMARY }}>{form.appointmentPrice} {isAr?'د.أ':'JD'}</span>
+                  </div>
+                )
+              })()}
+              <input
+                type="number"
+                name="price"
+                value={form.price}
+                onChange={handleChange}
+                min="0" step="0.01"
+                placeholder={t.pricePlaceholder}
+                className="form-input"
+                style={{
+                  width:'100%', background:CARD_BG, border:`1px solid ${BORDER}`,
+                  borderRadius:12, padding:'10px 14px', fontSize:14,
+                  fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif",
+                  color:TEXT_DARK, outline:'none'
+                }}
+              />
+              <p style={{ fontSize:11, color:TEXT_MUTED, marginTop:5 }}>
+                {isAr?'يمكنك تعديل السعر إذا لزم الأمر':'You can adjust the price if needed'}
+              </p>
+            </FormField>
+
+            {/* ✅ بطاقة التأمين — تفاعلية: ممكن تلغي التطبيق أو تغيّر النسبة يدوياً */}
+            {insurance?.hasInsurance && (form.appointmentPrice || form.price) && (() => {
+              const total = form.price !== '' ? parseFloat(form.price) : (form.appointmentPrice || 0)
+              const rate = insuranceApplies ? (parseFloat(overrideRate) || 0) : 0
+              const insAmount = Math.round(total * rate / 100 * 1000) / 1000
+              const patAmount = Math.round((total - insAmount) * 1000) / 1000
+              return (
+                <div style={{ background: insuranceApplies ? '#F0FDF4' : '#F8FAFA', border: `1px solid ${insuranceApplies ? '#86EFAC' : '#DCE5E5'}`, borderRadius: 14, padding: '14px 16px', marginBottom: 16, transition: 'all 0.2s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: insuranceApplies ? 12 : 4, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>🏥</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: insuranceApplies ? '#16A34A' : '#6B8A8C' }}>
+                        {isAr ? `تأمين نشط — ${insurance.companyName}` : `Active Insurance — ${insurance.companyName}`}
+                      </span>
+                    </div>
+                    {/* ✅ مفتاح تشغيل/إيقاف التأمين لهذا الموعد بالذات */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 11, color: '#6B8A8C', fontWeight: 600 }}>
+                        {insuranceApplies ? (isAr ? 'يشمله التأمين' : 'Covered') : (isAr ? 'مستثنى' : 'Excluded')}
+                      </span>
+                      <input type="checkbox" checked={insuranceApplies} onChange={e => setInsuranceApplies(e.target.checked)}
+                        style={{ width: 15, height: 15, accentColor: '#16A34A', cursor: 'pointer' }} />
+                    </label>
+                  </div>
+
+                  {insuranceApplies ? (
+                    <>
+                      {/* ✅ نسبة التغطية قابلة للتعديل يدوياً — لو الخدمة عندها نسبة مختلفة عن الافتراضي */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <span style={{ fontSize: 11.5, color: '#6B8A8C' }}>{isAr ? 'نسبة التغطية:' : 'Coverage rate:'}</span>
+                        <input type="number" min={0} max={100} value={overrideRate} onChange={e => setOverrideRate(e.target.value)}
+                          style={{ width: 60, padding: '3px 6px', border: '1px solid #86EFAC', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#16A34A', textAlign: 'center', fontFamily: "'Inter',sans-serif" }} />
+                        <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 700 }}>%</span>
+                        {overrideRate !== String(insurance.coverageRate) && (
+                          <span style={{ fontSize: 10, color: '#B8892A', background: '#FBF4E4', padding: '2px 8px', borderRadius: 100 }}>
+                            {isAr ? `مُعدَّلة يدوياً (الافتراضي ${insurance.coverageRate}%)` : `Manually adjusted (default ${insurance.coverageRate}%)`}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                        <div style={{ textAlign: 'center', background: '#FFF', borderRadius: 10, padding: '10px 6px' }}>
+                          <p style={{ fontSize: 11, color: '#6B8A8C', margin: '0 0 4px' }}>{isAr ? 'إجمالي الزيارة' : 'Total'}</p>
+                          <p style={{ fontSize: 16, fontWeight: 700, color: '#2C3E3F', margin: 0, fontFamily: "'Inter',monospace" }}>
+                            {total} {isAr ? 'د.أ' : 'JD'}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: 'center', background: '#FFF', borderRadius: 10, padding: '10px 6px' }}>
+                          <p style={{ fontSize: 11, color: '#6B8A8C', margin: '0 0 4px' }}>{isAr ? 'يدفع التأمين' : 'Insurance pays'}</p>
+                          <p style={{ fontSize: 16, fontWeight: 700, color: '#16A34A', margin: 0, fontFamily: "'Inter',monospace" }}>
+                            {insAmount.toFixed(2)} {isAr ? 'د.أ' : 'JD'}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: 'center', background: '#FFFBEB', borderRadius: 10, padding: '10px 6px', border: '1px solid #FCD34D' }}>
+                          <p style={{ fontSize: 11, color: '#6B8A8C', margin: '0 0 4px' }}>{isAr ? 'يدفع المريض' : 'Patient pays'}</p>
+                          <p style={{ fontSize: 16, fontWeight: 700, color: '#F59E0B', margin: 0, fontFamily: "'Inter',monospace" }}>
+                            {patAmount.toFixed(2)} {isAr ? 'د.أ' : 'JD'}
+                          </p>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#6B8A8C', margin: '8px 0 0', textAlign: 'center' }}>
+                        📋 {isAr ? 'رقم البوليصة' : 'Policy'}: {insurance.policyNumber}
+                        {' · '}{isAr ? 'صالحة حتى' : 'Valid until'}: {insurance.expiryDate}
+                      </p>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: 12, color: '#6B8A8C', margin: 0 }}>
+                      {isAr
+                        ? `⚠️ هذا الموعد مستثنى من التأمين — يدفع المريض كامل المبلغ (${total} د.أ)`
+                        : `⚠️ This visit is excluded from insurance — patient pays the full amount (${total} JD)`}
+                    </p>
+                  )}
+
+                  <p style={{ fontSize: 10, color: '#8BAFB1', margin: '10px 0 0', textAlign: 'center', fontStyle: 'italic' }}>
+                    {isAr
+                      ? 'هذا تقدير مبدئي للاستئناس — التفصيل النهائي والفاتورة يُحسمان عند إنهاء الزيارة'
+                      : 'This is a preliminary estimate — the final breakdown and invoice are settled when the visit is completed'}
+                  </p>
+                </div>
+              )
+            })()}
+
+            {/* لا يوجد تأمين */}
+            {insurance && !insurance.hasInsurance && form.patientId && (
+              <div style={{ background:'#F8FAFA', border:'1px solid #DCE5E5', borderRadius:10, padding:'10px 14px', marginBottom:12, fontSize:12, color:'#6B8A8C', display:'flex', alignItems:'center', gap:8 }}>
+                <span>ℹ️</span> {isAr?'المريض لا يملك تأميناً نشطاً':'Patient has no active insurance'}
+              </div>
+            )}
 
             {/* ملاحظات */}
             <FormField label={t.notes}>

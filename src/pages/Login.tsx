@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import type { AuthResponse } from '../types'
 import logo from '../assets/logo.png'
@@ -35,7 +35,14 @@ const translations = {
     subdomainChecking: 'Checking...',
     subdomainNotFound: 'Clinic not found or inactive',
     subdomainHint: 'Enter your clinic subdomain to continue',
-    adminHint: 'Type "admin" to access the admin panel',
+    adminLinkText: 'Platform administrator?',
+    adminLinkCta: 'Sign in here',
+    adminBadge: 'Platform Administration',
+    adminWelcome: 'Super Admin access — not tied to any single clinic',
+    copyLink: 'Copy your clinic link',
+    copiedLink: 'Copied!',
+    copyHint: 'Save this link — it takes you straight to your clinic\'s sign-in next time',
+    autoChecking: 'Loading your clinic...',
   },
   ar: {
     dir: 'rtl' as const,
@@ -64,7 +71,14 @@ const translations = {
     subdomainChecking: 'جارٍ التحقق...',
     subdomainNotFound: 'العيادة غير موجودة أو غير نشطة',
     subdomainHint: 'أدخل رابط عيادتك للمتابعة',
-    adminHint: 'اكتب "admin" للدخول إلى لوحة الإدارة',
+    adminLinkText: 'أنت مسؤول المنصة؟',
+    adminLinkCta: 'سجّل الدخول من هنا',
+    adminBadge: 'إدارة المنصة',
+    adminWelcome: 'دخول المسؤول العام — غير تابع لأي عيادة',
+    copyLink: 'انسخ رابط عيادتك',
+    copiedLink: 'تم النسخ!',
+    copyHint: 'احفظ هذا الرابط — سيأخذك مباشرة لتسجيل الدخول لعيادتك في المرة القادمة',
+    autoChecking: 'جارٍ تحميل بيانات عيادتك...',
   },
 }
 
@@ -81,6 +95,7 @@ const globalCss = `
 @keyframes shake      { 0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-6px);}40%,80%{transform:translateX(6px);} }
 @keyframes step-in    { from{opacity:0;transform:translateX(30px) scale(0.98);}to{opacity:1;transform:translateX(0) scale(1);} }
 @keyframes step-in-r  { from{opacity:0;transform:translateX(-30px) scale(0.98);}to{opacity:1;transform:translateX(0) scale(1);} }
+@keyframes pop-in     { from{opacity:0;transform:scale(0.9);}to{opacity:1;transform:scale(1);} }
 
 .cura-shell {
   display:grid; grid-template-columns:55fr 45fr; min-height:100dvh; background:#F5F7F8;
@@ -99,6 +114,7 @@ input:focus { border-color:#5B8C8F !important; box-shadow:0 0 0 3px rgba(91,140,
 
 .step-enter     { animation:step-in   0.35s cubic-bezier(0.22,1,0.36,1) both; }
 .step-enter-rev { animation:step-in-r 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+.pop-in         { animation:pop-in 0.25s cubic-bezier(0.22,1,0.36,1) both; }
 
 @media(max-width:1024px){ .cura-shell{ grid-template-columns:1fr 1fr; } }
 @media(max-width:768px){
@@ -117,6 +133,11 @@ const TM = '#6B8A8C'
 const BR = '#DCE5E5'
 const EB = '#FDF5F5'
 const ET = '#C4A77D'
+// Gold accent reserved for the SuperAdmin path only, so it reads as a
+// distinct, higher-privilege entry point rather than "just another clinic".
+const GOLD   = '#B8892A'
+const GOLDS  = '#FBF4E4'
+const GOLDBR = '#E8D4A8'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const EyeIcon = () => (
@@ -128,6 +149,23 @@ const EyeOffIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
     <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+)
+const ShieldIcon = ({ color = GOLD }: { color?: string }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/>
+    <path d="M9 12l2 2 4-4"/>
+  </svg>
+)
+const LinkIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 007.07 0l2.83-2.83a5 5 0 00-7.07-7.07l-1.5 1.5"/>
+    <path d="M14 11a5 5 0 00-7.07 0l-2.83 2.83a5 5 0 007.07 7.07l1.5-1.5"/>
+  </svg>
+)
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
   </svg>
 )
 
@@ -213,11 +251,18 @@ const StatsDashboard = ({ lang }: { lang:'en'|'ar' }) => {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Login() {
   const navigate = useNavigate()
+  // ── Point 1: reading the subdomain straight from the URL ──
+  // Route this component at "/login/:subdomain?" so a clinic gets a
+  // permanent, bookmarkable link like  app.cura.jo/login/huor
+  // and "/login/admin" is reserved for the SuperAdmin entry (point 2).
+  const { subdomain: subdomainParam } = useParams<{ subdomain?: string }>()
+
   const [lang, setLang]         = useState<Lang>('en')
   const [step, setStep]         = useState<'subdomain'|'login'>('subdomain')
   const [subdomain, setSubdomain] = useState('')
   const [clinicInfo, setClinicInfo] = useState<{ name:string; logo?:string; isAdmin:boolean } | null>(null)
   const [checkingSubdomain, setCheckingSubdomain] = useState(false)
+  const [autoChecking, setAutoChecking] = useState(false)
   const [subdomainError, setSubdomainError] = useState('')
   const [emailOrUsername, setEmailOrUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -225,6 +270,12 @@ export default function Login() {
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
   const [shakeForm, setShakeForm] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  // Remembers the last subdomain we already resolved, so navigating to the
+  // same "/login/:subdomain" we just set ourselves doesn't trigger a second,
+  // redundant fetch + full-screen loading flash that hides the login form.
+  const resolvedRef = useRef<string | null>(null)
 
   const t    = translations[lang]
   const isAr = lang === 'ar'
@@ -236,19 +287,54 @@ export default function Login() {
     }
   }, [])
 
-  // ── Step 1: Check subdomain ────────────────────────────────────────────────
-  const handleSubdomainSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!subdomain.trim()) return
-    setSubdomainError(''); setCheckingSubdomain(true)
-    try {
-      const res = await api.get(`/clinics/by-subdomain/${subdomain.trim().toLowerCase()}`)
-      setClinicInfo(res.data)
+  // ── Shared resolver used by both the manual form and the URL-driven auto-check ──
+  const resolveSubdomain = useCallback(async (value: string, opts?: { silent?: boolean }) => {
+    const sub = value.trim().toLowerCase()
+    if (!sub) return
+
+    // Point 2: the SuperAdmin entry never hits the clinics endpoint —
+    // it isn't tied to any clinic, so there's nothing to look up.
+    if (sub === 'admin') {
+      resolvedRef.current = 'admin'
+      setClinicInfo({ name: t.adminBadge, isAdmin: true })
+      setSubdomain('admin')
       setStep('login')
+      return
+    }
+
+    if (!opts?.silent) setCheckingSubdomain(true)
+    setSubdomainError('')
+    try {
+      const res = await api.get(`/clinics/by-subdomain/${sub}`)
+      resolvedRef.current = sub
+      setClinicInfo(res.data)
+      setSubdomain(sub)
+      setStep('login')
+      // Point 1: once confirmed, make the URL reflect the clinic so the
+      // address bar itself becomes the shareable/bookmarkable link.
+      navigate(`/login/${sub}`, { replace: true })
     } catch {
       setSubdomainError(t.subdomainNotFound)
       setShakeForm(true); setTimeout(() => setShakeForm(false), 400)
-    } finally { setCheckingSubdomain(false) }
+    } finally {
+      setCheckingSubdomain(false)
+    }
+  }, [navigate, t.adminBadge, t.subdomainNotFound])
+
+  // ── On mount / when the URL param changes, resolve it automatically ──
+  // so staff who open their saved clinic link never have to type it again.
+  useEffect(() => {
+    if (!subdomainParam) return
+    if (resolvedRef.current === subdomainParam.toLowerCase()) return
+    setAutoChecking(true)
+    resolveSubdomain(subdomainParam, { silent: true }).finally(() => setAutoChecking(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subdomainParam])
+
+  const handleSubdomainSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!subdomain.trim()) return
+    await resolveSubdomain(subdomain)
   }
 
   // ── Step 2: Login ──────────────────────────────────────────────────────────
@@ -276,6 +362,15 @@ export default function Login() {
     } finally { setLoading(false) }
   }
 
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/login/${subdomain}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch { /* clipboard unavailable — silently ignore */ }
+  }
+
   const LoadingDots = () => (
     <span style={{ display:'inline-flex', gap:4, alignItems:'center' }}>
       {[0,0.15,0.3].map((d,i) => (
@@ -292,11 +387,26 @@ export default function Login() {
     />
   )
 
+  // While an URL-provided subdomain is being resolved automatically, show a
+  // minimal loading state instead of flashing the "type your clinic" form.
+  if (autoChecking) return (
+    <LoadingScreen
+      message={t.autoChecking}
+      fullScreen
+    />
+  )
+
   const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
     width:'100%', background:PS, border:`1px solid ${BR}`, borderRadius:12,
     padding:'12px 14px', fontSize:14, fontFamily:t.font, color:TD,
     outline:'none', transition:'all 0.2s ease', ...extra,
   })
+
+  const isAdminMode = !!clinicInfo?.isAdmin
+  const accent   = isAdminMode ? GOLD   : P
+  const accentD  = isAdminMode ? '#9C7222' : PD
+  const accentS  = isAdminMode ? GOLDS  : PS
+  const accentBr = isAdminMode ? GOLDBR : BR
 
   return (
     <div className="cura-shell" dir={t.dir} style={{ fontFamily:t.font }}>
@@ -348,22 +458,26 @@ export default function Login() {
           </div>
 
           {/* Card */}
-          <div className={shakeForm ? 'shake' : ''} style={{ background:'#FFF', border:`1px solid ${BR}`, borderRadius:24, padding:'2rem', boxShadow:'0 8px 32px rgba(0,0,0,0.04)' }}>
+          <div className={shakeForm ? 'shake' : ''} style={{ background:'#FFF', border:`1px solid ${accentBr}`, borderRadius:24, padding:'2rem', boxShadow: isAdminMode ? '0 8px 32px rgba(184,137,42,0.10)' : '0 8px 32px rgba(0,0,0,0.04)', transition:'border-color 0.3s ease, box-shadow 0.3s ease' }}>
 
             {/* Logo */}
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'1.5rem', gap:8 }}>
-              <div style={{ width:70, height:70, borderRadius:20, background:`linear-gradient(135deg,${P},${PD})`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 4px 12px ${P}30` }}>
+              <div style={{ width:70, height:70, borderRadius:20, background:`linear-gradient(135deg,${accent},${accentD})`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 4px 12px ${accent}30`, transition:'background 0.3s ease' }}>
                 <img src={logo} alt="CURA" style={{ width:45, height:45, objectFit:'contain', filter:'brightness(0) invert(1)' }} />
               </div>
 
-              {/* Clinic badge — shown after subdomain confirmed */}
+              {/* Clinic / Admin badge — shown after subdomain confirmed */}
               {clinicInfo && (
-                <div style={{ display:'flex', alignItems:'center', gap:8, background:PS, border:`1px solid ${BR}`, borderRadius:100, padding:'5px 14px', animation:'fade-in 0.3s ease' }}>
-                  <span style={{ fontSize:14 }}>{clinicInfo.isAdmin ? '⚙️' : '🏥'}</span>
-                  <span style={{ fontSize:13, fontWeight:700, color:TD }}>{clinicInfo.name}</span>
-                  <button onClick={() => { setStep('subdomain'); setClinicInfo(null); setError('') }}
+                <div className="pop-in" style={{ display:'flex', alignItems:'center', gap:8, background:accentS, border:`1px solid ${accentBr}`, borderRadius:100, padding:'5px 14px' }}>
+                  {clinicInfo.isAdmin ? <ShieldIcon color={GOLD} /> : <span style={{ fontSize:14 }}>🏥</span>}
+                  <span style={{ fontSize:13, fontWeight:700, color: isAdminMode ? '#8A6A22' : TD }}>{clinicInfo.name}</span>
+                  <button onClick={() => { setStep('subdomain'); setClinicInfo(null); setError(''); navigate('/login', { replace:true }) }}
                     style={{ background:'none', border:'none', color:TM, cursor:'pointer', fontSize:11, padding:'0 2px' }}>✕</button>
                 </div>
+              )}
+
+              {clinicInfo?.isAdmin && (
+                <p style={{ fontSize:11, color:TM, textAlign:'center', maxWidth:280, lineHeight:1.5 }}>{t.adminWelcome}</p>
               )}
 
               {!clinicInfo && (
@@ -385,8 +499,7 @@ export default function Login() {
                     {t.subdomainLabel}
                   </label>
                   {/* Subdomain input with suffix */}
-                  <div style={{ display:'flex', alignItems:'center', border:`1px solid ${subdomainError?ET:BR}`, borderRadius:12, overflow:'hidden', background:PS, transition:'all 0.2s ease' }}
-                    onFocus={() => {}} >
+                  <div style={{ display:'flex', alignItems:'center', border:`1px solid ${subdomainError?ET:BR}`, borderRadius:12, overflow:'hidden', background:PS, transition:'all 0.2s ease' }}>
                     <input
                       type="text"
                       value={subdomain}
@@ -402,9 +515,6 @@ export default function Login() {
                   {subdomainError && (
                     <p style={{ fontSize:11, color:ET, marginTop:6, display:'flex', alignItems:'center', gap:4 }}>⚠️ {subdomainError}</p>
                   )}
-                  <p style={{ fontSize:11, color:TM, marginTop:6, opacity:0.7 }}>
-                    💡 {t.adminHint}
-                  </p>
                 </div>
 
                 <button type="submit" disabled={checkingSubdomain || !subdomain.trim()}
@@ -413,6 +523,19 @@ export default function Login() {
                   onMouseLeave={e=>{ e.currentTarget.style.background=P }}>
                   {checkingSubdomain ? <><LoadingDots /></> : t.subdomainBtn}
                 </button>
+
+                {/* Point 2: a clear, dedicated SuperAdmin entry point instead of a hidden typing trick */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:18, fontSize:12 }}>
+                  <span style={{ color:TM }}>{t.adminLinkText}</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login/admin')}
+                    style={{ display:'inline-flex', alignItems:'center', gap:5, background:'none', border:'none', color:GOLD, fontWeight:700, cursor:'pointer', fontFamily:t.font, padding:0 }}
+                  >
+                    <ShieldIcon color={GOLD} />
+                    {t.adminLinkCta}
+                  </button>
+                </div>
 
                 {/* Divider */}
                 <div style={{ display:'flex', alignItems:'center', gap:12, margin:'16px 0' }}>
@@ -433,6 +556,24 @@ export default function Login() {
             {/* ── STEP 2: Login ── */}
             {step === 'login' && (
               <form onSubmit={handleLogin} className="step-enter" dir={t.dir}>
+
+                {/* Point 1: once the clinic is confirmed, offer a one-tap way to save
+                    this exact URL for next time, so no one has to retype the subdomain. */}
+                {!isAdminMode && (
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    style={{
+                      width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                      background:PS, border:`1px dashed ${BR}`, borderRadius:12, padding:'10px 12px',
+                      fontSize:12, fontWeight:600, color: linkCopied ? '#2E8B57' : P, cursor:'pointer',
+                      fontFamily:t.font, marginBottom:16, transition:'all 0.2s ease',
+                    }}
+                  >
+                    {linkCopied ? <CheckIcon /> : <LinkIcon />}
+                    {linkCopied ? t.copiedLink : t.copyLink}
+                  </button>
+                )}
 
                 {/* Email */}
                 <div style={{ marginBottom:14 }}>
@@ -466,7 +607,7 @@ export default function Login() {
 
                 {/* Forgot */}
                 <div style={{ textAlign:isAr?'right':'left', marginBottom:16 }}>
-                  <a href="#" onClick={e=>e.preventDefault()} style={{ fontSize:11, color:P, textDecoration:'none', opacity:0.75 }}>{t.forgot}</a>
+                  <a href="#" onClick={e=>e.preventDefault()} style={{ fontSize:11, color:accent, textDecoration:'none', opacity:0.75 }}>{t.forgot}</a>
                 </div>
 
                 {/* Error */}
@@ -479,14 +620,14 @@ export default function Login() {
 
                 {/* Submit */}
                 <button type="submit" disabled={loading}
-                  style={{ width:'100%', background:P, color:'#FFF', border:'none', borderRadius:12, padding:'13px', fontSize:14, fontWeight:600, fontFamily:t.font, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all 0.2s ease', marginBottom:14 }}
-                  onMouseEnter={e=>{ if(!loading) e.currentTarget.style.background=PD }}
-                  onMouseLeave={e=>{ e.currentTarget.style.background=P }}>
+                  style={{ width:'100%', background:accent, color:'#FFF', border:'none', borderRadius:12, padding:'13px', fontSize:14, fontWeight:600, fontFamily:t.font, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all 0.2s ease', marginBottom:14 }}
+                  onMouseEnter={e=>{ if(!loading) e.currentTarget.style.background=accentD }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background=accent }}>
                   {loading ? <LoadingDots /> : t.btn}
                 </button>
 
                 {/* Back to subdomain */}
-                <button type="button" onClick={() => { setStep('subdomain'); setClinicInfo(null); setError('') }}
+                <button type="button" onClick={() => { setStep('subdomain'); setClinicInfo(null); setError(''); navigate('/login', { replace:true }) }}
                   style={{ width:'100%', background:'transparent', border:`1px solid ${BR}`, borderRadius:12, padding:'10px', fontSize:12, fontWeight:500, color:TM, cursor:'pointer', fontFamily:t.font, transition:'all 0.2s' }}
                   onMouseEnter={e=>{ e.currentTarget.style.background=PS; e.currentTarget.style.color=P }}
                   onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color=TM }}>

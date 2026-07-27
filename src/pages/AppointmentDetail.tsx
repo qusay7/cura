@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
-import VisitNoteModal from './VisitNoteModal'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
+
+const globalCss = `
+@keyframes fade-up { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0);} }
+@keyframes soft-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+@keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
+.detail-shell { animation: fade-up 0.35s ease both; }
+.detail-card { animation: fade-up 0.35s ease both; }
+`
 
 const PRIMARY = '#5B8C8F'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -14,294 +21,292 @@ const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const SUCCESS = '#4A7679'
-const INFO = '#8BAFB1'
-const DANGER = '#C4A77D'
+const SUCCESS_BG = '#E8F5E9'
+const WARNING = '#C4A77D'
+const WARNING_BG = '#FBF4E4'
 
 const T = {
   ar: {
-    back: 'رجوع', title: 'تفاصيل الموعد',
-    patient: 'المريض', doctor: 'الطبيب', date: 'التاريخ والوقت',
-    type: 'النوع', price: 'السعر', status: 'الحالة',
-    notes: 'ملاحظات', createdAt: 'تاريخ الإنشاء',
-    checkIn: 'وقت الدخول', checkOut: 'وقت الخروج',
-    duration: 'مدة الزيارة', minutes: 'دقيقة',
-    visitNotes: 'ملاحظات الزيارة', addVisitNote: 'إضافة ملاحظات الزيارة',
-    editVisitNote: 'تعديل ملاحظات الزيارة',
-    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية',
-    tests: 'الفحوصات', nextVisit: 'الزيارة القادمة',
-    cost: 'التكلفة', noVisitNote: 'لا توجد ملاحظات زيارة بعد',
+    back: 'رجوع', title: 'تفاصيل الزيارة', loading: 'جاري التحميل...',
+    notFound: 'الموعد غير موجود', errGeneric: 'حدث خطأ أثناء التحميل',
+    patient: 'المريض', doctor: 'الطبيب', dateTime: 'الموعد', type: 'نوع الزيارة',
+    status: 'الحالة', checkIn: 'وقت الدخول', checkOut: 'وقت الخروج',
+    price: 'السعر', commission: 'حصة الطبيب', riyal: 'د.أ', notRecorded: '— لم يُسجَّل بعد',
+    visitNoteTitle: '📋 ملاحظة الزيارة', diagnosis: 'التشخيص', prescription: 'الوصفة الطبية',
+    tests: 'الفحوصات', notes: 'ملاحظات', nextVisit: 'الزيارة القادمة', noVisitNote: 'لم تُسجَّل ملاحظة زيارة لهذا الموعد',
+    paymentTitle: '💰 الدفعة', totalAmount: 'المبلغ الإجمالي', amountPaid: 'المبلغ المدفوع',
+    patientBalance: 'رصيد المريض', insuranceAmount: 'حصة التأمين', insuranceBalance: 'المتبقي من التأمين',
+    paymentMethod: 'طريقة الدفع', isPaid: 'الحالة', paid: 'مدفوع بالكامل', unpaid: 'غير مكتمل',
+    noPayment: 'لم تُسجَّل دفعة لهذا الموعد', cash: 'نقدي', card: 'بطاقة', insurance: 'تأمين',
     scheduled: 'مجدول', confirmed: 'مؤكد', completed: 'مكتمل', cancelled: 'ملغي',
-    loading: 'جاري التحميل...', notFound: 'الموعد غير موجود',
-    riyal: 'د.أ', notAvailable: 'غير متوفر',
-    patientHistory: 'سجل المريض',
+    quickActions: 'إجراءات سريعة', editAppointment: 'تعديل الموعد', viewPatient: 'ملف المريض',
   },
   en: {
-    back: 'Back', title: 'Appointment Details',
-    patient: 'Patient', doctor: 'Doctor', date: 'Date & Time',
-    type: 'Type', price: 'Price', status: 'Status',
-    notes: 'Notes', createdAt: 'Created At',
-    checkIn: 'Check-in', checkOut: 'Check-out',
-    duration: 'Duration', minutes: 'min',
-    visitNotes: 'Visit Notes', addVisitNote: 'Add Visit Notes',
-    editVisitNote: 'Edit Visit Notes',
-    diagnosis: 'Diagnosis', prescription: 'Prescription',
-    tests: 'Tests & Imaging', nextVisit: 'Next Visit',
-    cost: 'Cost', noVisitNote: 'No visit notes yet',
+    back: 'Back', title: 'Visit Details', loading: 'Loading...',
+    notFound: 'Appointment not found', errGeneric: 'An error occurred while loading',
+    patient: 'Patient', doctor: 'Doctor', dateTime: 'Appointment', type: 'Visit Type',
+    status: 'Status', checkIn: 'Check-in Time', checkOut: 'Check-out Time',
+    price: 'Price', commission: 'Doctor Commission', riyal: 'JD', notRecorded: '— Not recorded yet',
+    visitNoteTitle: '📋 Visit Note', diagnosis: 'Diagnosis', prescription: 'Prescription',
+    tests: 'Tests', notes: 'Notes', nextVisit: 'Next Visit', noVisitNote: 'No visit note recorded for this appointment',
+    paymentTitle: '💰 Payment', totalAmount: 'Total Amount', amountPaid: 'Amount Paid',
+    patientBalance: 'Patient Balance', insuranceAmount: 'Insurance Amount', insuranceBalance: 'Insurance Remaining',
+    paymentMethod: 'Payment Method', isPaid: 'Status', paid: 'Fully Paid', unpaid: 'Incomplete',
+    noPayment: 'No payment recorded for this appointment', cash: 'Cash', card: 'Card', insurance: 'Insurance',
     scheduled: 'Scheduled', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled',
-    loading: 'Loading...', notFound: 'Appointment not found',
-    riyal: 'JD', notAvailable: 'N/A',
-    patientHistory: 'Patient History',
+    quickActions: 'Quick Actions', editAppointment: 'Edit Appointment', viewPatient: 'Patient File',
   },
 }
 
-interface AppointmentDetail {
-  id: string; patientId: string; patientName: string; patientNumber: number
-  doctorId: string | null; doctorName: string | null
-  appointmentDate: string; type: string | null; price: number | null
-  status: string; notes: string | null; notes2: string | null; notes3: string | null
-  createdAt: string; checkInTime?: string; checkOutTime?: string
+interface AppointmentData {
+  id: string
+  patientId: string
+  patientName?: string
+  doctorId?: string
+  doctorName?: string
+  appointmentDate: string
+  type?: string
+  status: string
+  price?: number
+  doctorCommissionAmount?: number
+  checkInTime?: string
+  checkOutTime?: string
 }
 
-interface VisitNote {
-  id?: string; diagnosis?: string; prescription?: string
-  tests?: string; notes?: string; nextVisitDate?: string; cost?: number
-  doctorName?: string; createdAt?: string
+interface VisitNoteData {
+  id: string
+  diagnosis?: string
+  prescription?: string
+  tests?: string
+  notes?: string
+  nextVisitDate?: string
+  cost?: number
+}
+
+interface PaymentData {
+  hasPayment: boolean
+  id?: string
+  totalAmount?: number
+  amountPaid?: number
+  patientAmount?: number
+  patientBalance?: number
+  insuranceAmount?: number
+  insuranceBalance?: number
+  paymentMethod?: string
+  isPaid?: boolean
+}
+
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="detail-card" style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 18, padding: 20, marginBottom: 16 }}>
+    <h3 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, marginBottom: 14 }}>{title}</h3>
+    {children}
+  </div>
+)
+
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
+    <span style={{ color: TEXT_MUTED }}>{label}</span>
+    <span style={{ color: TEXT_DARK, fontWeight: 600, textAlign: 'left' }}>{value}</span>
+  </div>
+)
+
+const StatusBadge = ({ status, lang }: { status: string; lang: 'ar' | 'en' }) => {
+  const t = T[lang]
+  const config: Record<string, { color: string; bg: string; label: string; icon: string }> = {
+    scheduled: { color: '#F59E0B', bg: '#FFF8E1', label: t.scheduled, icon: '⏰' },
+    confirmed: { color: '#22C55E', bg: '#E8F5E9', label: t.confirmed, icon: '✓' },
+    completed: { color: PRIMARY, bg: PRIMARY_SOFT, label: t.completed, icon: '✔️' },
+    cancelled: { color: '#EF4444', bg: '#FFF5F5', label: t.cancelled, icon: '✕' },
+  }
+  const c = config[status] || { color: TEXT_MUTED, bg: '#F1F4F4', label: status, icon: '📋' }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 100, fontSize: 12, fontWeight: 700, background: c.bg, color: c.color }}>
+      <span>{c.icon}</span>{c.label}
+    </span>
+  )
 }
 
 export default function AppointmentDetail() {
-  const { id } = useParams()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
-  const [appointment, setAppointment] = useState<AppointmentDetail | null>(null)
-  const [visitNote, setVisitNote] = useState<VisitNote | null>(null)
+  const [appointment, setAppointment] = useState<AppointmentData | null>(null)
+  const [visitNote, setVisitNote] = useState<VisitNoteData | null>(null)
+  const [payment, setPayment] = useState<PaymentData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-
-  useEffect(() => {
-    const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
-    window.addEventListener('cura-lang-change', handleLangChange)
-    return () => window.removeEventListener('cura-lang-change', handleLangChange)
-  }, [])
-
-  const fetchData = async () => {
-    try {
-      const [apptRes, noteRes] = await Promise.all([
-        api.get(`/appointments/${id}`),
-        api.get(`/visitnotes/appointment/${id}`).catch(() => ({ data: null })),
-      ])
-      setAppointment(apptRes.data)
-      setVisitNote(noteRes.data)
-    } catch { navigate('/appointments') }
-    finally { setLoading(false) }
-  }
-
-  useEffect(() => { fetchData() }, [id])
+  const [error, setError] = useState('')
 
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  const formatDateTime = (dateStr: string) => {
-    const [datePart, timePart] = dateStr.split('T')
-    const [y, mo, d] = datePart.split('-').map(Number)
-    const [h, mi] = (timePart || '00:00').split(':').map(Number)
-    const date = new Date(y, mo-1, d, h, mi)
-    return date.toLocaleString(isAr ? 'ar-SA' : 'en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' })
-  }
-
-  const formatTime = (dateStr: string) => {
-    const [, timePart] = dateStr.split('T')
-    return timePart ? timePart.substring(0, 5) : dateStr
-  }
-
-  const getDuration = () => {
-    if (!appointment?.checkInTime || !appointment?.checkOutTime) return null
-    const inTime = new Date(appointment.checkInTime)
-    const outTime = new Date(appointment.checkOutTime)
-    return Math.round((outTime.getTime() - inTime.getTime()) / 60000)
-  }
-
-  const statusConfig = (status: string) => {
-    switch (status) {
-      case 'scheduled': return { color: INFO,    bg: `${INFO}20`,    label: t.scheduled, icon: '⏰' }
-      case 'confirmed': return { color: SUCCESS, bg: `${SUCCESS}20`, label: t.confirmed, icon: '✓'  }
-      case 'completed': return { color: PRIMARY, bg: `${PRIMARY}20`, label: t.completed, icon: '✔️' }
-      case 'cancelled': return { color: DANGER,  bg: `${DANGER}20`,  label: t.cancelled, icon: '✕'  }
-      default:          return { color: TEXT_MUTED, bg: `${TEXT_MUTED}20`, label: status, icon: '📋' }
+  useEffect(() => {
+    const cssId = 'cura-appt-detail-css'
+    if (!document.getElementById(cssId)) {
+      const s = document.createElement('style'); s.id = cssId; s.textContent = globalCss; document.head.appendChild(s)
     }
+  }, [])
+
+  useEffect(() => {
+    if (!id) return
+    const fetchAll = async () => {
+      setLoading(true); setError('')
+      try {
+        const [apptRes, noteRes, payRes] = await Promise.all([
+          api.get(`/appointments/${id}`),
+          api.get(`/visitnotes/appointment/${id}`).catch(() => ({ data: null })),
+          api.get(`/payments/appointment/${id}`).catch(() => ({ data: { hasPayment: false } })),
+        ])
+        setAppointment(apptRes.data)
+        setVisitNote(noteRes.data)
+        setPayment(payRes.data)
+      } catch {
+        setError(t.notFound)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return t.notRecorded
+    const d = new Date(dateStr)
+    return d.toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
   }
 
-  if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
-      <div style={{ textAlign:'center', maxWidth:300 }}>
-        <div style={{ background:PRIMARY_SOFT, borderRadius:20, padding:'20px 24px', marginBottom:16, border:`1px solid ${BORDER}` }}>
-          <ECGAnimation height={80} showLetters={false} speed={0.7} />
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return t.notRecorded
+    const d = new Date(dateStr)
+    return d.toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const methodLabel = (m?: string) => m === 'cash' ? t.cash : m === 'card' ? t.card : m === 'insurance' ? t.insurance : (m || '—')
+
+  if (loading) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.95)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <ECGAnimation height={90} showLetters speed={0.7} />
+          <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 12 }}>{t.loading}</p>
         </div>
-        <p style={{ color:TEXT_MUTED, fontSize:14 }}>{t.loading}</p>
       </div>
-    </div>
-  )
+    )
+  }
 
-  if (!appointment) return (
-    <div style={{ textAlign:'center', padding:'60px 24px', color:TEXT_MUTED }}>
-      <span style={{ fontSize:48 }}>📅</span>
-      <p style={{ marginTop:16 }}>{t.notFound}</p>
-    </div>
-  )
-
-  const sc = statusConfig(appointment.status)
-  const duration = getDuration()
-
-  const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: React.ReactNode }) => (
-    <div style={{ display:'flex', gap:12, padding:'12px 0', borderBottom:`1px solid ${BORDER}` }}>
-      <span style={{ fontSize:18, flexShrink:0 }}>{icon}</span>
-      <div style={{ flex:1 }}>
-        <p style={{ fontSize:11, fontWeight:600, color:TEXT_MUTED, margin:'0 0 2px', letterSpacing:'0.5px', textTransform:'uppercase' }}>{label}</p>
-        <div style={{ fontSize:14, fontWeight:500, color:TEXT_DARK }}>{value}</div>
+  if (error || !appointment) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <p style={{ fontSize: 14, color: TEXT_MUTED, marginBottom: 16 }}>{error || t.notFound}</p>
+        <button onClick={() => navigate('/appointments')}
+          style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 10, padding: '9px 20px', fontSize: 13, cursor: 'pointer' }}>
+          {t.back}
+        </button>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div dir={isAr?'rtl':'ltr'} style={{ background:'#F8FAFA', minHeight:'100vh', padding:24, fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif" }}>
-      <div style={{ maxWidth:800, margin:'0 auto' }}>
+    <div className="detail-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
+      <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom:24 }}>
-          <button onClick={()=>navigate('/appointments')}
-            style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'none', color:TEXT_MUTED, fontSize:13, cursor:'pointer', marginBottom:16 }}
-            onMouseEnter={e=>e.currentTarget.style.color=PRIMARY} onMouseLeave={e=>e.currentTarget.style.color=TEXT_MUTED}>
-            ← {t.back}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <button onClick={() => navigate('/appointments')}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 16px', fontSize: 12.5, color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isAr ? '→' : '←'} {t.back}
           </button>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
-            <div>
-              <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:PRIMARY_SOFT, border:`1px solid ${BORDER}`, borderRadius:100, padding:'4px 16px', fontSize:11, fontWeight:600, color:PRIMARY, marginBottom:10 }}>
-                <span style={{ width:6, height:6, borderRadius:'50%', background:PRIMARY }} />📅 {t.title}
-              </div>
-              <h2 style={{ fontFamily:"'DM Serif Display','Georgia',serif", fontSize:28, fontWeight:500, color:TEXT_DARK, margin:0 }}>
-                {appointment.patientName}
-              </h2>
-              <p style={{ fontSize:13, color:TEXT_MUTED, margin:'4px 0 0' }}>#{appointment.patientNumber}</p>
-            </div>
-            <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 14px', borderRadius:100, fontSize:13, fontWeight:600, background:sc.bg, color:sc.color }}>
-              {sc.icon} {sc.label}
-            </span>
-          </div>
+          <StatusBadge status={appointment.status} lang={lang} />
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <h2 style={{ fontFamily: "'DM Serif Display','Georgia',serif", fontSize: 24, fontWeight: 500, color: TEXT_DARK, marginBottom: 4 }}>
+          🩺 {t.title}
+        </h2>
+        <p style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 22 }}>
+          {appointment.patientName || '—'} · {formatDateTime(appointment.appointmentDate)}
+        </p>
 
-          {/* بيانات الموعد */}
-          <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, padding:'20px 24px', gridColumn:'1 / -1' }}>
-            <h3 style={{ fontSize:15, fontWeight:600, color:TEXT_DARK, margin:'0 0 4px', display:'flex', alignItems:'center', gap:8 }}>
-              📋 {t.title}
-            </h3>
-            <div style={{ marginTop:8 }}>
-              <InfoRow icon="👤" label={t.patient} value={`${appointment.patientName} — #${appointment.patientNumber}`} />
-              <InfoRow icon="👨‍⚕️" label={t.doctor} value={appointment.doctorName || t.notAvailable} />
-              <InfoRow icon="📅" label={t.date} value={formatDateTime(appointment.appointmentDate)} />
-              {appointment.type && <InfoRow icon="🩺" label={t.type} value={appointment.type} />}
-              {appointment.price != null && <InfoRow icon="💰" label={t.price} value={`${appointment.price} ${t.riyal}`} />}
-              {appointment.notes && <InfoRow icon="📝" label={t.notes} value={appointment.notes} />}
-
-              {/* CheckIn / CheckOut */}
-              {appointment.checkInTime && (
-                <InfoRow icon="🟢" label={t.checkIn} value={formatTime(appointment.checkInTime)} />
-              )}
-              {appointment.checkOutTime && (
-                <InfoRow icon="🏁" label={t.checkOut} value={formatTime(appointment.checkOutTime)} />
-              )}
-              {duration !== null && (
-                <InfoRow icon="⏱️" label={t.duration} value={`${duration} ${t.minutes}`} />
-              )}
-            </div>
-
-            {/* رابط سجل المريض */}
-            <button onClick={()=>navigate(`/patients/${appointment.patientId}`)}
-              style={{ marginTop:16, background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 16px', fontSize:12, color:PRIMARY, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6 }}
-              onMouseEnter={e=>e.currentTarget.style.background=PRIMARY_SOFT}
-              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              👤 {t.patientHistory}
-            </button>
+        {/* بيانات الموعد */}
+        <Section title={`📅 ${t.dateTime}`}>
+          <Row label={t.patient} value={appointment.patientName || '—'} />
+          <Row label={t.doctor} value={appointment.doctorName || '—'} />
+          <Row label={t.dateTime} value={formatDateTime(appointment.appointmentDate)} />
+          <Row label={t.type} value={appointment.type || '—'} />
+          <Row label={t.checkIn} value={formatTime(appointment.checkInTime)} />
+          <Row label={t.checkOut} value={formatTime(appointment.checkOutTime)} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 13 }}>
+            <span style={{ color: TEXT_MUTED }}>{t.price}</span>
+            <span style={{ color: PRIMARY, fontWeight: 700 }}>{appointment.price != null ? `${appointment.price} ${t.riyal}` : t.notRecorded}</span>
           </div>
-
-          {/* ملاحظات الزيارة */}
-          <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, padding:'20px 24px', gridColumn:'1 / -1' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-              <h3 style={{ fontSize:15, fontWeight:600, color:TEXT_DARK, margin:0, display:'flex', alignItems:'center', gap:8 }}>
-                🩺 {t.visitNotes}
-              </h3>
-              <button onClick={()=>setShowModal(true)}
-                style={{ background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, padding:'8px 16px', fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}
-                onMouseEnter={e=>e.currentTarget.style.background='#4A7679'}
-                onMouseLeave={e=>e.currentTarget.style.background=PRIMARY}>
-                {visitNote?.id ? `✏️ ${t.editVisitNote}` : `+ ${t.addVisitNote}`}
-              </button>
+          {appointment.doctorCommissionAmount != null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 13 }}>
+              <span style={{ color: TEXT_MUTED }}>{t.commission}</span>
+              <span style={{ color: SUCCESS, fontWeight: 700 }}>{appointment.doctorCommissionAmount} {t.riyal}</span>
             </div>
+          )}
+        </Section>
 
-            {visitNote?.id ? (
-              <div style={{ display:'grid', gap:12 }}>
-                {visitNote.diagnosis && (
-                  <div style={{ background:'#F8FAFA', borderRadius:12, padding:'12px 16px', border:`1px solid ${BORDER}` }}>
-                    <p style={{ fontSize:11, fontWeight:700, color:PRIMARY, margin:'0 0 4px', textTransform:'uppercase', letterSpacing:'0.5px' }}>🔬 {t.diagnosis}</p>
-                    <p style={{ fontSize:14, color:TEXT_DARK, margin:0, whiteSpace:'pre-wrap' }}>{visitNote.diagnosis}</p>
-                  </div>
-                )}
-                {visitNote.prescription && (
-                  <div style={{ background:'#F0FDF4', borderRadius:12, padding:'12px 16px', border:'1px solid #86EFAC' }}>
-                    <p style={{ fontSize:11, fontWeight:700, color:'#16A34A', margin:'0 0 4px', textTransform:'uppercase', letterSpacing:'0.5px' }}>💊 {t.prescription}</p>
-                    <p style={{ fontSize:14, color:TEXT_DARK, margin:0, whiteSpace:'pre-wrap' }}>{visitNote.prescription}</p>
-                  </div>
-                )}
-                {visitNote.tests && (
-                  <div style={{ background:'#EFF6FF', borderRadius:12, padding:'12px 16px', border:'1px solid #BFDBFE' }}>
-                    <p style={{ fontSize:11, fontWeight:700, color:'#1D4ED8', margin:'0 0 4px', textTransform:'uppercase', letterSpacing:'0.5px' }}>🧪 {t.tests}</p>
-                    <p style={{ fontSize:14, color:TEXT_DARK, margin:0, whiteSpace:'pre-wrap' }}>{visitNote.tests}</p>
-                  </div>
-                )}
-                {visitNote.notes && (
-                  <div style={{ background:'#FFFBEB', borderRadius:12, padding:'12px 16px', border:'1px solid #FCD34D' }}>
-                    <p style={{ fontSize:11, fontWeight:700, color:'#D97706', margin:'0 0 4px', textTransform:'uppercase', letterSpacing:'0.5px' }}>📝 {t.notes}</p>
-                    <p style={{ fontSize:14, color:TEXT_DARK, margin:0, whiteSpace:'pre-wrap' }}>{visitNote.notes}</p>
-                  </div>
-                )}
-                <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-                  {visitNote.nextVisitDate && (
-                    <div style={{ flex:1, minWidth:140, background:PRIMARY_SOFT, borderRadius:12, padding:'10px 14px', border:`1px solid ${BORDER}` }}>
-                      <p style={{ fontSize:10, fontWeight:700, color:PRIMARY, margin:'0 0 3px', textTransform:'uppercase' }}>📅 {t.nextVisit}</p>
-                      <p style={{ fontSize:14, fontWeight:600, color:TEXT_DARK, margin:0 }}>
-                        {new Date(visitNote.nextVisitDate).toLocaleDateString(isAr?'ar-SA':undefined)}
-                      </p>
-                    </div>
-                  )}
-                  {visitNote.cost != null && (
-                    <div style={{ flex:1, minWidth:140, background:'#F0FDF4', borderRadius:12, padding:'10px 14px', border:'1px solid #86EFAC' }}>
-                      <p style={{ fontSize:10, fontWeight:700, color:'#16A34A', margin:'0 0 3px', textTransform:'uppercase' }}>💰 {t.cost}</p>
-                      <p style={{ fontSize:14, fontWeight:600, color:TEXT_DARK, margin:0 }}>{visitNote.cost} {t.riyal}</p>
-                    </div>
-                  )}
+        {/* ملاحظة الزيارة */}
+        <Section title={t.visitNoteTitle}>
+          {visitNote ? (
+            <>
+              {visitNote.diagnosis && <Row label={t.diagnosis} value={visitNote.diagnosis} />}
+              {visitNote.prescription && <Row label={t.prescription} value={visitNote.prescription} />}
+              {visitNote.tests && <Row label={t.tests} value={visitNote.tests} />}
+              {visitNote.notes && (
+                <div style={{ padding: '10px 0', fontSize: 13 }}>
+                  <span style={{ color: TEXT_MUTED, display: 'block', marginBottom: 4 }}>{t.notes}</span>
+                  <span style={{ color: TEXT_DARK }}>{visitNote.notes}</span>
                 </div>
+              )}
+              {visitNote.nextVisitDate && <Row label={t.nextVisit} value={new Date(visitNote.nextVisitDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')} />}
+            </>
+          ) : (
+            <p style={{ fontSize: 12.5, color: TEXT_MUTED, fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>{t.noVisitNote}</p>
+          )}
+        </Section>
+
+        {/* الدفعة */}
+        <Section title={t.paymentTitle}>
+          {payment?.hasPayment ? (
+            <>
+              <Row label={t.totalAmount} value={`${payment.totalAmount} ${t.riyal}`} />
+              <Row label={t.amountPaid} value={`${payment.amountPaid} ${t.riyal}`} />
+              {(payment.insuranceAmount ?? 0) > 0 && (
+                <>
+                  <Row label={t.insuranceAmount} value={`${payment.insuranceAmount} ${t.riyal}`} />
+                  <Row label={t.insuranceBalance} value={`${payment.insuranceBalance} ${t.riyal}`} />
+                </>
+              )}
+              <Row label={t.paymentMethod} value={methodLabel(payment.paymentMethod)} />
+              <div style={{ marginTop: 10 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100,
+                  fontSize: 12, fontWeight: 700,
+                  background: payment.isPaid ? SUCCESS_BG : WARNING_BG,
+                  color: payment.isPaid ? SUCCESS : WARNING,
+                }}>
+                  {payment.isPaid ? `✅ ${t.paid}` : `⏳ ${t.unpaid}`}
+                </span>
               </div>
-            ) : (
-              <div style={{ textAlign:'center', padding:'32px 0', color:TEXT_MUTED }}>
-                <span style={{ fontSize:40, opacity:0.5 }}>🩺</span>
-                <p style={{ fontSize:13, marginTop:10 }}>{t.noVisitNote}</p>
-              </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <p style={{ fontSize: 12.5, color: TEXT_MUTED, fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>{t.noPayment}</p>
+          )}
+        </Section>
+
+        {/* إجراءات سريعة */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <button onClick={() => navigate(`/appointments/${id}/edit`)}
+            style={{ flex: 1, background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            ✏️ {t.editAppointment}
+          </button>
+          <button onClick={() => navigate(`/patients/${appointment.patientId}`)}
+            style={{ flex: 1, background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 500, color: TEXT_MUTED, cursor: 'pointer' }}>
+            👤 {t.viewPatient}
+          </button>
         </div>
       </div>
-
-      {/* Modal */}
-      <VisitNoteModal
-        isOpen={showModal}
-        onClose={()=>setShowModal(false)}
-        onSaved={fetchData}
-        appointmentId={appointment.id}
-        patientId={appointment.patientId}
-        doctorId={appointment.doctorId}
-        lang={lang}
-        existingNote={visitNote}
-      />
     </div>
   )
 }

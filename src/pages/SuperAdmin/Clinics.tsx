@@ -138,6 +138,7 @@ export default function SuperAdminClinics() {
   const [saving, setSaving] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
+  const [permsSeeding, setPermsSeeding] = useState(false)
 
   const emptyForm = {
     name: '', subDomain: '', phone: '', email: '',
@@ -243,6 +244,11 @@ console.log('Calling departments seed for:', clinic.id)
 const deptRes = await api.post(`/departments/seed-defaults/${clinic.id}`)
 console.log('Departments result:', deptRes.data)
 
+      // ✅ 6 — إنشاء قوالب الزيارة الافتراضية (كشف/مراجعة/استشارة/متابعة)
+      console.log('Calling templates seed for:', clinic.id)
+      const tplRes = await api.post(`/treatmentplans/templates/seed-defaults/${clinic.id}`)
+      console.log('Templates result:', tplRes.data)
+
       setSuccess(
         isAr
           ? `تم إنشاء العيادة والمدير والاشتراك والأدوار بنجاح!\n👤 Username: ${form.subDomain}\n🔑 Password: ${form.subDomain}@123`
@@ -268,6 +274,38 @@ console.log('Departments result:', deptRes.data)
       setClinics(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c))
     } catch {
       alert('حدث خطأ')
+    }
+  }
+
+  // ✅ يهيّئ جدول الصلاحيات العام (Permissions) — خطوة تُسوّى مرة واحدة بس
+  // لكل نشر جديد للنظام، قبل أول عيادة. تكرارها آمن (idempotent) ولا تكرر الصلاحيات.
+  const handleSeedPermissions = async () => {
+    setPermsSeeding(true)
+    setError('')
+    try {
+      await api.post('/auth/seed-permissions')
+      setSuccess(isAr
+        ? '✅ تم تهيئة قائمة الصلاحيات بنجاح. الآن الأدوار الجديدة ستُربط بصلاحياتها تلقائياً.'
+        : '✅ Permissions initialized successfully. New roles will now be linked to their permissions automatically.')
+      setTimeout(() => setSuccess(''), 6000)
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تهيئة الصلاحيات' : 'Failed to initialize permissions'))
+    } finally {
+      setPermsSeeding(false)
+    }
+  }
+
+  // ✅ يعيد ربط أدوار عيادة موجودة بصلاحياتها — مفيد لعيادات أُنشئت
+  // قبل تهيئة جدول الصلاحيات (زي عيادات جُرّبت أثناء التطوير المبكر).
+  const handleResyncRoles = async (clinicId: string, clinicName: string) => {
+    try {
+      await api.post(`/roles/seed-defaults/${clinicId}`)
+      setSuccess(isAr
+        ? `✅ تم تحديث صلاحيات أدوار "${clinicName}"`
+        : `✅ Roles/permissions refreshed for "${clinicName}"`)
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر التحديث' : 'Failed to refresh'))
     }
   }
 
@@ -328,8 +366,18 @@ console.log('Departments result:', deptRes.data)
           </p>
         </div>
 
-        {/* Action Button */}
-        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end' }}>
+        {/* Action Buttons */}
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={handleSeedPermissions}
+            disabled={permsSeeding}
+            className="btn-secondary"
+            title={isAr
+              ? 'يُسوّى مرة واحدة بس قبل أول عيادة — يعبّي قائمة الصلاحيات العامة اللي تعتمد عليها أدوار كل العيادات'
+              : 'Run once before your first clinic — populates the global permissions list every clinic\'s roles depend on'}
+          >
+            {permsSeeding ? `⏳ ${isAr ? 'جاري التهيئة...' : 'Initializing...'}` : `🔧 ${isAr ? 'تهيئة الصلاحيات' : 'Initialize Permissions'}`}
+          </button>
           <button onClick={() => setShowForm(!showForm)} className="btn-primary">
             <span>{showForm ? '✕' : '+'}</span>
             {showForm ? (isAr ? 'إغلاق' : 'Close') : t.addClinic}
@@ -532,6 +580,15 @@ console.log('Departments result:', deptRes.data)
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <button onClick={() => navigate(`/superadmin/clinics/${clinic.id}`)} className="btn-details">
                         ✏️ {t.details}
+                      </button>
+                      <button
+                        onClick={() => handleResyncRoles(clinic.id, clinic.name)}
+                        className="btn-details"
+                        title={isAr
+                          ? 'أعد ربط أدوار هذه العيادة بقائمة الصلاحيات الحالية — مفيد لو أُنشئت العيادة قبل تهيئة الصلاحيات'
+                          : 'Re-link this clinic\'s roles to the current permissions list — useful if the clinic was created before permissions were initialized'}
+                      >
+                        🔄 {isAr ? 'تحديث الصلاحيات' : 'Resync Permissions'}
                       </button>
                       <button onClick={() => handleToggle(clinic.id)} className={`btn-toggle ${clinic.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}>
                         {clinic.isActive ? `🔴 ${t.deactivate}` : `🟢 ${t.activate}`}

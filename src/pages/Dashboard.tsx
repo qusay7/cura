@@ -107,7 +107,6 @@ const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const PROGRESS_BG = '#E8F0F0'
-const NOTIFICATION_BADGE = '#C4A77D'
 
 const T = {
   ar: {
@@ -147,11 +146,6 @@ const T = {
     addPatient: 'Add Patient', addDoctor: 'Add Doctor',
     quickVisit: 'Quick Visit', bookAppointment: 'Book Appointment',
   },
-}
-
-interface Notification {
-  id: number; title: string; message: string; time: string
-  read: boolean; type: 'appointment' | 'alert' | 'system'
 }
 
 interface DoctorTodayAppointment {
@@ -198,73 +192,6 @@ const DashboardLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }
     </div>
   </div>
 )
-
-// ─── Notification Bell ────────────────────────────────────────────────────────
-const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang, unreadCount }: {
-  notifications: Notification[]; onMarkAsRead: (id: number) => void
-  onViewAll: () => void; lang: 'ar' | 'en'; unreadCount: number
-}) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isRinging, setIsRinging] = useState(false)
-  const t = T[lang]
-  const isAr = lang === 'ar'
-
-  useEffect(() => {
-    if (unreadCount > 0) { setIsRinging(true); setTimeout(() => setIsRinging(false), 1000) }
-  }, [unreadCount])
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('.notif-wrap')) setIsOpen(false) }
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [])
-
-  const getIcon = (type: string) => ({ appointment: '📅', alert: '⚠️', system: '🔔' }[type] || '📋')
-
-  return (
-    <div className="notif-wrap" style={{ position: 'relative' }}>
-      <button onClick={() => setIsOpen(!isOpen)}
-        style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 12, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none' }}>
-        <span style={{ fontSize: 18 }}>🔔</span>
-        {unreadCount > 0 && <span style={{ position: 'absolute', top: -6, right: -6, background: NOTIFICATION_BADGE, color: 'white', fontSize: 10, fontWeight: 600, borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
-      </button>
-      {isOpen && (
-        <div className="notification-dropdown" style={{ position: 'absolute', top: 50, [isAr ? 'left' : 'right']: 0, width: 340, maxWidth: 'calc(100vw - 20px)', background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', zIndex: 1000, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: PRIMARY_SOFT }}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{t.notifications}</h4>
-            {unreadCount > 0 && <button onClick={() => notifications.forEach(n => !n.read && onMarkAsRead(n.id))} style={{ background: 'transparent', border: 'none', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}>{t.markAllRead}</button>}
-          </div>
-          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-            {notifications.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: TEXT_MUTED }}>
-                <span style={{ fontSize: 32, opacity: 0.5 }}>🔕</span>
-                <p style={{ fontSize: 13, marginTop: 8 }}>{t.noNotifications}</p>
-              </div>
-            ) : notifications.map(notif => (
-              <div key={notif.id} onClick={() => onMarkAsRead(notif.id)}
-                style={{ padding: '12px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 12, cursor: 'pointer', background: notif.read ? 'transparent' : PRIMARY_SOFT }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${PRIMARY}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{getIcon(notif.type)}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, gap: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: notif.read ? 500 : 600, color: TEXT_DARK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{notif.title}</span>
-                    <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0 }}>{notif.time}</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
-                </div>
-                {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: NOTIFICATION_BADGE, alignSelf: 'center', flexShrink: 0 }} />}
-              </div>
-            ))}
-          </div>
-          {notifications.length > 0 && (
-            <div style={{ padding: '10px 16px', borderTop: `1px solid ${BORDER}`, textAlign: 'center' }}>
-              <button onClick={onViewAll} style={{ background: 'transparent', border: 'none', fontSize: 12, color: PRIMARY, cursor: 'pointer' }}>{t.viewAll} →</button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 const StatCard = ({ icon, value, label, btnLabel, onBtnClick, onClick, showBtn }: {
@@ -439,13 +366,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctorsToday, setDoctorsToday] = useState<DoctorTodayAppointment[]>([])
-  const [notifications, setNotifications] = useState<Notification[]>([
-    { id: 1, title: 'موعد جديد', message: 'تم إضافة موعد جديد مع د. أحمد السيد', time: 'منذ 5 دقائق', read: false, type: 'appointment' },
-    { id: 2, title: 'تنبيه الحصة', message: 'اقتربت من الحد الأقصى لعدد المرضى (85%)', time: 'منذ ساعة', read: false, type: 'alert' },
-    { id: 3, title: 'تحديث النظام', message: 'تم تحديث النظام إلى الإصدار الأحدث', time: 'منذ 3 ساعات', read: true, type: 'system' },
-  ])
 
-  const unreadCount = notifications.filter(n => !n.read).length
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const isSuperAdmin = user.role === 'SuperAdmin'
 
@@ -481,28 +402,25 @@ export default function Dashboard() {
   const sub = data?.subscription
   const daysColor = sub ? (sub.daysRemaining <= 3 ? '#C4A77D' : sub.daysRemaining <= 7 ? '#8BAFB1' : PRIMARY) : PRIMARY
 
-  const handleLogout = async () => {
-    const refreshToken = localStorage.getItem('refreshToken')
-    try { await api.post('/auth/logout', { refreshToken }) } finally { localStorage.clear(); navigate('/login') }
-  }
-
   return (
     <div className="dash-shell" style={{ fontFamily: font, direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '16px 20px' }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
-        {/* Top Bar */}
+        {/* Top Bar — ترحيب مختصر بس. الإشعارات وتسجيل الخروج وقائمة المستخدم
+            موجودين أصلاً بالشريط العلوي لـ Layout.tsx اللي يغلّف هذي الصفحة،
+            فما نكررهم هنا. */}
         <div style={{ background: CARD_BG, borderRadius: 20, padding: '14px 20px', marginBottom: 24, border: `1px solid ${BORDER}`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div className="top-bar-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY_SOFT, borderRadius: 100, padding: '4px 14px', fontSize: 11, fontWeight: 600, color: PRIMARY, marginBottom: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: 'soft-pulse 2s infinite' }} />CURA
-              </div>
-              <h1 style={{ fontSize: 22, fontWeight: 600, color: TEXT_DARK, margin: 0, letterSpacing: '-0.3px' }}>{t.title}</h1>
-              <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.welcome} {user.fullName ? `${user.fullName} 👋` : '👋'}</p>
-            </div>
-
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY_SOFT, borderRadius: 100, padding: '4px 14px', fontSize: 11, fontWeight: 600, color: PRIMARY, marginBottom: 6 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: 'soft-pulse 2s infinite' }} />CURA
           </div>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: TEXT_DARK, margin: 0, letterSpacing: '-0.3px' }}>{t.title}</h1>
+          <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.welcome} {user.fullName ? `${user.fullName} 👋` : '👋'}</p>
         </div>
+
+        {/* عنوان قسم واضح يفصل "الأرقام السريعة" عن باقي الشاشة */}
+        <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.5px', textTransform: 'uppercase', margin: '0 0 10px 4px' }}>
+          {isAr ? 'نظرة سريعة' : 'Quick Overview'}
+        </p>
 
         {/* Stats Grid */}
         <div className="stats-grid">

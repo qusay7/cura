@@ -19,6 +19,7 @@ import Settings from './pages/Settings'
 import AddUser from './pages/AddUser'
 import Users from './pages/Users'
 import Departments from './pages/Departments'
+import TreatmentTemplates from './pages/TreatmentTemplates'
 import ClinicPermissions from './pages/ClinicPermissions'
 import Reports from './pages/Reports'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
@@ -28,6 +29,9 @@ import Queue from './pages/Queue'
 import AppointmentDetail from './pages/AppointmentDetail'
 import PatientVisitNotes from './pages/PatientVisitNotes'
 import LandingPage from './pages/LandingPage'
+import Insurance from './pages/Insurance'
+import Payments from './pages/Payments'
+import Staff from './pages/Staff'
 
 function App() {
   return (
@@ -35,7 +39,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         {/* ── عام ── */}
-        <Route path="/login" element={<Login />} />
+       <Route path="/login/:subdomain?" element={<Login />} />
 
         {/* ── Dashboard ── */}
         <Route path="/dashboard" element={
@@ -145,6 +149,13 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* ── قوالب الزيارة ── */}
+        <Route path="/treatment-templates" element={
+          <ProtectedRoute permission="departments.manage">
+            <Layout><TreatmentTemplates /></Layout>
+          </ProtectedRoute>
+        } />
+
         {/* ── التقارير ── */}
         <Route path="/reports" element={
           <ProtectedRoute permission="reports.view">
@@ -184,12 +195,30 @@ function App() {
             <Layout><Queue /></Layout>
           </ProtectedRoute>
         } />
+          
+        <Route path="/insurance" element={
+          <ProtectedRoute>
+            <Layout><Insurance /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/payments" element={
+          <ProtectedRoute>
+            <Layout><Payments /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/staff" element={
+          <ProtectedRoute>
+            <Layout><Staff /></Layout>
+            </ProtectedRoute>}
+             />
+
 
         {/* ── Redirects ── */}
 <Route path="/" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-
       {/* ✅ PWA Install Prompt */}
       <PWAInstallPrompt />
     </>

@@ -1,5 +1,28 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../api/axios'
+import {
+  Calendar, FolderOpen, Stethoscope, ListOrdered, CreditCard,
+  BarChart3, Building2, Globe, Lock, Cloud, Wrench, Menu, X, Loader2,
+} from 'lucide-react'
+
+// ── API ─────────────────────────────────────────────────────────────────────
+// ⚠️ عدّل هذا لو متغير البيئة عندك باسم مختلف (مثلاً VITE_BACKEND_URL).
+// لو تركته فاضي، الطلب يروح لنفس أصل الفرونت إند (مفيد لو عندك Proxy بـ vite.config.ts).
+ 
+interface ApiPlan {
+  id: string
+  name: string
+  description: string | null
+  monthlyPrice: number
+  yearlyPrice: number
+  maxUsers: number
+  maxDoctors: number
+  maxPatients: number
+  isActive: boolean
+  isFeatured: boolean
+  features: string[]
+}
 
 const C = {
   teal:      '#2E6E6E',
@@ -37,6 +60,7 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
 @keyframes countUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 @keyframes spin     { to { transform:rotate(360deg); } }
 @keyframes gradMove { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 
 .fu  { animation: fadeUp  0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .fi  { animation: fadeIn  0.5s ease both; }
@@ -87,6 +111,7 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
 .btn-primary:hover { background:${C.tealGlow}; transform:translateY(-2px); box-shadow:0 8px 28px rgba(46,110,110,0.35); }
 .btn-primary:hover::before { opacity:1; }
 .btn-primary:active { transform:translateY(0); }
+.btn-primary:focus-visible { outline:2px solid ${C.tealLight}; outline-offset:2px; }
 
 .btn-ghost {
   display:inline-flex; align-items:center; gap:8px;
@@ -96,6 +121,7 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
   cursor:pointer; transition:all 0.22s ease; white-space:nowrap;
 }
 .btn-ghost:hover { border-color:${C.teal}; color:${C.teal}; background:${C.tealSoft}; transform:translateY(-1px); }
+.btn-ghost:focus-visible { outline:2px solid ${C.teal}; outline-offset:2px; }
 
 .btn-white {
   display:inline-flex; align-items:center; gap:8px;
@@ -106,6 +132,7 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
   box-shadow:0 4px 20px rgba(0,0,0,0.12);
 }
 .btn-white:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(0,0,0,0.18); }
+.btn-white:focus-visible { outline:2px solid #FFF; outline-offset:3px; }
 
 /* ── Feature cards ── */
 .feat-card {
@@ -126,14 +153,19 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
   background:${C.white}; border:1.5px solid ${C.border};
   border-radius:24px; padding:36px 28px;
   transition:all 0.28s ease; position:relative; overflow:hidden;
+  transform: scale(1) translateY(0);
 }
-.plan-card:hover { border-color:${C.tealLight}; box-shadow:0 16px 48px rgba(46,110,110,0.12); transform:translateY(-5px); }
+.plan-card:hover { border-color:${C.tealLight}; box-shadow:0 16px 48px rgba(46,110,110,0.12); transform: scale(1) translateY(-5px); }
 .plan-card.top {
   background:linear-gradient(160deg, ${C.darkMid} 0%, ${C.dark} 100%);
   border-color:${C.teal};
   box-shadow:0 20px 60px rgba(46,110,110,0.25);
+  transform: scale(1.03) translateY(0);
 }
-.plan-card.top:hover { box-shadow:0 28px 70px rgba(46,110,110,0.3); transform:translateY(-6px); }
+/* Fix: featured card's hover lift now composes with its base scale instead of an
+   inline transform overriding the class (the previous bug that silently killed
+   the hover lift only on this one card). */
+.plan-card.top:hover { box-shadow:0 28px 70px rgba(46,110,110,0.3); transform: scale(1.03) translateY(-6px); }
 
 /* ── ECG ── */
 .ecg-path {
@@ -167,6 +199,15 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
   background-clip:text;
 }
 
+/* ── Mobile menu ── */
+.mobile-menu-btn { display:none; }
+.mobile-panel { animation: slideDown 0.22s ease both; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
 /* ── Responsive ── */
 @media(max-width:1024px) {
   .hero-grid    { grid-template-columns:1fr !important; }
@@ -175,9 +216,10 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
   .plan-grid    { grid-template-columns:1fr !important; }
 }
 @media(max-width:768px) {
-  .nav-links    { display:none !important; }
-  .stats-grid   { grid-template-columns:repeat(2,1fr) !important; }
-  .feat-grid    { grid-template-columns:1fr !important; }
+  .nav-links      { display:none !important; }
+  .mobile-menu-btn{ display:inline-flex !important; }
+  .stats-grid     { grid-template-columns:repeat(2,1fr) !important; }
+  .feat-grid      { grid-template-columns:1fr !important; }
 }
 `
 
@@ -226,35 +268,26 @@ const T = {
       title:'كل ما تحتاجه عيادتك في منصة واحدة',
       sub:'من أوّل موعد حتى آخر فاتورة — Cura يُغطّي كل خطوة في رحلة مريضك',
       items:[
-        { icon:'📅', title:'جدولة المواعيد',   desc:'تقويم ذكي يُقلّل الغياب ويملأ الفراغات تلقائياً — مع تذكيرات فورية للمرضى.' },
-        { icon:'🗂️', title:'ملف المريض الموحّد', desc:'سجل طبي شامل يضمّ التاريخ المرضي والوصفات والفحوصات والتشخيصات بأثر رجعي.' },
-        { icon:'🩺', title:'ملاحظات الزيارة',  desc:'تشخيص دقيق، وصفة طبية، طلبات مختبر وأشعة — كلّها في نقرة واحدة عند كل زيارة.' },
-        { icon:'🔢', title:'إدارة قوائم الدور', desc:'نظام انتظار ذكي يتتبّع الدور في الوقت الفعلي ويُعلم الطاقم بأي تغيير.' },
-        { icon:'💳', title:'الفواتير والإيصالات', desc:'إصدار فواتير احترافية بنقرة واحدة مع دعم قادم للفوترة الإلكترونية الأردنية.' },
-        { icon:'📊', title:'تقارير الأداء',    desc:'لوحة بيانات تفصيلية للإيرادات والمرضى والأطباء تساعدك في اتخاذ قرارات مبنية على البيانات.' },
-        { icon:'🏥', title:'تعدد الأقسام',     desc:'قسّم عيادتك إلى أقسام طبية مستقلة — لكل منها فريقه وصلاحياته الخاصة.' },
-        { icon:'🌐', title:'واجهة ثنائية اللغة', desc:'دعم كامل للغتين العربية والإنجليزية مع اتجاه RTL مدمج من اليوم الأول.' },
+        { Icon:Calendar,     title:'جدولة المواعيد',   desc:'تقويم ذكي يُقلّل الغياب ويملأ الفراغات تلقائياً — مع تذكيرات فورية للمرضى.' },
+        { Icon:FolderOpen,   title:'ملف المريض الموحّد', desc:'سجل طبي شامل يضمّ التاريخ المرضي والوصفات والفحوصات والتشخيصات بأثر رجعي.' },
+        { Icon:Stethoscope,  title:'ملاحظات الزيارة',  desc:'تشخيص دقيق، وصفة طبية، طلبات مختبر وأشعة — كلّها في نقرة واحدة عند كل زيارة.' },
+        { Icon:ListOrdered,  title:'إدارة قوائم الدور', desc:'نظام انتظار ذكي يتتبّع الدور في الوقت الفعلي ويُعلم الطاقم بأي تغيير.' },
+        { Icon:CreditCard,   title:'الفواتير والإيصالات', desc:'إصدار فواتير احترافية بنقرة واحدة مع دعم قادم للفوترة الإلكترونية الأردنية.' },
+        { Icon:BarChart3,    title:'تقارير الأداء',    desc:'لوحة بيانات تفصيلية للإيرادات والمرضى والأطباء تساعدك في اتخاذ قرارات مبنية على البيانات.' },
+        { Icon:Building2,    title:'تعدد الأقسام',     desc:'قسّم عيادتك إلى أقسام طبية مستقلة — لكل منها فريقه وصلاحياته الخاصة.' },
+        { Icon:Globe,        title:'واجهة ثنائية اللغة', desc:'دعم كامل للغتين العربية والإنجليزية مع اتجاه RTL مدمج من اليوم الأول.' },
       ],
     },
     pricing:{
       eyebrow:'الأسعار',
       title:'أسعار شفّافة بلا رسوم مخفية',
       sub:'خطط مرنة تنمو مع عيادتك — جميعها تشمل الدعم الفني المجاني ومدير حساب مخصص',
-      monthly:'شهري', yearly:'سنوي', save:'وفّر 20%',
-      plans:[
-        { name:'الأساسية', nameEn:'Starter', price:29, currency:'د.أ',
-          desc:'للعيادات الناشئة والأطباء المستقلين',
-          features:['3 أطباء كحدٍّ أقصى','500 ملف مريض','جدولة المواعيد','ملاحظات الزيارة','تقارير أساسية'],
-          cta:'ابدأ الآن', featured:false },
-        { name:'المتقدمة', nameEn:'Professional', price:59, currency:'د.أ',
-          desc:'الخيار الأمثل للعيادات متوسطة الحجم',
-          features:['10 أطباء كحدٍّ أقصى','مرضى غير محدودين','جميع المميزات','فواتير إلكترونية','أقسام متعددة','دعم ذو أولوية'],
-          cta:'ابدأ مجاناً 14 يوماً', featured:true },
-        { name:'المؤسسية', nameEn:'Enterprise', price:99, currency:'د.أ',
-          desc:'للمستشفيات والمجمعات الطبية الكبرى',
-          features:['أطباء ومرضى غير محدودين','واجهة برمجية (API) مخصصة','تكامل مع الفوترة الوطنية','مدير حساب مخصص','اتفاقية مستوى الخدمة (SLA)','تدريب مجاني للفريق'],
-          cta:'تواصل مع فريق المبيعات', featured:false },
-      ],
+      monthly:'شهري', yearly:'سنوي', save:'وفّر مقابل الاشتراك السنوي',
+      currency:'د.أ',
+      ctaDefault:'ابدأ الآن', ctaFeatured:'ابدأ مجاناً 14 يوماً',
+      loading:'جاري تحميل الخطط...',
+      error:'تعذّر تحميل الخطط حالياً، يرجى المحاولة لاحقاً',
+      empty:'لا توجد خطط متاحة حالياً',
     },
     cta:{
       title:'جاهز لتحويل تجربة مرضاك؟',
@@ -300,35 +333,26 @@ const T = {
       title:'Everything your clinic needs, nothing it doesn\'t',
       sub:'From first appointment to final invoice — Cura covers every step of your patient journey',
       items:[
-        { icon:'📅', title:'Appointment Scheduling', desc:'Smart calendar that cuts no-shows and fills gaps automatically with instant patient reminders.' },
-        { icon:'🗂️', title:'Unified Patient Records',  desc:'Comprehensive medical history, prescriptions, lab results, and diagnoses — all in one place.' },
-        { icon:'🩺', title:'Visit Notes',             desc:'Diagnosis, prescription, lab orders, and imaging requests captured in a single click per visit.' },
-        { icon:'🔢', title:'Queue Management',        desc:'Real-time walk-in queue system that keeps staff and patients informed at every step.' },
-        { icon:'💳', title:'Billing & Receipts',     desc:'One-click professional invoices with Jordan national e-invoicing integration coming soon.' },
-        { icon:'📊', title:'Performance Analytics',  desc:'Revenue, patient, and physician dashboards that turn clinic data into actionable decisions.' },
-        { icon:'🏥', title:'Multi-Department',        desc:'Independent departments with dedicated teams, permissions, and workflows under one roof.' },
-        { icon:'🌐', title:'Bilingual Interface',    desc:'Full Arabic and English support with native RTL layout built in from day one.' },
+        { Icon:Calendar,    title:'Appointment Scheduling', desc:'Smart calendar that cuts no-shows and fills gaps automatically with instant patient reminders.' },
+        { Icon:FolderOpen,  title:'Unified Patient Records',  desc:'Comprehensive medical history, prescriptions, lab results, and diagnoses — all in one place.' },
+        { Icon:Stethoscope, title:'Visit Notes',             desc:'Diagnosis, prescription, lab orders, and imaging requests captured in a single click per visit.' },
+        { Icon:ListOrdered, title:'Queue Management',        desc:'Real-time walk-in queue system that keeps staff and patients informed at every step.' },
+        { Icon:CreditCard,  title:'Billing & Receipts',     desc:'One-click professional invoices with Jordan national e-invoicing integration coming soon.' },
+        { Icon:BarChart3,   title:'Performance Analytics',  desc:'Revenue, patient, and physician dashboards that turn clinic data into actionable decisions.' },
+        { Icon:Building2,   title:'Multi-Department',        desc:'Independent departments with dedicated teams, permissions, and workflows under one roof.' },
+        { Icon:Globe,       title:'Dual-Language Support',    desc:'Full Arabic and English support with native RTL layout built in from day one.' },
       ],
     },
     pricing:{
       eyebrow:'Pricing',
       title:'Transparent pricing, no hidden fees',
       sub:'Flexible plans that scale with your clinic — all include free technical support and onboarding',
-      monthly:'Monthly', yearly:'Yearly', save:'Save 20%',
-      plans:[
-        { name:'Starter', nameEn:'Starter', price:29, currency:'JD',
-          desc:'For independent physicians and small practices',
-          features:['Up to 3 physicians','500 patient records','Appointment scheduling','Visit notes','Basic reports'],
-          cta:'Get started', featured:false },
-        { name:'Professional', nameEn:'Professional', price:59, currency:'JD',
-          desc:'The go-to choice for growing clinics',
-          features:['Up to 10 physicians','Unlimited patients','All features','E-invoicing','Multi-department','Priority support'],
-          cta:'Start 14-day free trial', featured:true },
-        { name:'Enterprise', nameEn:'Enterprise', price:99, currency:'JD',
-          desc:'For hospitals and large medical groups',
-          features:['Unlimited physicians & patients','Custom API access','National billing integration','Dedicated account manager','SLA guarantee','Free staff training'],
-          cta:'Talk to sales', featured:false },
-      ],
+      monthly:'Monthly', yearly:'Yearly', save:'Save with annual billing',
+      currency:'JD',
+      ctaDefault:'Get started', ctaFeatured:'Start 14-day free trial',
+      loading:'Loading plans...',
+      error:'Could not load plans right now, please try again later',
+      empty:'No plans available right now',
     },
     cta:{
       title:'Ready to transform your patient experience?',
@@ -349,7 +373,10 @@ export default function LandingPage() {
   const [lang,    setLang]    = useState<'ar'|'en'>('en')
   const [billing, setBilling] = useState<'monthly'|'yearly'>('monthly')
   const [scrolled,setScrolled]= useState(false)
-  const heroRef = useRef<HTMLDivElement>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [plans, setPlans] = useState<ApiPlan[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [plansError, setPlansError] = useState(false)
 
   useEffect(() => {
     const id = 'cura-lp-css'
@@ -361,9 +388,38 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // ── Fetch real plans from the API instead of hardcoded pricing ──
+ useEffect(() => {
+    let cancelled = false
+    async function loadPlans() {
+      setPlansLoading(true)
+      setPlansError(false)
+      try {
+        const res = await api.get<ApiPlan[]>('/plans')
+        if (!cancelled) setPlans(res.data)
+      } catch {
+        if (!cancelled) setPlansError(true)
+      } finally {
+        if (!cancelled) setPlansLoading(false)
+      }
+    }
+    loadPlans()
+    return () => { cancelled = true }
+  }, [])
+
+  // Close the mobile panel automatically if the viewport grows back to desktop width
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth > 768) setMobileOpen(false) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const t    = T[lang]
   const isAr = lang === 'ar'
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:'smooth' })
+  const scrollTo = (id: string) => {
+    setMobileOpen(false)
+    document.getElementById(id)?.scrollIntoView({ behavior:'smooth' })
+  }
 
   const LangBtn = () => (
     <button onClick={() => setLang(isAr ? 'en' : 'ar')}
@@ -380,49 +436,100 @@ export default function LandingPage() {
       {/* ══════════════════════ NAV ══════════════════════ */}
       <nav style={{
         position:'fixed', inset:'0 0 auto 0', zIndex:200,
-        background: scrolled ? 'rgba(247,249,249,0.88)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(16px)' : 'none',
-        borderBottom: scrolled ? `1px solid ${C.border}` : 'none',
-        transition:'all 0.3s ease', padding:'0 40px',
+        background: scrolled || mobileOpen ? 'rgba(247,249,249,0.95)' : 'transparent',
+        backdropFilter: scrolled || mobileOpen ? 'blur(16px)' : 'none',
+        borderBottom: scrolled || mobileOpen ? `1px solid ${C.border}` : 'none',
+        transition:'all 0.3s ease', padding:'0 24px',
       }}>
-        <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', height:70 }}>
-          {/* Logo */}
-          <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={() => window.scrollTo({ top:0, behavior:'smooth' })}>
-            <div style={{ width:38, height:38, borderRadius:11, background:`linear-gradient(135deg,${C.teal},${C.tealLight})`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 4px 14px ${C.teal}40` }}>
-              <span style={{ color:'#FFF', fontSize:17, fontWeight:800, fontFamily:"'DM Serif Display',serif", lineHeight:1 }}>C</span>
+        <div style={{ maxWidth:1200, margin:'0 auto' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', height:70 }}>
+            {/* Logo */}
+            <div style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }} onClick={() => window.scrollTo({ top:0, behavior:'smooth' })}>
+              <div style={{ width:38, height:38, borderRadius:11, background:`linear-gradient(135deg,${C.teal},${C.tealLight})`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 4px 14px ${C.teal}40` }}>
+                <span style={{ color:'#FFF', fontSize:17, fontWeight:800, fontFamily:"'DM Serif Display',serif", lineHeight:1 }}>C</span>
+              </div>
+              <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:23, color:C.dark, letterSpacing:'-0.4px', fontWeight:400 }}>Cura</span>
             </div>
-            <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:23, color:C.dark, letterSpacing:'-0.4px', fontWeight:400 }}>Cura</span>
-          </div>
 
-          {/* Desktop links */}
-          <div className="nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
-            {[
-              { label:t.nav.features, id:'features' },
-              { label:t.nav.pricing,  id:'pricing'  },
-            ].map(l => (
-              <span key={l.id} className="nav-item" onClick={() => scrollTo(l.id)}>{l.label}</span>
-            ))}
-            <LangBtn />
-            <div style={{ width:1, height:20, background:C.border }} />
-            <span className="nav-item" onClick={() => navigate('/login')}>{t.nav.login}</span>
-            <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding:'9px 22px', fontSize:13, borderRadius:10 }}>{t.nav.cta}</button>
-          </div>
+            {/* Desktop links */}
+            <div className="nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
+              {[
+                { label:t.nav.features, id:'features' },
+                { label:t.nav.pricing,  id:'pricing'  },
+              ].map(l => (
+                <span key={l.id} className="nav-item" onClick={() => scrollTo(l.id)}>{l.label}</span>
+              ))}
+              <LangBtn />
+              <div style={{ width:1, height:20, background:C.border }} />
+              <span className="nav-item" onClick={() => navigate('/login')}>{t.nav.login}</span>
+              <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding:'9px 22px', fontSize:13, borderRadius:10 }}>{t.nav.cta}</button>
+            </div>
 
-          {/* Mobile */}
-          <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-            <LangBtn />
-            <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding:'9px 18px', fontSize:13, borderRadius:10 }}>{t.nav.login}</button>
+            {/* Mobile controls */}
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <div className="mobile-menu-btn" style={{ display:'none' }}>
+                <LangBtn />
+              </div>
+              <button
+                className="mobile-menu-btn"
+                aria-label={mobileOpen ? (isAr ? 'إغلاق القائمة' : 'Close menu') : (isAr ? 'فتح القائمة' : 'Open menu')}
+                aria-expanded={mobileOpen}
+                onClick={() => setMobileOpen(v => !v)}
+                style={{
+                  alignItems:'center', justifyContent:'center',
+                  width:38, height:38, borderRadius:10,
+                  background:C.tealSoft, border:`1px solid ${C.border}`,
+                  color:C.teal, cursor:'pointer', marginInlineStart:8,
+                }}
+              >
+                {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Mobile dropdown panel — only visible below 768px via the .nav-links / .mobile-menu-btn breakpoint */}
+        {mobileOpen && (
+          <div className="mobile-panel" style={{
+            borderTop:`1px solid ${C.border}`,
+            background:'rgba(247,249,249,0.98)',
+            padding:'16px 24px 22px',
+          }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:4, maxWidth:1200, margin:'0 auto' }}>
+              {[
+                { label:t.nav.features, id:'features' },
+                { label:t.nav.pricing,  id:'pricing'  },
+              ].map(l => (
+                <button key={l.id} onClick={() => scrollTo(l.id)}
+                  style={{ textAlign:isAr ? 'right' : 'left', background:'none', border:'none', padding:'12px 4px',
+                    fontSize:15, fontWeight:600, color:C.dark, cursor:'pointer', fontFamily:t.font,
+                    borderBottom:`1px solid ${C.border}` }}>
+                  {l.label}
+                </button>
+              ))}
+              <button onClick={() => { setMobileOpen(false); navigate('/login') }}
+                style={{ textAlign:isAr ? 'right' : 'left', background:'none', border:'none', padding:'12px 4px',
+                  fontSize:15, fontWeight:600, color:C.dark, cursor:'pointer', fontFamily:t.font,
+                  borderBottom:`1px solid ${C.border}` }}>
+                {t.nav.login}
+              </button>
+              <button className="btn-primary" onClick={() => { setMobileOpen(false); navigate('/login') }}
+                style={{ marginTop:12, justifyContent:'center' }}>
+                {t.nav.cta}
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ══════════════════════ HERO ══════════════════════ */}
-      <section ref={heroRef} style={{ minHeight:'100vh', display:'flex', alignItems:'center', padding:'110px 40px 80px' }}>
-        {/* BG gradient blob */}
-        <div style={{ position:'fixed', top:'-15%', [isAr?'left':'right']:'-10%', width:600, height:600, borderRadius:'50%',
+      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', padding:'110px 40px 80px', overflow:'hidden' }}>
+        {/* BG gradient blobs — scoped to this section only (was `position: fixed`,
+            which bled through every section below it on scroll) */}
+        <div style={{ position:'absolute', top:'-15%', [isAr?'left':'right']:'-10%', width:600, height:600, borderRadius:'50%',
           background:`radial-gradient(circle, ${C.teal}18 0%, transparent 70%)`,
           pointerEvents:'none', zIndex:0 }} />
-        <div style={{ position:'fixed', bottom:'-20%', [isAr?'right':'left']:'-5%', width:500, height:500, borderRadius:'50%',
+        <div style={{ position:'absolute', bottom:'-20%', [isAr?'right':'left']:'-5%', width:500, height:500, borderRadius:'50%',
           background:`radial-gradient(circle, ${C.tealLight}12 0%, transparent 70%)`,
           pointerEvents:'none', zIndex:0 }} />
 
@@ -440,9 +547,9 @@ export default function LandingPage() {
               <h1 className="fu d1" style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(40px,5.5vw,70px)', color:C.dark, lineHeight:1.1, letterSpacing:'-0.6px', marginBottom:6 }}>
                 {t.hero.h1}
               </h1>
-<h1 style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(40px,5.5vw,70px)', color:C.teal, lineHeight:1.1, letterSpacing:'-0.6px', marginBottom:28 }}>
-  {t.hero.h1b}
-</h1>
+              <h1 className="fu d1" style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(40px,5.5vw,70px)', color:C.teal, lineHeight:1.1, letterSpacing:'-0.6px', marginBottom:28 }}>
+                {t.hero.h1b}
+              </h1>
 
               <p className="fu d2" style={{ fontSize:'clamp(15px,1.6vw,17.5px)', color:C.muted, lineHeight:1.75, maxWidth:520, marginBottom:40 }}>
                 {t.hero.sub}
@@ -456,12 +563,12 @@ export default function LandingPage() {
               {/* Trust badges */}
               <div className="fu d4" style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap' }}>
                 {[
-                  { icon:'🔒', text: isAr ? 'بيانات آمنة ومشفّرة' : 'Encrypted & Secure' },
-                  { icon:'☁️', text: isAr ? 'سحابي 100%'         : '100% Cloud-Based'  },
-                  { icon:'🛠️', text: isAr ? 'دعم فني على مدار الساعة' : '24/7 Support'  },
+                  { Icon:Lock,   text: isAr ? 'بيانات آمنة ومشفّرة' : 'Encrypted & Secure' },
+                  { Icon:Cloud,  text: isAr ? 'سحابي 100%'         : '100% Cloud-Based'  },
+                  { Icon:Wrench, text: isAr ? 'دعم فني على مدار الساعة' : '24/7 Support'  },
                 ].map((b,i) => (
                   <div key={i} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:C.muted, fontWeight:500 }}>
-                    <span>{b.icon}</span><span>{b.text}</span>
+                    <b.Icon size={14} strokeWidth={2} color={C.teal} /><span>{b.text}</span>
                   </div>
                 ))}
               </div>
@@ -500,7 +607,9 @@ export default function LandingPage() {
                 {/* Card header */}
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <div style={{ width:32, height:32, borderRadius:9, background:C.tealSoft, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15 }}>📅</div>
+                    <div style={{ width:32, height:32, borderRadius:9, background:C.tealSoft, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <Calendar size={16} color={C.teal} strokeWidth={2} />
+                    </div>
                     <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{t.hero.card_title}</span>
                   </div>
                   <span style={{ fontSize:11, background:C.tealSoft, color:C.teal, padding:'3px 10px', borderRadius:100, fontWeight:700 }}>
@@ -589,7 +698,9 @@ export default function LandingPage() {
           <div className="feat-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:20 }}>
             {t.feats.items.map((f,i) => (
               <div key={i} className="feat-card fu" style={{ animationDelay:`${i*0.05}s` }}>
-                <div style={{ width:50, height:50, background:C.tealSoft, borderRadius:15, display:'flex', alignItems:'center', justifyContent:'center', fontSize:23, marginBottom:18 }}>{f.icon}</div>
+                <div style={{ width:50, height:50, background:C.tealSoft, borderRadius:15, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:18 }}>
+                  <f.Icon size={22} color={C.teal} strokeWidth={1.8} />
+                </div>
                 <h3 style={{ fontSize:15, fontWeight:700, color:C.dark, marginBottom:10, lineHeight:1.3 }}>{f.title}</h3>
                 <p style={{ fontSize:13, color:C.muted, lineHeight:1.7, margin:0 }}>{f.desc}</p>
               </div>
@@ -632,59 +743,91 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="plan-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24 }}>
-            {t.pricing.plans.map((plan,i) => (
-              <div key={i} className={`plan-card${plan.featured?' top':''}`} style={{ ...(plan.featured ? { transform:'scale(1.03)' } : {}) }}>
+          {/* Loading state */}
+          {plansLoading && (
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, padding:'60px 0', color:C.muted }}>
+              <Loader2 size={28} style={{ animation:'spin 0.9s linear infinite' }} />
+              <p style={{ fontSize:14 }}>{t.pricing.loading}</p>
+            </div>
+          )}
 
-                {plan.featured && (
-                  <div style={{ background:`linear-gradient(90deg,${C.teal},${C.tealLight})`, color:'#FFF', fontSize:11, fontWeight:800, padding:'5px 14px', borderRadius:100, display:'inline-block', marginBottom:20, letterSpacing:'0.6px' }}>
-                    {isAr ? '⭐ الأكثر اختياراً' : '⭐ Most Popular'}
+          {/* Error state */}
+          {!plansLoading && plansError && (
+            <div style={{ textAlign:'center', padding:'60px 0' }}>
+              <p style={{ fontSize:14, color:C.muted }}>{t.pricing.error}</p>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!plansLoading && !plansError && plans.length === 0 && (
+            <div style={{ textAlign:'center', padding:'60px 0' }}>
+              <p style={{ fontSize:14, color:C.muted }}>{t.pricing.empty}</p>
+            </div>
+          )}
+
+          {/* Real plans from the API */}
+          {!plansLoading && !plansError && plans.length > 0 && (
+            <div className="plan-grid" style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(plans.length,3)},1fr)`, gap:24 }}>
+              {plans.map((plan) => {
+                const displayPrice = billing==='yearly'
+                  ? Math.round(plan.yearlyPrice / 12)
+                  : Math.round(plan.monthlyPrice)
+                return (
+                  <div key={plan.id} className={`plan-card${plan.isFeatured?' top':''}`}>
+
+                    {plan.isFeatured && (
+                      <div style={{ background:`linear-gradient(90deg,${C.teal},${C.tealLight})`, color:'#FFF', fontSize:11, fontWeight:800, padding:'5px 14px', borderRadius:100, display:'inline-block', marginBottom:20, letterSpacing:'0.6px' }}>
+                        {isAr ? '⭐ الأكثر اختياراً' : '⭐ Most Popular'}
+                      </div>
+                    )}
+
+                    <h3 style={{ fontSize:20, fontWeight:800, color:plan.isFeatured?'#FFF':C.dark, marginBottom:6 }}>{plan.name}</h3>
+                    {plan.description && (
+                      <p style={{ fontSize:13, color:plan.isFeatured?'rgba(255,255,255,0.6)':C.muted, marginBottom:24, lineHeight:1.5 }}>{plan.description}</p>
+                    )}
+
+                    <div style={{ marginBottom:28, display:'flex', alignItems:'baseline', gap:4 }}>
+                      <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:52, color:plan.isFeatured?'#FFF':C.teal, lineHeight:1 }}>
+                        {displayPrice}
+                      </span>
+                      <span style={{ fontSize:14, color:plan.isFeatured?'rgba(255,255,255,0.5)':C.muted }}>
+                        {t.pricing.currency}/{isAr?'شهر':'mo'}
+                      </span>
+                    </div>
+
+                    <ul style={{ listStyle:'none', marginBottom:32 }}>
+                      {plan.features.map((f,j) => (
+                        <li key={j} style={{ display:'flex', alignItems:'flex-start', gap:10, fontSize:14, color:plan.isFeatured?'rgba(255,255,255,0.85)':C.dark, marginBottom:12, lineHeight:1.5 }}>
+                          <span style={{ color:plan.isFeatured?'#4ADE80':C.teal, fontWeight:700, flexShrink:0, marginTop:1 }}>✓</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button onClick={() => navigate('/login')}
+                      style={{
+                        width:'100%', padding:'14px', borderRadius:12,
+                        border: plan.isFeatured ? 'none' : `1.5px solid ${C.border}`,
+                        background: plan.isFeatured ? `linear-gradient(135deg,${C.tealLight},${C.teal})` : 'transparent',
+                        color: plan.isFeatured ? '#FFF' : C.dark,
+                        fontSize:14, fontWeight:700, cursor:'pointer', transition:'all 0.22s ease',
+                        fontFamily:t.font,
+                      }}
+                      onMouseEnter={e => {
+                        if(plan.isFeatured) { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1.01)' }
+                        else { e.currentTarget.style.background=C.tealSoft; e.currentTarget.style.borderColor=C.teal; e.currentTarget.style.color=C.teal }
+                      }}
+                      onMouseLeave={e => {
+                        if(plan.isFeatured) { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1)' }
+                        else { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor=C.border; e.currentTarget.style.color=C.dark }
+                      }}>
+                      {plan.isFeatured ? t.pricing.ctaFeatured : t.pricing.ctaDefault}
+                    </button>
                   </div>
-                )}
-
-                <h3 style={{ fontSize:20, fontWeight:800, color:plan.featured?'#FFF':C.dark, marginBottom:6 }}>{plan.name}</h3>
-                <p style={{ fontSize:13, color:plan.featured?'rgba(255,255,255,0.6)':C.muted, marginBottom:24, lineHeight:1.5 }}>{plan.desc}</p>
-
-                <div style={{ marginBottom:28, display:'flex', alignItems:'baseline', gap:4 }}>
-                  <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:52, color:plan.featured?'#FFF':C.teal, lineHeight:1 }}>
-                    {billing==='yearly' ? Math.round(plan.price*0.8) : plan.price}
-                  </span>
-                  <span style={{ fontSize:14, color:plan.featured?'rgba(255,255,255,0.5)':C.muted }}>
-                    {plan.currency}/{isAr?'شهر':'mo'}
-                  </span>
-                </div>
-
-                <ul style={{ listStyle:'none', marginBottom:32 }}>
-                  {plan.features.map((f,j) => (
-                    <li key={j} style={{ display:'flex', alignItems:'flex-start', gap:10, fontSize:14, color:plan.featured?'rgba(255,255,255,0.85)':C.dark, marginBottom:12, lineHeight:1.5 }}>
-                      <span style={{ color:plan.featured?'#4ADE80':C.teal, fontWeight:700, flexShrink:0, marginTop:1 }}>✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                <button onClick={() => navigate('/login')}
-                  style={{
-                    width:'100%', padding:'14px', borderRadius:12,
-                    border: plan.featured ? 'none' : `1.5px solid ${C.border}`,
-                    background: plan.featured ? `linear-gradient(135deg,${C.tealLight},${C.teal})` : 'transparent',
-                    color: plan.featured ? '#FFF' : C.dark,
-                    fontSize:14, fontWeight:700, cursor:'pointer', transition:'all 0.22s ease',
-                    fontFamily:t.font,
-                  }}
-                  onMouseEnter={e => {
-                    if(plan.featured) { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1.01)' }
-                    else { e.currentTarget.style.background=C.tealSoft; e.currentTarget.style.borderColor=C.teal; e.currentTarget.style.color=C.teal }
-                  }}
-                  onMouseLeave={e => {
-                    if(plan.featured) { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1)' }
-                    else { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor=C.border; e.currentTarget.style.color=C.dark }
-                  }}>
-                  {plan.cta}
-                </button>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* Guarantee note */}
           <p style={{ textAlign:'center', marginTop:32, fontSize:13, color:C.muted }}>

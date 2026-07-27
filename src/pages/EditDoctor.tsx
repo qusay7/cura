@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
+import SearchableSelect from '../components/SearchableSelect'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -179,6 +180,21 @@ const T = {
     loadingMessage: 'جاري تحميل بيانات الطبيب',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات',
     noDepartments: 'لا توجد أقسام',
+    // ✅ الإعدادات المالية
+    tabInfo: 'بيانات الطبيب', tabFinancial: 'الإعدادات المالية',
+    generalTitle: 'الإعداد العام', generalHint: 'يطبّق على كل قوالب الزيارة، إلا لو فيه استثناء خاص لقالب معيّن',
+    commissionType: 'نوع الحصة', percentage: 'نسبة مئوية', fixed: 'مبلغ ثابت',
+    firstVisitPrice: 'سعر الكشف الأول', followUpPrice: 'سعر المراجعة',
+    pricePlaceholder: 'استخدم سعر القالب', firstVisitRate: 'حصة الكشف الأول',
+    followUpRate: 'حصة المراجعة', ratePlaceholder: 'بدون حصة',
+    saveGeneral: 'حفظ الإعداد العام',
+    exceptionsTitle: 'استثناءات لقوالب معيّنة',
+    exceptionsHint: 'تتجاوز الإعداد العام وسعر القالب لهذا الطبيب بالذات',
+    addException: '+ إضافة استثناء', selectTemplate: 'اختر قالب...',
+    saveException: 'حفظ الاستثناء', noExceptions: 'ما فيه أي استثناءات مضافة',
+    edit: 'تعديل', delete: 'حذف', cancel2: 'إلغاء',
+    financialSaved: 'تم الحفظ بنجاح', financialError: 'حدث خطأ أثناء الحفظ',
+    confirmDelete: 'متأكد تبي تحذف هذا الاستثناء؟',
   },
   en: {
     title: 'Edit Doctor', back: 'Back',
@@ -194,10 +210,39 @@ const T = {
     loadingMessage: 'Loading Doctor Data',
     loadingSub: 'Please wait while we load doctor information',
     noDepartments: 'No departments available',
+    tabInfo: 'Doctor Info', tabFinancial: 'Financial Settings',
+    generalTitle: 'General Settings', generalHint: 'Applies to all visit templates unless a specific exception exists',
+    commissionType: 'Commission Type', percentage: 'Percentage', fixed: 'Fixed Amount',
+    firstVisitPrice: 'First Visit Price', followUpPrice: 'Follow-up Price',
+    pricePlaceholder: 'Use template price', firstVisitRate: 'First Visit Commission',
+    followUpRate: 'Follow-up Commission', ratePlaceholder: 'No commission',
+    saveGeneral: 'Save General Settings',
+    exceptionsTitle: 'Template-Specific Exceptions',
+    exceptionsHint: 'Overrides the general setting and template price for this doctor only',
+    addException: '+ Add Exception', selectTemplate: 'Select template...',
+    saveException: 'Save Exception', noExceptions: 'No exceptions added yet',
+    edit: 'Edit', delete: 'Delete', cancel2: 'Cancel',
+    financialSaved: 'Saved successfully', financialError: 'An error occurred while saving',
+    confirmDelete: 'Are you sure you want to delete this exception?',
   },
 }
 
 interface Department { id: string; name: string; nameEn?: string; isActive: boolean }
+
+interface Template { id: string; name: string; nameEn?: string | null }
+
+interface FinancialSetting {
+  id: string
+  templateId: string | null
+  templateName: string | null
+  isGeneral: boolean
+  firstVisitPrice: number | null
+  followUpPrice: number | null
+  commissionType: 'percentage' | 'fixed'
+  firstVisitCommissionRate: number | null
+  followUpCommissionRate: number | null
+  isActive: boolean
+}
 
 const FormField = ({ label, required, children, error }: {
   label: string; required?: boolean; children: React.ReactNode; error?: string
@@ -248,6 +293,136 @@ export default function EditDoctor() {
     fullName: '', specialty: '', phone: '', email: '', notes: '',
     isActive: true, departmentId: '', workType: 'appointments',
   })
+
+  // ✅ الإعدادات المالية
+  const [activeTab, setActiveTab] = useState<'info' | 'financial'>('info')
+  const [financialLoaded, setFinancialLoaded] = useState(false)
+  const [financialLoading, setFinancialLoading] = useState(false)
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [settings, setSettings] = useState<FinancialSetting[]>([])
+  const [financialError, setFinancialError] = useState('')
+  const [financialSuccess, setFinancialSuccess] = useState('')
+
+  const emptyMoneyForm = {
+    commissionType: 'percentage' as 'percentage' | 'fixed',
+    firstVisitPrice: '', followUpPrice: '',
+    firstVisitCommissionRate: '', followUpCommissionRate: '',
+  }
+  const [generalForm, setGeneralForm] = useState(emptyMoneyForm)
+  const [savingGeneral, setSavingGeneral] = useState(false)
+
+  const [showExceptionForm, setShowExceptionForm] = useState(false)
+  const [editingExceptionId, setEditingExceptionId] = useState<string | null>(null)
+  const [exceptionTemplateId, setExceptionTemplateId] = useState('')
+  const [exceptionForm, setExceptionForm] = useState(emptyMoneyForm)
+  const [savingException, setSavingException] = useState(false)
+
+  const loadFinancialData = async () => {
+    setFinancialLoading(true)
+    setFinancialError('')
+    try {
+      const [tplRes, settingsRes] = await Promise.all([
+        api.get('/treatmentplans/templates'),
+        api.get(`/doctors/${id}/financial-settings`),
+      ])
+      setTemplates(tplRes.data)
+      setSettings(settingsRes.data)
+
+      const general = (settingsRes.data as FinancialSetting[]).find(s => s.isGeneral)
+      if (general) {
+        setGeneralForm({
+          commissionType: general.commissionType,
+          firstVisitPrice: general.firstVisitPrice?.toString() ?? '',
+          followUpPrice: general.followUpPrice?.toString() ?? '',
+          firstVisitCommissionRate: general.firstVisitCommissionRate?.toString() ?? '',
+          followUpCommissionRate: general.followUpCommissionRate?.toString() ?? '',
+        })
+      }
+      setFinancialLoaded(true)
+    } catch {
+      setFinancialError(t.financialError)
+    } finally {
+      setFinancialLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'financial' && !financialLoaded) loadFinancialData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
+  const buildMoneyPayload = (f: typeof emptyMoneyForm) => ({
+    commissionType: f.commissionType,
+    firstVisitPrice: f.firstVisitPrice ? parseFloat(f.firstVisitPrice) : null,
+    followUpPrice: f.followUpPrice ? parseFloat(f.followUpPrice) : null,
+    firstVisitCommissionRate: f.firstVisitCommissionRate ? parseFloat(f.firstVisitCommissionRate) : null,
+    followUpCommissionRate: f.followUpCommissionRate ? parseFloat(f.followUpCommissionRate) : null,
+  })
+
+  const handleSaveGeneral = async () => {
+    setSavingGeneral(true)
+    setFinancialError(''); setFinancialSuccess('')
+    try {
+      await api.put(`/doctors/${id}/financial-settings/general`, buildMoneyPayload(generalForm))
+      setFinancialSuccess(t.financialSaved)
+      await loadFinancialData()
+      setTimeout(() => setFinancialSuccess(''), 3000)
+    } catch (err: any) {
+      setFinancialError(err.response?.data?.message || err.response?.data || t.financialError)
+    } finally {
+      setSavingGeneral(false)
+    }
+  }
+
+  const openAddException = () => {
+    setEditingExceptionId(null)
+    setExceptionTemplateId('')
+    setExceptionForm(emptyMoneyForm)
+    setShowExceptionForm(true)
+  }
+
+  const openEditException = (s: FinancialSetting) => {
+    setEditingExceptionId(s.id)
+    setExceptionTemplateId(s.templateId || '')
+    setExceptionForm({
+      commissionType: s.commissionType,
+      firstVisitPrice: s.firstVisitPrice?.toString() ?? '',
+      followUpPrice: s.followUpPrice?.toString() ?? '',
+      firstVisitCommissionRate: s.firstVisitCommissionRate?.toString() ?? '',
+      followUpCommissionRate: s.followUpCommissionRate?.toString() ?? '',
+    })
+    setShowExceptionForm(true)
+  }
+
+  const handleSaveException = async () => {
+    if (!exceptionTemplateId) {
+      setFinancialError(isAr ? 'اختر قالباً أولاً' : 'Please select a template first')
+      return
+    }
+    setSavingException(true)
+    setFinancialError(''); setFinancialSuccess('')
+    try {
+      await api.put(`/doctors/${id}/financial-settings/exceptions/${exceptionTemplateId}`, buildMoneyPayload(exceptionForm))
+      setFinancialSuccess(t.financialSaved)
+      setShowExceptionForm(false)
+      await loadFinancialData()
+      setTimeout(() => setFinancialSuccess(''), 3000)
+    } catch (err: any) {
+      setFinancialError(err.response?.data?.message || err.response?.data || t.financialError)
+    } finally {
+      setSavingException(false)
+    }
+  }
+
+  const handleDeleteException = async (settingId: string) => {
+    if (!window.confirm(t.confirmDelete)) return
+    try {
+      await api.delete(`/doctors/${id}/financial-settings/${settingId}`)
+      await loadFinancialData()
+    } catch {
+      setFinancialError(t.financialError)
+    }
+  }
 
   useEffect(() => {
     const styleId = 'cura-edit-doctor-css'
@@ -338,7 +513,24 @@ export default function EditDoctor() {
           </div>
         </div>
 
-        {/* Form */}
+        {/* ✅ التبويبات */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {(['info', 'financial'] as const).map(tab => (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '9px 18px', borderRadius: 12, fontSize: 13, fontWeight: 600,
+                border: `1.5px solid ${activeTab === tab ? PRIMARY : BORDER}`,
+                background: activeTab === tab ? PRIMARY_SOFT : CARD_BG,
+                color: activeTab === tab ? PRIMARY : TEXT_MUTED,
+                cursor: 'pointer', transition: 'all 0.2s ease',
+                fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif",
+              }}>
+              {tab === 'info' ? `👤 ${t.tabInfo}` : `💰 ${t.tabFinancial}`}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'info' && (
         <form onSubmit={handleSubmit}>
           <div className="form-container" style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 24, padding: '28px' }}>
 
@@ -442,6 +634,196 @@ export default function EditDoctor() {
             </div>
           </div>
         </form>
+        )}
+
+        {activeTab === 'financial' && (
+          <div className="form-container" style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 24, padding: '28px' }}>
+
+            {financialLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: TEXT_MUTED }}>
+                <div style={{ width: 32, height: 32, margin: '0 auto 12px', borderRadius: '50%', border: `3px solid ${BORDER}`, borderTopColor: PRIMARY, animation: 'spin 0.8s linear infinite' }} />
+                {isAr ? 'جاري التحميل...' : 'Loading...'}
+              </div>
+            ) : (
+              <>
+                {financialError && (
+                  <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span>⚠️</span><span style={{ fontSize: 13, color: ERROR_TEXT }}>{financialError}</span>
+                  </div>
+                )}
+                {financialSuccess && (
+                  <div style={{ background: PRIMARY_SOFT, border: `1px solid ${SUCCESS}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span>✅</span><span style={{ fontSize: 13, color: SUCCESS }}>{financialSuccess}</span>
+                  </div>
+                )}
+
+                {/* ═══ الإعداد العام ═══ */}
+                <div style={{ marginBottom: 28 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}>{t.generalTitle}</h3>
+                  <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>{t.generalHint}</p>
+
+                  <FormField label={t.commissionType}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {(['percentage', 'fixed'] as const).map(ct => (
+                        <button key={ct} type="button"
+                          onClick={() => setGeneralForm(prev => ({ ...prev, commissionType: ct }))}
+                          style={{
+                            flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                            border: `2px solid ${generalForm.commissionType === ct ? PRIMARY : BORDER}`,
+                            background: generalForm.commissionType === ct ? PRIMARY_SOFT : CARD_BG,
+                            color: generalForm.commissionType === ct ? PRIMARY : TEXT_MUTED,
+                            cursor: 'pointer', transition: 'all 0.2s ease',
+                          }}>
+                          {ct === 'percentage' ? `% ${t.percentage}` : `💵 ${t.fixed}`}
+                        </button>
+                      ))}
+                    </div>
+                  </FormField>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <FormField label={t.firstVisitPrice}>
+                      <input type="number" value={generalForm.firstVisitPrice}
+                        onChange={e => setGeneralForm(prev => ({ ...prev, firstVisitPrice: e.target.value }))}
+                        placeholder={t.pricePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                    </FormField>
+                    <FormField label={t.followUpPrice}>
+                      <input type="number" value={generalForm.followUpPrice}
+                        onChange={e => setGeneralForm(prev => ({ ...prev, followUpPrice: e.target.value }))}
+                        placeholder={t.pricePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                    </FormField>
+                    <FormField label={t.firstVisitRate}>
+                      <input type="number" value={generalForm.firstVisitCommissionRate}
+                        onChange={e => setGeneralForm(prev => ({ ...prev, firstVisitCommissionRate: e.target.value }))}
+                        placeholder={t.ratePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                    </FormField>
+                    <FormField label={t.followUpRate}>
+                      <input type="number" value={generalForm.followUpCommissionRate}
+                        onChange={e => setGeneralForm(prev => ({ ...prev, followUpCommissionRate: e.target.value }))}
+                        placeholder={t.ratePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                    </FormField>
+                  </div>
+
+                  <button type="button" onClick={handleSaveGeneral} disabled={savingGeneral}
+                    style={{ marginTop: 16, background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 13, fontWeight: 600, cursor: savingGeneral ? 'not-allowed' : 'pointer', opacity: savingGeneral ? 0.7 : 1 }}>
+                    {savingGeneral ? t.saving : t.saveGeneral}
+                  </button>
+                </div>
+
+                {/* ═══ الاستثناءات ═══ */}
+                <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 22 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                    <div>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}>{t.exceptionsTitle}</h3>
+                      <p style={{ fontSize: 12, color: TEXT_MUTED }}>{t.exceptionsHint}</p>
+                    </div>
+                    {!showExceptionForm && (
+                      <button type="button" onClick={openAddException}
+                        style={{ background: PRIMARY_SOFT, color: PRIMARY, border: `1px solid ${PRIMARY}40`, borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {t.addException}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* فورم إضافة/تعديل استثناء */}
+                  {showExceptionForm && (
+                    <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16, marginTop: 12 }}>
+                      <FormField label={t.selectTemplate}>
+                        <SearchableSelect
+                          isRtl={isAr}
+                          value={exceptionTemplateId}
+                          onChange={setExceptionTemplateId}
+                          placeholder={t.selectTemplate}
+                          disabled={!!editingExceptionId}
+                          options={templates.map(tpl => ({ value: tpl.id, label: isAr ? tpl.name : (tpl.nameEn || tpl.name) }))}
+                        />
+                      </FormField>
+
+                      <FormField label={t.commissionType}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          {(['percentage', 'fixed'] as const).map(ct => (
+                            <button key={ct} type="button"
+                              onClick={() => setExceptionForm(prev => ({ ...prev, commissionType: ct }))}
+                              style={{
+                                flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                                border: `2px solid ${exceptionForm.commissionType === ct ? PRIMARY : BORDER}`,
+                                background: exceptionForm.commissionType === ct ? CARD_BG : CARD_BG,
+                                color: exceptionForm.commissionType === ct ? PRIMARY : TEXT_MUTED,
+                                cursor: 'pointer',
+                              }}>
+                              {ct === 'percentage' ? `% ${t.percentage}` : `💵 ${t.fixed}`}
+                            </button>
+                          ))}
+                        </div>
+                      </FormField>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        <FormField label={t.firstVisitPrice}>
+                          <input type="number" value={exceptionForm.firstVisitPrice}
+                            onChange={e => setExceptionForm(prev => ({ ...prev, firstVisitPrice: e.target.value }))}
+                            placeholder={t.pricePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                        </FormField>
+                        <FormField label={t.followUpPrice}>
+                          <input type="number" value={exceptionForm.followUpPrice}
+                            onChange={e => setExceptionForm(prev => ({ ...prev, followUpPrice: e.target.value }))}
+                            placeholder={t.pricePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                        </FormField>
+                        <FormField label={t.firstVisitRate}>
+                          <input type="number" value={exceptionForm.firstVisitCommissionRate}
+                            onChange={e => setExceptionForm(prev => ({ ...prev, firstVisitCommissionRate: e.target.value }))}
+                            placeholder={t.ratePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                        </FormField>
+                        <FormField label={t.followUpRate}>
+                          <input type="number" value={exceptionForm.followUpCommissionRate}
+                            onChange={e => setExceptionForm(prev => ({ ...prev, followUpCommissionRate: e.target.value }))}
+                            placeholder={t.ratePlaceholder} className="form-input" style={inputStyle(isAr)} />
+                        </FormField>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                        <button type="button" onClick={handleSaveException} disabled={savingException}
+                          style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 12.5, fontWeight: 600, cursor: savingException ? 'not-allowed' : 'pointer', opacity: savingException ? 0.7 : 1 }}>
+                          {savingException ? t.saving : t.saveException}
+                        </button>
+                        <button type="button" onClick={() => setShowExceptionForm(false)}
+                          style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '9px 18px', fontSize: 12.5, fontWeight: 500, color: TEXT_MUTED, cursor: 'pointer' }}>
+                          {t.cancel2}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* قائمة الاستثناءات الموجودة */}
+                  <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {settings.filter(s => !s.isGeneral).length === 0 ? (
+                      <p style={{ fontSize: 12.5, color: TEXT_MUTED, textAlign: 'center', padding: '16px 0' }}>{t.noExceptions}</p>
+                    ) : settings.filter(s => !s.isGeneral).map(s => (
+                      <div key={s.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>{s.templateName}</p>
+                          <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '3px 0 0' }}>
+                            {s.commissionType === 'percentage' ? t.percentage : t.fixed}
+                            {' · '}{t.firstVisitRate}: {s.firstVisitCommissionRate ?? '—'}
+                            {' · '}{t.followUpRate}: {s.followUpCommissionRate ?? '—'}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" onClick={() => openEditException(s)}
+                            style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
+                            {t.edit}
+                          </button>
+                          <button type="button" onClick={() => handleDeleteException(s.id)}
+                            style={{ background: ERROR_BG, color: ERROR_TEXT, border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
+                            {t.delete}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

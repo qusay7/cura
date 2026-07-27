@@ -328,19 +328,23 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
 
   const allMenuItems = [
-    { path: '/dashboard',          labelAr: 'الرئيسية',        labelEn: 'Home',          icon: 'ti-layout-dashboard',   permission: null,                 superAdminOnly: false },
-    { path: '/patients',           labelAr: 'المرضى',          labelEn: 'Patients',      icon: 'ti-users',              permission: 'patients.view',      superAdminOnly: false },
-    { path: '/doctors',            labelAr: 'الأطباء',         labelEn: 'Doctors',       icon: 'ti-stethoscope',        permission: 'doctors.view',       superAdminOnly: false },
-    { path: '/appointments',       labelAr: 'المواعيد',        labelEn: 'Appointments',  icon: 'ti-calendar',           permission: 'appointments.view',  superAdminOnly: false },
-    { path: '/schedules',          labelAr: 'جداول الدوام',    labelEn: 'Schedules',     icon: 'ti-calendar-time',      permission: 'schedules.view',     superAdminOnly: false },
-    { path: '/departments',        labelAr: 'الأقسام',         labelEn: 'Departments',   icon: 'ti-building-hospital',  permission: 'departments.manage', superAdminOnly: false },
-    /*{ path: '/queue',              labelAr: 'قائمة الانتظار',  labelEn: 'Queue',         icon: 'ti-list',               permission: 'appointments.view',  superAdminOnly: false },*/
-    { path: '/reports',            labelAr: 'التقارير',        labelEn: 'Reports',       icon: 'ti-chart-bar',          permission: 'reports.view',       superAdminOnly: false },
-    { path: '/users',              labelAr: 'المستخدمون',      labelEn: 'Users',         icon: 'ti-users-group',        permission: 'users.view',         superAdminOnly: false },
-    { path: '/permissions',        labelAr: 'الصلاحيات',       labelEn: 'Permissions',   icon: 'ti-shield-lock',        permission: 'settings.view',      superAdminOnly: false },
-    { path: '/settings',           labelAr: 'الإعدادات',       labelEn: 'Settings',      icon: 'ti-settings',           permission: 'settings.view',      superAdminOnly: false },
-    { path: '/superadmin/clinics', labelAr: 'العيادات',        labelEn: 'Clinics',       icon: 'ti-building-hospital',  permission: null,                 superAdminOnly: true  },
-    { path: '/superadmin/plans',   labelAr: 'الخطط',           labelEn: 'Plans',         icon: 'ti-diamond',            permission: null,                 superAdminOnly: true  },
+    { path: '/dashboard',          labelAr: 'الرئيسية',            labelEn: 'Home',               icon: 'ti-layout-dashboard',   permission: null,                 superAdminOnly: false },
+    { path: '/patients',           labelAr: 'المرضى'  ,            labelEn: 'Patients',           icon: 'ti-users',              permission: 'patients.view',      superAdminOnly: false },
+    { path: '/doctors',            labelAr: 'الأطباء'  ,            labelEn: 'Doctors',            icon: 'ti-stethoscope',        permission: 'doctors.view',       superAdminOnly: false },
+    { path: '/appointments',       labelAr: 'المواعيد',            labelEn: 'Appointments',       icon: 'ti-calendar',           permission: 'appointments.view',  superAdminOnly: false },
+    { path: '/schedules',          labelAr: 'جداول الدوام',        labelEn: 'Schedules',          icon: 'ti-calendar-time',      permission: 'schedules.view',     superAdminOnly: false },
+    { path: '/departments',        labelAr: 'الأقسام',              labelEn: 'Departments',        icon: 'ti-building-hospital',   permission: 'departments.manage', superAdminOnly: false },
+    { path: '/treatment-templates', labelAr: 'قوالب الزيارة',       labelEn: 'Visit Templates',    icon: 'ti-clipboard-list',      permission: 'treatmenttemplates.manage', superAdminOnly: false },
+    { path: '/insurance',          labelAr: 'التأمين الصحي',       labelEn: 'Health Insurance',   icon: 'ti-heart-handshake',    permission: 'insurance.view', superAdminOnly: false }, 
+     /*{ path: '/queue',              labelAr: 'قائمة الانتظار',       labelEn: 'Queue',            icon: 'ti-list',                 permission: 'appointments.view',  superAdminOnly: false },*/
+    { path: '/reports',            labelAr: 'التقارير',        labelEn: 'Reports',       icon: 'ti-chart-bar',            permission: 'reports.view',       superAdminOnly: false },
+    { path: '/users',              labelAr: 'المستخدمون',      labelEn: 'Users',         icon: 'ti-users-group',          permission: 'users.view',         superAdminOnly: false },
+    { path: '/permissions',        labelAr: 'الصلاحيات',        labelEn: 'Permissions',   icon: 'ti-shield-lock',          permission: 'settings.view',      superAdminOnly: false },
+    { path: '/settings',           labelAr: 'الإعدادات',        labelEn: 'Settings',      icon: 'ti-settings',             permission: 'settings.view',      superAdminOnly: false },
+    { path: '/superadmin/clinics', labelAr: 'العيادات',        labelEn: 'Clinics',       icon: 'ti-building-hospital',    permission: null,                 superAdminOnly: true  },
+    { path: '/superadmin/plans',   labelAr: 'الخطط',           labelEn: 'Plans',         icon: 'ti-diamond',              permission: null,                 superAdminOnly: true  },
+    { path:'/payments',            labelAr:'المدفوعات',        labelEn:'Payments',       icon:'ti-cash',                  permission: 'payments.view',      superAdminOnly: false},
+    { path:'/staff',               labelAr:'فريق العمل',       labelEn:'Staff',          icon:'ti-users' ,                permission: 'staff.view',           superAdminOnly: false},
   ]
 
   const menuItems = allMenuItems.filter(item => {

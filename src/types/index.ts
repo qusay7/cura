@@ -53,6 +53,9 @@ export interface Appointment {
   status: string
   notes: string | null
   createdAt: string
+  isPaid?: boolean | null
+  amountPaid?: number
+  patientBalance?: number
 }
 
 export interface DashboardData {

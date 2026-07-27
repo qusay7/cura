@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import SearchableSelect from '../components/SearchableSelect'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -108,7 +109,7 @@ const css = `
 `
 
 interface ClinicSchedule  { id:string; dayOfWeek:number; dayName:string; openTime:string; closeTime:string; isActive:boolean }
-interface DoctorSchedule  { id:string; doctorId:string; doctorName:string; dayOfWeek:number; dayName:string; startTime:string; endTime:string; slotDuration:number; firstVisitPrice:number|null; followUpPrice:number|null; isActive:boolean }
+interface DoctorSchedule  { id:string; doctorId:string; doctorName:string; dayOfWeek:number; dayName:string; startTime:string; endTime:string; slotDuration:number; isActive:boolean }
 interface Doctor          { id:string; fullName:string; specialty?:string; isActive:boolean }
 interface Absence         { id:string; doctorId?:string; doctorName?:string; startDate:string; endDate:string; startTime?:string; endTime?:string; isFullDay:boolean; type:string; notes?:string }
 
@@ -137,7 +138,6 @@ const T = {
     addDay:'+ إضافة يوم', save:'حفظ', cancel:'إلغاء', delete:'حذف', edit:'تعديل',
     selectDays:'اختر الأيام', openTime:'وقت الفتح', closeTime:'وقت الإغلاق',
     startTime:'من', endTime:'إلى', slot:'مدة الموعد',
-    firstPrice:'سعر الأولى', followPrice:'سعر المتابعة',
     h24:'24 ساعة', noData:'لا يوجد جدول دوام بعد',
     selectDoctor:'اختر طبيباً', allDoctors:'الأطباء',
     copyClinic:'📋 نسخ من جدول العيادة', copyConfirm:"سيتم نسخ دوام العيادة لهذا الطبيب. متابعة؟",
@@ -168,7 +168,6 @@ const T = {
     addDay:'+ Add Day', save:'Save', cancel:'Cancel', delete:'Delete', edit:'Edit',
     selectDays:'Select Days', openTime:'Open Time', closeTime:'Close Time',
     startTime:'From', endTime:'To', slot:'Slot Duration',
-    firstPrice:'1st Visit', followPrice:'Follow-up',
     h24:'24 Hours', noData:'No schedule configured yet',
     selectDoctor:'Select a doctor', allDoctors:'Doctors',
     copyClinic:'📋 Copy from Clinic Schedule', copyConfirm:"Copy clinic schedule to this doctor?",
@@ -249,16 +248,12 @@ export default function Schedules() {
   const [dEnd,   setDEnd]   = useState('14:00')
   const [d24,    setD24]    = useState(false)
   const [dSlot,  setDSlot]  = useState(15)
-  const [dFP,    setDFP]    = useState('')
-  const [dFU,    setDFU]    = useState('')
 
   // Doctor edit
   const [editId, setEditId] = useState<string|null>(null)
   const [eStart, setES]     = useState('')
   const [eEnd,   setEE]     = useState('')
   const [eSlot,  setESl]    = useState(15)
-  const [eFP,    setEFP]    = useState('')
-  const [eFU,    setEFU]    = useState('')
 
   // Absence form
   const [absFor,      setAbsFor]      = useState<'clinic'|'doctor'>('clinic')
@@ -331,7 +326,7 @@ export default function Schedules() {
     const results = await Promise.all(dDays.map(day => api.post(`/schedules/doctor?lang=${lang}`, {
       doctorId:selectedDoctor, dayOfWeek:day,
       startTime:d24?'00:00:00':dStart+':00', endTime:d24?'23:59:59':dEnd+':00',
-      slotDuration:dSlot, firstVisitPrice:dFP?parseFloat(dFP):null, followUpPrice:dFU?parseFloat(dFU):null,
+      slotDuration:dSlot,
     })))
 
 const warnings = results.map(r => r.data?.warning).filter(Boolean)
@@ -340,13 +335,6 @@ if (warnings.length > 0) {
 } else {
   showAlert('ok', t.saved)
 }
- 
-
-    if (warnings.length > 0) {
-      showAlert('err', warnings[0]) // عرض أول تحذير
-    } else {
-      showAlert('ok', t.saved)
-    }
 
     setSDF(false); setDDays([]); setD24(false); fetchDoctor(selectedDoctor)
   } catch (err: any) {
@@ -356,7 +344,7 @@ if (warnings.length > 0) {
 }
   const startEdit = (s:DoctorSchedule) => {
     setEditId(s.id); setES(s.startTime.substring(0,5)); setEE(s.endTime.substring(0,5))
-    setESl(s.slotDuration); setEFP(s.firstVisitPrice?.toString()||''); setEFU(s.followUpPrice?.toString()||'')
+    setESl(s.slotDuration)
   }
   const handleEdit = async () => {
     if (!editId) return
@@ -365,7 +353,6 @@ if (warnings.length > 0) {
       await api.put(`/schedules/doctor/${editId}`, {
         doctorId:selectedDoctor, dayOfWeek:s.dayOfWeek,
         startTime:eStart+':00', endTime:eEnd+':00', slotDuration:eSlot,
-        firstVisitPrice:eFP?parseFloat(eFP):null, followUpPrice:eFU?parseFloat(eFU):null,
       })
       showAlert('ok',t.saved); setEditId(null); fetchDoctor(selectedDoctor)
     } catch { showAlert('err',t.errSave) }
@@ -378,7 +365,6 @@ if (warnings.length > 0) {
       await Promise.all(clinicSchedules.map(s => api.post('/schedules/doctor', {
         doctorId:selectedDoctor, dayOfWeek:s.dayOfWeek,
         startTime:s.openTime, endTime:s.closeTime, slotDuration:15,
-        firstVisitPrice:null, followUpPrice:null,
       })))
       showAlert('ok',t.copied); fetchDoctor(selectedDoctor)
     } catch { showAlert('err',t.errSave) }
@@ -422,8 +408,9 @@ if (warnings.length > 0) {
   }
 
   const selDoc = doctors.find(d=>d.id===selectedDoctor)
-  // أضف هذا المتغير بعد selDoc
-const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
+  // ✅ مصدرين منفصلين — كل تبويب يتحقق من بياناته هو بس، مو بيانات تبويب تاني
+  const existingClinicDays = new Set(clinicSchedules.map(s => s.dayOfWeek))
+  const existingDoctorDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
   const getTypeLabel = (type:string) => ABSENCE_TYPES[lang].find(x=>x.value===type)
 
   return (
@@ -476,12 +463,12 @@ const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
                 <p style={{ fontSize:13, fontWeight:700, color:TEXT_DARK, marginBottom:14 }}>{t.selectDays}</p>
               <div className="day-grid" style={{ marginBottom:16 }}>
   {t.days.map((d,i) => {
-    const taken = existingDays.has(i)
+    const taken = existingClinicDays.has(i)
     return (
       <button key={i}
-        className={`day-btn${dDays.includes(i)?' sel':''}${taken?' disabled':''}`}
+        className={`day-btn${cDays.includes(i)?' sel':''}${taken?' disabled':''}`}
         disabled={taken}
-        onClick={()=>!taken && toggleDay(dDays,setDDays,i)}
+        onClick={()=>!taken && toggleDay(cDays,setCDays,i)}
         title={taken ? (isAr ? 'مضاف مسبقاً' : 'Already added') : ''}
         style={{ opacity:taken?0.4:1, cursor:taken?'not-allowed':'pointer' }}>
         {d}
@@ -572,7 +559,7 @@ const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
                     <p style={{ fontSize:13, fontWeight:700, color:TEXT_DARK, marginBottom:14 }}>{t.selectDays}</p>
                    <div className="day-grid" style={{ marginBottom:16 }}>
   {t.days.map((d,i) => {
-    const taken = existingDays.has(i)
+    const taken = existingDoctorDays.has(i)
     return (
       <button key={i}
         className={`day-btn${dDays.includes(i)?' sel':''}${taken?' disabled':''}`}
@@ -604,17 +591,8 @@ const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
                     <div className="field-row">
                       <div className="field">
                         <label>{t.slot}</label>
-                        <select value={dSlot} onChange={e=>setDSlot(Number(e.target.value))}>
-                          {slotOptions.map(v=><option key={v} value={v}>{v} {t.min}</option>)}
-                        </select>
-                      </div>
-                      <div className="field">
-                        <label>{t.firstPrice} ({t.riyal})</label>
-                        <input type="number" value={dFP} onChange={e=>setDFP(e.target.value)} min="0" step="0.5" placeholder="0.00" style={{ padding:'7px 10px', fontSize:13 }} />
-                      </div>
-                      <div className="field">
-                        <label>{t.followPrice} ({t.riyal})</label>
-                        <input type="number" value={dFU} onChange={e=>setDFU(e.target.value)} min="0" step="0.5" placeholder="0.00" style={{ padding:'7px 10px', fontSize:13 }} />
+                        <SearchableSelect isRtl={isAr} value={String(dSlot)} onChange={v=>setDSlot(Number(v))}
+                          options={slotOptions.map(v=>({value:String(v), label:`${v} ${t.min}`}))} />
                       </div>
                     </div>
                     <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
@@ -662,16 +640,6 @@ const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
                                   {slotOptions.map(v=><option key={v} value={v}>{v} {t.min}</option>)}
                                 </select>
                               </div>
-                              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
-                                <div className="field">
-                                  <label>{t.firstPrice}</label>
-                                  <input type="number" value={eFP} onChange={e=>setEFP(e.target.value)} min="0" step="0.5" placeholder="0.00" style={{ padding:'6px 8px', fontSize:12 }} />
-                                </div>
-                                <div className="field">
-                                  <label>{t.followPrice}</label>
-                                  <input type="number" value={eFU} onChange={e=>setEFU(e.target.value)} min="0" step="0.5" placeholder="0.00" style={{ padding:'6px 8px', fontSize:12 }} />
-                                </div>
-                              </div>
                               <button className="btn-p" onClick={handleEdit} style={{ width:'100%', borderRadius:10, justifyContent:'center' }}>💾 {t.save}</button>
                             </div>
                           ) : (
@@ -682,12 +650,6 @@ const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
                                 </span>
                                 <span className="badge" style={{ background:AMBER_BG, color:AMBER }}>⏱ {s.slotDuration} {t.min}</span>
                               </div>
-                              {(s.firstVisitPrice!=null || s.followUpPrice!=null) && (
-                                <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-                                  {s.firstVisitPrice!=null && <span className="badge" style={{ background:SUCCESS_BG, color:SUCCESS_C }}>1st: {s.firstVisitPrice} {t.riyal}</span>}
-                                  {s.followUpPrice!=null   && <span className="badge" style={{ background:SUCCESS_BG, color:SUCCESS_C }}>F/U: {s.followUpPrice} {t.riyal}</span>}
-                                </div>
-                              )}
                             </>
                           )}
                         </div>
@@ -734,10 +696,9 @@ const existingDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
                 {absFor==='doctor' && (
                   <div className="field" style={{ marginBottom:16 }}>
                     <label>{t.selectDoctor}</label>
-                    <select value={absDoctor} onChange={e=>setAbsDoctor(e.target.value)}>
-                      <option value="">{t.selectDoctor}...</option>
-                      {doctors.map(d=><option key={d.id} value={d.id}>{d.fullName}</option>)}
-                    </select>
+                    <SearchableSelect isRtl={isAr} value={absDoctor} onChange={setAbsDoctor}
+                      placeholder={`${t.selectDoctor}...`}
+                      options={doctors.map(d=>({value:d.id, label:d.fullName}))} />
                   </div>
                 )}
 

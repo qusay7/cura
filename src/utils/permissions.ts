@@ -1,5 +1,6 @@
 // التحقق من صلاحية معينة
 export const hasPermission = (permission: string): boolean => {
+  
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   // SuperAdmin يملك كل الصلاحيات

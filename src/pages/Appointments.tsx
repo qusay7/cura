@@ -6,6 +6,7 @@ import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import SearchableSelect from '../components/SearchableSelect'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -16,6 +17,9 @@ const globalCss = `
 @keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
 @keyframes slide-in { from{opacity:0;transform:translateX(-10px);} to{opacity:1;transform:translateX(0);} }
 @keyframes pulse-red { 0%,100%{background-color:#FFF0F0;} 50%{background-color:#FECACA;} }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fade-up-modal { from{opacity:0;transform:translateY(12px) scale(0.98);} to{opacity:1;transform:translateY(0) scale(1);} }
+.detail-card { animation: fade-up-modal 0.2s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 
 .appointments-shell { animation: fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .appointment-row { animation: slide-in 0.3s ease both; }
@@ -76,6 +80,16 @@ const T = {
     appointments: 'موعد', allStatus: 'كل الحالات',
     overdueLabel: 'فات الوقت', dueLabel: 'حان الموعد الآن!',
     checkedIn: 'تم الدخول', checkedOut: 'تم الخروج',
+    // ✅ نافذة إنهاء الزيارة السريع — فاتورة ببنود متعددة
+    quickCheckoutTitle: 'إنهاء الزيارة', quickCheckoutHint: 'سجّل ملاحظة الزيارة وبنود الفاتورة بخطوة واحدة (اختياري)',
+    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', visitNotes: 'ملاحظات',
+    invoiceItems: 'بنود الفاتورة', itemDesc: 'البند', itemPrice: 'السعر', itemInsurance: 'يغطيه التأمين',
+    addItem: '+ إضافة بند', removeItem: 'حذف',
+    totalAmount: 'المجموع الكلي', totalInsurance: 'يغطيه التأمين', totalPatientOwes: 'على المريض',
+    amountPaidNow: 'المبلغ المدفوع الآن', paymentMethod: 'طريقة الدفع', cash: 'نقدي', card: 'بطاقة', insurance: 'تأمين',
+    remainingAfterPayment: 'المتبقي على المريض بعد هذي الدفعة',
+    finishVisit: 'إنهاء الزيارة', skipAndFinish: 'تخطي وإنهاء فقط', saving: 'جارٍ الحفظ...',
+    quickCheckoutError: 'حدث خطأ أثناء الإنهاء', skipWarning: 'سيُسجَّل الموعد كمكتمل بدون دفعة — يظهر بالتقارير كمبلغ مستحق',
   },
   en: {
     title: 'Appointments', addAppointment: 'Book Appointment', patient: 'Patient',
@@ -96,6 +110,15 @@ const T = {
     appointments: 'appointments', allStatus: 'All Status',
     overdueLabel: 'Overdue', dueLabel: 'Appointment Now!',
     checkedIn: 'Checked In', checkedOut: 'Checked Out',
+    quickCheckoutTitle: 'Finish Visit', quickCheckoutHint: 'Log the visit note and invoice items in one step (optional)',
+    diagnosis: 'Diagnosis', prescription: 'Prescription', visitNotes: 'Notes',
+    invoiceItems: 'Invoice Items', itemDesc: 'Item', itemPrice: 'Price', itemInsurance: 'Insurance Covers',
+    addItem: '+ Add Item', removeItem: 'Remove',
+    totalAmount: 'Total Amount', totalInsurance: 'Insurance Covers', totalPatientOwes: 'Patient Owes',
+    amountPaidNow: 'Amount Paid Now', paymentMethod: 'Payment Method', cash: 'Cash', card: 'Card', insurance: 'Insurance',
+    remainingAfterPayment: "Patient's remaining balance after this payment",
+    finishVisit: 'Finish Visit', skipAndFinish: 'Skip & Finish', saving: 'Saving...',
+    quickCheckoutError: 'An error occurred while finishing the visit', skipWarning: 'The visit will be marked complete with no payment — it will show as due in reports',
   },
 }
 
@@ -117,6 +140,22 @@ const AppointmentsLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: strin
     </div>
   </div>
 )
+
+// ─── Payment Badge ───────────────────────────────────────────────────────────
+const PaymentBadge = ({ isPaid, lang }: { isPaid: boolean | null | undefined; lang: 'ar' | 'en' }) => {
+  const isAr = lang === 'ar'
+  // ✅ isPaid == undefined/null يعني "ما فيه سجل دفعة إطلاقاً" — ما نعرضها كخطأ، بس ما نعرض شارة أصلاً
+  if (isPaid === null || isPaid === undefined) return null
+  return isPaid ? (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'3px 9px', borderRadius:100, fontSize:10.5, fontWeight:700, background:'#E8F5E9', color:'#22C55E' }}>
+      ✅ {isAr ? 'مدفوع' : 'Paid'}
+    </span>
+  ) : (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'3px 9px', borderRadius:100, fontSize:10.5, fontWeight:700, background:'#FFF8E1', color:'#B8892A' }}>
+      ⏳ {isAr ? 'غير مدفوع' : 'Unpaid'}
+    </span>
+  )
+}
 
 // ─── Status Badge ────────────────────────────────────────────────────────────
 const StatusBadge = ({ status, lang }: { status: string; lang: 'ar' | 'en' }) => {
@@ -456,6 +495,409 @@ const FilterBar = ({
   )
 }
 
+// ─── Payment Modal (موحّد لـ checkout و payLater) ────────────────────────────
+interface InvoiceItem { desc: string; price: string; insuranceRate: string; covered: boolean }
+const emptyItem = (): InvoiceItem => ({ desc: '', price: '', insuranceRate: '', covered: true })
+const itemInsuranceAmount = (it: InvoiceItem) =>
+  it.covered ? Math.round((parseFloat(it.price) || 0) * (parseFloat(it.insuranceRate) || 0) / 100 * 1000) / 1000 : 0
+
+interface PaymentModalProps {
+  appointmentId: string
+  mode: 'checkout' | 'payLater'
+  appointment: Appointment | undefined
+  lang: 'ar' | 'en'
+  t: typeof T['ar']
+  onClose: () => void
+  onSuccess: (updates: Partial<Appointment> & { status?: string; checkOutTime?: string }) => void
+}
+
+function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSuccess }: PaymentModalProps) {
+  const isAr = lang === 'ar'
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [loadingInsurance, setLoadingInsurance] = useState(true)
+  const [patientHasInsurance, setPatientHasInsurance] = useState(false)
+  const [items, setItems] = useState<InvoiceItem[]>([emptyItem()])
+  const [form, setForm] = useState({ diagnosis: '', prescription: '', notes: '', paymentMethod: 'cash', amountPaidNow: '' })
+  // ✅ لو فيه دفعة مسجّلة أصلاً لهذا الموعد (حتى لو بمبلغ صفر) — نعدّلها بدل ما نحاول
+  // ننشئ وحدة جديدة، لأن AppointmentId فريد بجدول الدفعات وأي محاولة إنشاء ثانية بترمي خطأ
+  const [existingPayment, setExistingPayment] = useState<any>(null)
+
+  // ✅ "نوع الزيارة الفعلي" — بوضع الخروج بس. يخلي الطبيب/الموظف يصحح النوع
+  // لو اتضح وقت الفحص إنه مختلف عن المحجوز أصلاً (يؤثر على التقارير وحساب حصة الطبيب)
+  const [visitTemplates, setVisitTemplates] = useState<{ id: string; name: string; nameEn: string | null }[]>([])
+  const [actualTemplateId, setActualTemplateId] = useState('')
+
+  useEffect(() => {
+    if (mode !== 'checkout') return
+    setActualTemplateId((appointment as any)?.templateId || '')
+    api.get('/treatmentplans/templates')
+      .then(res => setVisitTemplates(res.data))
+      .catch(() => setVisitTemplates([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appointmentId])
+
+  // ✅ نجيب سعر الزيارة + حصة التأمين تلقائياً، أو الدفعة الموجودة أصلاً لو فيه وحدة سابقة
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      setLoadingInsurance(true)
+      const price = appointment?.price ?? 0
+
+      // 1) تحقق أول: فيه دفعة مسجّلة أصلاً لهذا الموعد؟
+      let existing: any = null
+      try {
+        const payRes = await api.get(`/payments/appointment/${appointmentId}`)
+        if (payRes.data?.hasPayment) existing = payRes.data
+      } catch { /* ما فيه دفعة مسجّلة بعد — طبيعي */ }
+
+      if (cancelled) return
+
+      if (existing) {
+        // ✅ فيه دفعة سابقة — نعبّي الفورم منها بدل حساب جديد، ونحفظ بياناتها للتحديث لاحقاً
+        setExistingPayment(existing)
+        setPatientHasInsurance((existing.insuranceAmount ?? 0) > 0)
+        const rate = existing.totalAmount > 0 ? String(Math.round((existing.insuranceAmount / existing.totalAmount) * 100)) : ''
+        setItems([{
+          desc: appointment?.type || '',
+          price: String(existing.totalAmount ?? price),
+          insuranceRate: rate,
+          covered: (existing.insuranceAmount ?? 0) > 0,
+        }])
+        setForm(prev => ({ ...prev, amountPaidNow: existing.amountPaid != null ? String(existing.amountPaid) : '' }))
+        setLoadingInsurance(false)
+        return
+      }
+
+      // 2) ما فيه دفعة سابقة — نحسب حصة التأمين تلقائياً بنفس آلية صفحة الحجز
+      let rate = ''
+      let hasIns = false
+      try {
+        if (appointment?.patientId && price > 0) {
+          const res = await api.get(`/insurance/calculate?patientId=${appointment.patientId}&amount=${price}`)
+          if (res.data?.hasInsurance) {
+            hasIns = true
+            rate = String(res.data.coverageRate)
+          }
+        }
+      } catch { /* ما فيه تأمين نشط أو تعذّر الحساب — يفضل فاضي، الموظف يعبّيه يدوياً لو احتاج */ }
+
+      if (!cancelled) {
+        setPatientHasInsurance(hasIns)
+        // ✅ نبدأ بافتراض "مشمول" لو المريض عنده تأمين نشط — والموظف يقدر يلغيه بضغطة
+        // لو رد التأمين الفعلي يقول إن هذا البند بالذات مستثنى (زي الأسنان غالباً)
+        setItems([{ desc: appointment?.type || '', price: price ? String(price) : '', insuranceRate: rate, covered: hasIns }])
+        setLoadingInsurance(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appointmentId])
+
+  const totals = (() => {
+    const totalAmount = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0)
+    // ✅ نتجاهل قيمة التأمين لأي بند غير مشمول، حتى لو فيه رقم قديم بالحقل (حماية إضافية)
+    const totalInsurance = items.reduce((sum, it) => sum + itemInsuranceAmount(it), 0)
+    const patientOwes = Math.max(0, totalAmount - totalInsurance)
+    const paidNow = parseFloat(form.amountPaidNow) || 0
+    const remaining = Math.max(0, patientOwes - paidNow)
+    return { totalAmount, totalInsurance, patientOwes, remaining }
+  })()
+
+  const updateItem = (i: number, field: keyof InvoiceItem, value: string | boolean) =>
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it))
+  const toggleCovered = (i: number) =>
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, covered: !it.covered } : it))
+  const addItemRow = () => setItems(prev => [...prev, { ...emptyItem(), covered: patientHasInsurance }])
+  const removeItemRow = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
+
+  const submit = async (skip: boolean) => {
+    setSaving(true); setError('')
+    try {
+      // ✅ لو الموظف/الطبيب صحّح "نوع الزيارة الفعلي"، نحدّثه أولاً — قبل الـ Checkout —
+      // عشان حساب حصة الطبيب والتقارير يعتمدوا على النوع الصحيح، مو المحجوز أصلاً
+      if (mode === 'checkout' && actualTemplateId && actualTemplateId !== (appointment as any)?.templateId) {
+        const chosenTemplate = visitTemplates.find(tpl => tpl.id === actualTemplateId)
+        await api.patch(`/appointments/${appointmentId}/update-type`, {
+          templateId: actualTemplateId,
+          type: chosenTemplate ? (isAr ? chosenTemplate.name : (chosenTemplate.nameEn || chosenTemplate.name)) : undefined,
+        })
+      }
+
+      let checkOutTime: string | undefined
+      if (mode === 'checkout') {
+        const res = await api.post(`/appointments/${appointmentId}/checkout`)
+        checkOutTime = res.data.checkOutTime
+      }
+
+      if (!skip) {
+        if (mode === 'checkout') {
+          const filledItems = items.filter(it => it.desc.trim() || parseFloat(it.price) > 0)
+          const itemsSummary = filledItems
+            .map(it => it.covered
+              ? `${it.desc || '-'}: ${it.price || 0} (${t.itemInsurance}: ${itemInsuranceAmount(it)})`
+              : `${it.desc || '-'}: ${it.price || 0} (${isAr ? 'مستثنى من التأمين' : 'excluded from insurance'})`)
+            .join(' | ')
+          if (form.diagnosis.trim() || form.prescription.trim() || form.notes.trim() || filledItems.length > 0) {
+            await api.post('/visitnotes', {
+              patientId: appointment?.patientId,
+              appointmentId,
+              doctorId: appointment?.doctorId,
+              diagnosis: form.diagnosis || null,
+              prescription: form.prescription || null,
+              notes: [form.notes, itemsSummary ? `📋 ${t.invoiceItems}: ${itemsSummary}` : ''].filter(Boolean).join('\n') || null,
+            })
+          }
+        }
+
+        if (totals.totalAmount > 0) {
+          if (existingPayment) {
+            // ✅ فيه دفعة أصلاً — نحدّثها بدل ما ننشئ وحدة جديدة (AppointmentId فريد بالجدول)
+            await api.put(`/payments/${existingPayment.id}`, {
+              totalAmount: totals.totalAmount,
+              insuranceAmount: totals.totalInsurance,
+              amountPaid: parseFloat(form.amountPaidNow) || 0,
+              paymentMethod: form.paymentMethod,
+              rowVersion: existingPayment.rowVersion,
+            })
+          } else {
+            await api.post('/payments', {
+              appointmentId,
+              totalAmount: totals.totalAmount,
+              insuranceAmount: totals.totalInsurance,
+              amountPaid: parseFloat(form.amountPaidNow) || 0,
+              paymentMethod: form.paymentMethod,
+            })
+          }
+        }
+      }
+
+      onSuccess({
+        ...(mode === 'checkout' ? { status: 'completed', checkOutTime } : {}),
+        isPaid: skip ? false : totals.remaining <= 0,
+        amountPaid: skip ? undefined : (parseFloat(form.amountPaidNow) || 0),
+      })
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.response?.data || t.quickCheckoutError)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inputStyle: React.CSSProperties = { padding: '7px 9px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, fontFamily: "'Inter',sans-serif", color: TEXT_DARK, background: CARD_BG }
+
+  return (
+    <div onClick={() => !saving && onClose()}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16, backdropFilter: 'blur(2px)' }}>
+      <div onClick={e => e.stopPropagation()} className="detail-card"
+        style={{ background: CARD_BG, borderRadius: 22, padding: 26, maxWidth: 460, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>
+              {mode === 'checkout' ? '🏁' : '💰'} {mode === 'checkout' ? t.quickCheckoutTitle : (isAr ? 'تسجيل دفعة' : 'Register Payment')}
+            </h3>
+            <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4, marginBottom: 0 }}>
+              {mode === 'checkout' ? t.quickCheckoutHint : (isAr ? 'الموعد مكتمل أصلاً — هذي بس تسجيل دفعة لاحقة' : 'The visit is already completed — this just registers a payment')}
+            </p>
+          </div>
+          <button onClick={onClose} disabled={saving}
+            style={{ background: '#F1F4F4', border: 'none', borderRadius: 10, width: 30, height: 30, flexShrink: 0, color: TEXT_MUTED, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
+            ✕
+          </button>
+        </div>
+
+        {appointment?.patientName && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 14, padding: '8px 12px', background: PRIMARY_SOFT, borderRadius: 10 }}>
+            <span style={{ fontSize: 13 }}>👤</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: TEXT_DARK }}>{appointment.patientName}</span>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: '#EF4444', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>⚠️</span><span>{error}</span>
+          </div>
+        )}
+
+        {/* ✅ نوع الزيارة الفعلي — يظهر بس بوضع الخروج، يسمح بتصحيح النوع لو اختلف عن المحجوز */}
+        {mode === 'checkout' && visitTemplates.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>
+              🔄 {isAr ? 'نوع الزيارة الفعلي' : 'Actual Visit Type'}
+            </label>
+            <SearchableSelect
+              isRtl={isAr}
+              value={actualTemplateId}
+              onChange={setActualTemplateId}
+              placeholder={isAr ? 'اختر نوع الزيارة...' : 'Select visit type...'}
+              options={visitTemplates.map(tpl => ({ value: tpl.id, label: isAr ? tpl.name : (tpl.nameEn || tpl.name) }))}
+            />
+            {actualTemplateId && actualTemplateId !== (appointment as any)?.templateId && (
+              <p style={{ fontSize: 10.5, color: '#B8892A', margin: '5px 0 0' }}>
+                ⚠️ {isAr ? 'مختلف عن نوع الحجز الأصلي — سيُحدَّث سجل الموعد بالنوع الصحيح' : 'Different from the original booking — the appointment record will be corrected'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* حقول ملاحظة الزيارة — بوضع الخروج بس */}
+        {mode === 'checkout' && (
+          <>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>🩺 {t.diagnosis}</label>
+              <input value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })}
+                style={{ width: '100%', ...inputStyle, padding: '9px 12px', fontSize: 13, fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>💊 {t.prescription}</label>
+              <input value={form.prescription} onChange={e => setForm({ ...form, prescription: e.target.value })}
+                style={{ width: '100%', ...inputStyle, padding: '9px 12px', fontSize: 13, fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>📝 {t.visitNotes}</label>
+              <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2}
+                style={{ width: '100%', ...inputStyle, padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none' }} />
+            </div>
+          </>
+        )}
+
+        {/* بنود الفاتورة */}
+        <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 6 }}>
+              🧾 {t.invoiceItems}
+            </label>
+            <button type="button" onClick={addItemRow}
+              style={{ background: CARD_BG, border: `1px solid ${PRIMARY}50`, color: PRIMARY, borderRadius: 8, padding: '5px 12px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+              {t.addItem}
+            </button>
+          </div>
+
+          {loadingInsurance ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '18px 0', color: TEXT_MUTED, fontSize: 12 }}>
+              <span style={{ width: 14, height: 14, border: `2px solid ${BORDER}`, borderTopColor: PRIMARY, borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+              {isAr ? 'جاري حساب السعر والتأمين...' : 'Calculating price & insurance...'}
+            </div>
+          ) : (
+            <>
+              {items.map((item, i) => {
+                const itemPrice = parseFloat(item.price) || 0
+                const itemInsurance = itemInsuranceAmount(item)
+                const itemPatientOwes = Math.max(0, itemPrice - itemInsurance)
+                return (
+                <div key={i} style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px 55px 68px auto', gap: 6, alignItems: 'center' }}>
+                    <input value={item.desc} onChange={e => updateItem(i, 'desc', e.target.value)} placeholder={t.itemDesc} style={inputStyle} />
+                    <input type="number" value={item.price} onChange={e => updateItem(i, 'price', e.target.value)} placeholder={t.itemPrice} style={inputStyle} />
+                    {/* ✅ نسبة تغطية التأمين (%) — نفس أسلوب شاشة الحجز، بدل إدخال مبلغ خام */}
+                    <input type="number" min={0} max={100} value={item.covered ? item.insuranceRate : ''} disabled={!item.covered}
+                      onChange={e => updateItem(i, 'insuranceRate', e.target.value)} placeholder={item.covered ? '%' : '—'}
+                      title={t.itemInsurance}
+                      style={{ ...inputStyle, textAlign: 'center', ...(item.covered && item.insuranceRate ? { borderColor: '#8BC79A', background: '#F3FBF4' } : {}), ...(!item.covered ? { background: '#F1F4F4', color: TEXT_MUTED, cursor: 'not-allowed' } : {}) }} />
+                    {/* ✅ المبلغ المستحق على المريض لهذا البند بالذات — القيمة المهمة فعلياً للموظف */}
+                    <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>
+                      {itemPatientOwes.toFixed(2)}
+                    </div>
+                    <button type="button" onClick={() => removeItemRow(i)} disabled={items.length === 1}
+                      style={{ background: 'none', border: 'none', color: items.length === 1 ? '#CBD5D5' : '#EF4444', cursor: items.length === 1 ? 'not-allowed' : 'pointer', fontSize: 15, padding: 4 }}>
+                      ✕
+                    </button>
+                  </div>
+                  {/* ✅ مفتاح صريح: هل التأمين يغطي هذا البند بالذات؟ (بعض الخدمات مستثناة، زي الأسنان غالباً) */}
+                  {patientHasInsurance && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, cursor: 'pointer', width: 'fit-content' }}>
+                      <input type="checkbox" checked={item.covered} onChange={() => toggleCovered(i)}
+                        style={{ width: 13, height: 13, accentColor: PRIMARY, cursor: 'pointer' }} />
+                      <span style={{ fontSize: 10.5, color: item.covered ? TEXT_MUTED : '#B8892A', fontWeight: item.covered ? 400 : 600 }}>
+                        {item.covered
+                          ? `🏥 ${isAr ? 'يغطي التأمين' : 'Insurance covers'} ${itemInsurance.toFixed(2)} ${t.riyal}`
+                          : (isAr ? '🚫 مستثنى من التأمين (يدفعه المريض كامل)' : '🚫 Excluded from insurance (patient pays in full)')}
+                      </span>
+                    </label>
+                  )}
+                </div>
+                )
+              })}
+
+              {/* عناوين الأعمدة — توضيح سريع لمعنى كل رقم بالصف */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px 55px 68px auto', gap: 6, marginTop: -4, marginBottom: 6, padding: '0 2px' }}>
+                <span />
+                <span style={{ fontSize: 9, color: TEXT_MUTED, textAlign: 'center' }}>{t.itemPrice}</span>
+                <span style={{ fontSize: 9, color: TEXT_MUTED, textAlign: 'center' }}>{isAr ? 'تأمين %' : 'Ins. %'}</span>
+                <span style={{ fontSize: 9, color: PRIMARY, textAlign: 'center', fontWeight: 700 }}>{isAr ? 'على المريض' : 'Patient'}</span>
+                <span />
+              </div>
+
+              <div style={{ borderTop: `1px dashed ${BORDER}`, marginTop: 10, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: TEXT_MUTED }}>{t.totalAmount}</span>
+                  <span style={{ fontWeight: 600, color: TEXT_DARK, fontFamily: "'Inter',sans-serif" }}>{totals.totalAmount.toFixed(2)}</span>
+                </div>
+                {totals.totalInsurance > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: TEXT_MUTED }}>🏥 {t.totalInsurance}</span>
+                    <span style={{ fontWeight: 600, color: SUCCESS, fontFamily: "'Inter',sans-serif" }}>-{totals.totalInsurance.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, marginTop: 2 }}>
+                  <span style={{ color: TEXT_DARK }}>{t.totalPatientOwes}</span>
+                  <span style={{ color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>{totals.patientOwes.toFixed(2)} {t.riyal}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.amountPaidNow}</label>
+            <input type="number" value={form.amountPaidNow} onChange={e => setForm({ ...form, amountPaidNow: e.target.value })}
+              placeholder="0.00" style={{ width: '100%', ...inputStyle, padding: '9px 12px', fontSize: 13 }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.paymentMethod}</label>
+            <select value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
+              style={{ width: '100%', ...inputStyle, padding: '9px 12px', fontSize: 13, fontFamily: 'inherit' }}>
+              <option value="cash">{t.cash}</option>
+              <option value="card">{t.card}</option>
+              <option value="insurance">{t.insurance}</option>
+            </select>
+          </div>
+        </div>
+
+        {totals.patientOwes > 0 && !loadingInsurance && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '9px 12px', background: totals.remaining > 0 ? '#FFF8E1' : '#E8F5E9', borderRadius: 10, marginBottom: 18 }}>
+            <span style={{ color: TEXT_MUTED }}>{t.remainingAfterPayment}</span>
+            <span style={{ fontWeight: 700, color: totals.remaining > 0 ? '#B8892A' : SUCCESS, fontFamily: "'Inter',sans-serif" }}>{totals.remaining.toFixed(2)} {t.riyal}</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => submit(false)} disabled={saving || loadingInsurance}
+            style={{ flex: 1, background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '12px', fontSize: 13.5, fontWeight: 700, cursor: (saving || loadingInsurance) ? 'not-allowed' : 'pointer', opacity: (saving || loadingInsurance) ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+            {saving ? t.saving : mode === 'checkout' ? `✔️ ${t.finishVisit}` : `💰 ${isAr ? 'تسجيل الدفعة' : 'Register Payment'}`}
+          </button>
+          {mode === 'checkout' ? (
+            <button onClick={() => submit(true)} disabled={saving}
+              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {t.skipAndFinish}
+            </button>
+          ) : (
+            <button onClick={onClose} disabled={saving}
+              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {t.cancel}
+            </button>
+          )}
+        </div>
+        {mode === 'checkout' && <p style={{ fontSize: 10.5, color: '#B8892A', textAlign: 'center', marginTop: 10 }}>⚠️ {t.skipWarning}</p>}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function Appointments() {
   const navigate = useNavigate()
@@ -507,6 +949,20 @@ export default function Appointments() {
     finally { setChangingStatus(null) }
   }
 
+  // ✅ نافذة الدفع الموحّدة — تخدم "إنهاء الزيارة" و"تسجيل دفعة لاحقاً" بمكوّن واحد
+  // بدل نسختين مكررتين (كانت تضاعف خطر أي خطأ مستقبلي، زي مشاكل واجهناها اليوم بالضبط)
+  const [paymentModal, setPaymentModal] = useState<{ id: string; mode: 'checkout' | 'payLater' } | null>(null)
+
+  const openPaymentModal = (id: string, mode: 'checkout' | 'payLater', e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPaymentModal({ id, mode })
+  }
+
+  const handlePaymentModalSuccess = (id: string, updates: Partial<Appointment>) => {
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates } as Appointment : a))
+    setPaymentModal(null)
+  }
+
   // ✅ CheckIn
   const handleCheckIn = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); setChangingStatus(id)
@@ -515,17 +971,6 @@ export default function Appointments() {
       setAppointments(prev => prev.map(a => a.id === id
         ? { ...a, status: 'confirmed', checkInTime: res.data.checkInTime } : a))
     } catch { console.error('CheckIn failed') }
-    finally { setChangingStatus(null) }
-  }
-
-  // ✅ CheckOut
-  const handleCheckOut = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); setChangingStatus(id)
-    try {
-      const res = await api.post(`/appointments/${id}/checkout`)
-      setAppointments(prev => prev.map(a => a.id === id
-        ? { ...a, status: 'completed', checkOutTime: res.data.checkOutTime } : a))
-    } catch { console.error('CheckOut failed') }
     finally { setChangingStatus(null) }
   }
 
@@ -730,7 +1175,10 @@ export default function Appointments() {
 
                         {/* الحالة */}
                         <td style={{ padding:'14px 16px' }}>
-                          <StatusBadge status={appointment.status} lang={lang} />
+                          <div style={{ display:'flex', flexDirection:'column', gap:5, alignItems:'flex-start' }}>
+                            <StatusBadge status={appointment.status} lang={lang} />
+                            <PaymentBadge isPaid={(appointment as any).isPaid} lang={lang} />
+                          </div>
                         </td>
 
                         {/* الإجراءات */}
@@ -748,10 +1196,18 @@ export default function Appointments() {
 
                             {/* ✅ CheckOut — للمواعيد التي تم دخولها ولم يتم خروجها */}
                             {hasCheckedIn && !hasCheckedOut && appointment.status !== 'completed' && (
-                              <button className="action-btn" onClick={e=>handleCheckOut(appointment.id,e)}
+                              <button className="action-btn" onClick={e=>openPaymentModal(appointment.id,'checkout',e)}
                                 disabled={changingStatus===appointment.id}
                                 style={{ background:PRIMARY_SOFT, color:PRIMARY, borderColor:BORDER }}>
                                 🏁 {t.checkOut}
+                              </button>
+                            )}
+
+                            {/* ✅ موعد مكتمل وغير مدفوع — تسجيل دفعة لاحقاً */}
+                            {appointment.status === 'completed' && (appointment as any).isPaid === false && (
+                              <button className="action-btn" onClick={e=>openPaymentModal(appointment.id,'payLater',e)}
+                                style={{ background:'#FFF8E1', color:'#B8892A', borderColor:'#E8D4A8' }}>
+                                💰 {isAr ? 'تسجيل دفعة' : 'Register Payment'}
                               </button>
                             )}
 
@@ -812,6 +1268,19 @@ export default function Appointments() {
           </div>
         )}
       </div>
+
+      {/* ✅ نافذة الدفع الموحّدة — تخدم "إنهاء الزيارة" و"تسجيل دفعة لاحقاً" */}
+      {paymentModal && (
+        <PaymentModal
+          appointmentId={paymentModal.id}
+          mode={paymentModal.mode}
+          appointment={appointments.find(a => a.id === paymentModal.id)}
+          lang={lang}
+          t={t}
+          onClose={() => setPaymentModal(null)}
+          onSuccess={(updates) => handlePaymentModalSuccess(paymentModal.id, updates)}
+        />
+      )}
     </div>
   )
 }

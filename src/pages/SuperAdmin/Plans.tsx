@@ -52,6 +52,10 @@ const globalCss = `
   gap: 6px;
 }
 
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
 .form-label {
   font-size: 12px;
   font-weight: 600;
@@ -75,6 +79,60 @@ const globalCss = `
   outline: none;
   border-color: #5B8C8F;
   box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1);
+}
+
+.form-textarea {
+  padding: 12px 16px;
+  border: 1px solid #DCE5E5;
+  border-radius: 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #2C3E3F;
+  background: #FFFFFF;
+  transition: all 0.2s ease;
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.7;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #5B8C8F;
+  box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1);
+}
+
+/* Featured toggle row */
+.featured-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #FBF4E4;
+  border: 1px solid #E8D4A8;
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 /* Plans Grid */
@@ -103,13 +161,28 @@ const globalCss = `
   filter: grayscale(0.05);
 }
 
+.plan-card.featured {
+  border-color: #C4A77D;
+  box-shadow: 0 4px 20px rgba(196, 167, 125, 0.18);
+}
+
+.plan-card.featured:hover {
+  box-shadow: 0 16px 36px rgba(196, 167, 125, 0.28);
+}
+
 .plan-header {
   background: linear-gradient(135deg, #E8F0F0 0%, #F0F5F5 100%);
   padding: 20px 24px;
   border-bottom: 1px solid #DCE5E5;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.plan-card.featured .plan-header {
+  background: linear-gradient(135deg, #FBF4E4 0%, #F5EBD4 100%);
+  border-bottom-color: #E8D4A8;
 }
 
 .plan-name {
@@ -117,6 +190,13 @@ const globalCss = `
   font-weight: 700;
   color: #2C3E3F;
   margin: 0;
+}
+
+.plan-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .plan-badge {
@@ -127,6 +207,7 @@ const globalCss = `
   border-radius: 100px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .plan-badge.active {
@@ -137,6 +218,11 @@ const globalCss = `
 .plan-badge.inactive {
   background: rgba(196, 167, 125, 0.15);
   color: #C4A77D;
+}
+
+.plan-badge.featured {
+  background: #C4A77D;
+  color: #FFFFFF;
 }
 
 .plan-body {
@@ -201,6 +287,38 @@ const globalCss = `
 
 .limit-unlimited {
   color: #4A7679;
+}
+
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: #F8FAFA;
+  border-radius: 14px;
+  border: 1px solid #EEF3F3;
+}
+
+.features-list-empty {
+  font-size: 12px;
+  color: #6B8A8C;
+  font-style: italic;
+}
+
+.feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #2C3E3F;
+  line-height: 1.5;
+}
+
+.feature-check {
+  color: #5B8C8F;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .action-buttons {
@@ -403,7 +521,6 @@ const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const SUCCESS = '#4A7679'
 const WARNING = '#C4A77D'
 
@@ -417,6 +534,8 @@ interface Plan {
   maxDoctors: number
   maxPatients: number
   isActive: boolean
+  isFeatured: boolean
+  features: string[]
   createdAt: string
 }
 
@@ -424,32 +543,38 @@ const defaultPlans = [
   {
     name: 'Basic',
     description: 'للعيادات الصغيرة',
-    monthlyPrice: 99,
-    yearlyPrice: 999,
+    monthlyPrice: 20,
+    yearlyPrice: 199,
     maxUsers: 3,
     maxDoctors: 2,
     maxPatients: 300,
     isActive: true,
+    isFeatured: false,
+    featuresText: 'جدولة المواعيد\nملاحظات الزيارة\nتقارير أساسية',
   },
   {
     name: 'Standard',
     description: 'للعيادات المتوسطة',
-    monthlyPrice: 199,
-    yearlyPrice: 1999,
+    monthlyPrice: 29,
+    yearlyPrice: 299,
     maxUsers: 10,
     maxDoctors: 5,
     maxPatients: 1000,
     isActive: true,
+    isFeatured: true,
+    featuresText: 'جميع مميزات الخطة الأساسية\nفواتير إلكترونية\nأقسام متعددة\nدعم ذو أولوية',
   },
   {
     name: 'Premium',
     description: 'للعيادات الكبيرة',
-    monthlyPrice: 399,
-    yearlyPrice: 3999,
+    monthlyPrice: 45,
+    yearlyPrice: 410,
     maxUsers: -1,
     maxDoctors: -1,
     maxPatients: -1,
     isActive: true,
+    isFeatured: false,
+    featuresText: 'جميع مميزات الخطة المتقدمة\nمستخدمون وأطباء غير محدودين\nمدير حساب مخصص\nتدريب مجاني للفريق',
   },
 ]
 
@@ -479,6 +604,7 @@ export default function SuperAdminPlans() {
     name: '', description: '',
     monthlyPrice: '', yearlyPrice: '',
     maxUsers: '', maxDoctors: '', maxPatients: '',
+    featuresText: '', isFeatured: false,
   }
   const [form, setForm] = useState(emptyForm)
 
@@ -540,6 +666,9 @@ export default function SuperAdminPlans() {
       maxUsers: String(plan.maxUsers),
       maxDoctors: String(plan.maxDoctors),
       maxPatients: String(plan.maxPatients),
+      // Rejoin the features array back into one-per-line text for editing
+      featuresText: (plan.features || []).join('\n'),
+      isFeatured: plan.isFeatured,
     })
     setShowForm(true)
   }
@@ -557,6 +686,8 @@ export default function SuperAdminPlans() {
         maxUsers: parseInt(form.maxUsers),
         maxDoctors: parseInt(form.maxDoctors),
         maxPatients: parseInt(form.maxPatients),
+        featuresText: form.featuresText,
+        isFeatured: form.isFeatured,
         isActive: true,
       }
 
@@ -574,7 +705,7 @@ export default function SuperAdminPlans() {
       fetchPlans()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data || 'حدث خطأ')
+      setError(err.response?.data?.message || err.response?.data || 'حدث خطأ')
     } finally {
       setSaving(false)
     }
@@ -594,8 +725,8 @@ export default function SuperAdminPlans() {
   const fields = [
     { key: 'name', label: 'اسم الخطة', placeholder: 'Basic', type: 'text', required: true },
     { key: 'description', label: 'الوصف', placeholder: 'للعيادات الصغيرة', type: 'text', required: false },
-    { key: 'monthlyPrice', label: 'السعر الشهري', placeholder: '99', type: 'number', required: true },
-    { key: 'yearlyPrice', label: 'السعر السنوي', placeholder: '999', type: 'number', required: true },
+    { key: 'monthlyPrice', label: 'السعر الشهري', placeholder: '20', type: 'number', required: true },
+    { key: 'yearlyPrice', label: 'السعر السنوي', placeholder: '199', type: 'number', required: true },
     { key: 'maxUsers', label: 'عدد المستخدمين', placeholder: '-1 = غير محدود', type: 'number', required: true },
     { key: 'maxDoctors', label: 'عدد الأطباء', placeholder: '-1 = غير محدود', type: 'number', required: true },
     { key: 'maxPatients', label: 'عدد المرضى', placeholder: '-1 = غير محدود', type: 'number', required: true },
@@ -623,6 +754,15 @@ export default function SuperAdminPlans() {
     unlimited: lang === 'ar' ? 'غير محدود' : 'Unlimited',
     noPlans: lang === 'ar' ? 'لا توجد خطط — اضغط "إنشاء الخطط الافتراضية" للبدء' : 'No plans — click "Create Default Plans" to start',
     loading: lang === 'ar' ? 'جاري التحميل...' : 'Loading...',
+    featuresLabel: lang === 'ar' ? 'المميزات (ميزة بكل سطر)' : 'Features (one per line)',
+    featuresPlaceholder: lang === 'ar' ? 'جدولة المواعيد\nملاحظات الزيارة\nتقارير أساسية' : 'Appointment scheduling\nVisit notes\nBasic reports',
+    featuresHint: lang === 'ar' ? 'هذي القائمة تظهر بالضبط لزوّار صفحة الأسعار العامة' : 'This list is shown as-is on the public pricing page',
+    featuredLabel: lang === 'ar' ? 'الخطة الأكثر اختياراً ⭐' : 'Most Popular plan ⭐',
+    featuredHint: lang === 'ar'
+      ? 'خطة واحدة بس تُعرض كمميّزة بأي وقت — تفعيلها هنا يلغي التمييز عن أي خطة أخرى تلقائياً'
+      : 'Only one plan can be featured at a time — enabling this will automatically unfeature any other plan',
+    featured: lang === 'ar' ? 'مميّزة' : 'Featured',
+    noFeatures: lang === 'ar' ? 'لم تُضف أي مميزات لهذه الخطة بعد' : 'No features added to this plan yet',
   }
 
   const isAr = lang === 'ar'
@@ -699,7 +839,7 @@ export default function SuperAdminPlans() {
                     <label className="form-label">{f.label} {f.required && <span style={{ color: '#C4A77D' }}>*</span>}</label>
                     <input
                       type={f.type}
-                      value={form[f.key as keyof typeof form]}
+                      value={form[f.key as keyof typeof form] as string}
                       onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                       placeholder={f.placeholder}
                       className="form-input"
@@ -707,9 +847,42 @@ export default function SuperAdminPlans() {
                     />
                   </div>
                 ))}
+
+                {/* Features — multi-line, spans the full grid width */}
+                <div className="form-field form-field-full">
+                  <label className="form-label">{t.featuresLabel}</label>
+                  <textarea
+                    value={form.featuresText}
+                    onChange={e => setForm({ ...form, featuresText: e.target.value })}
+                    placeholder={t.featuresPlaceholder}
+                    className="form-textarea"
+                    rows={5}
+                  />
+                  <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>💡 {t.featuresHint}</p>
+                </div>
+
+                {/* Featured toggle — spans the full grid width */}
+                <div className="form-field form-field-full">
+                  <div className="featured-toggle-row">
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#8A6A22', marginBottom: 3 }}>{t.featuredLabel}</div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>{t.featuredHint}</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.isFeatured}
+                      onClick={() => setForm({ ...form, isFeatured: !form.isFeatured })}
+                      className="toggle-switch"
+                      style={{ background: form.isFeatured ? WARNING : '#DCE5E5' }}
+                    >
+                      <span className="toggle-knob" style={{ [isAr ? 'right' : 'left']: form.isFeatured ? 21 : 3 } as React.CSSProperties} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 20, marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 20, marginTop: 12 }}>
                 💡 {isAr ? 'استخدم -1 للحصول على عدد غير محدود' : 'Use -1 for unlimited'}
               </p>
 
@@ -735,9 +908,9 @@ export default function SuperAdminPlans() {
           ) : plans.map(plan => {
             const planIcon = plan.name === 'Basic' ? '🥉' : plan.name === 'Standard' ? '🥈' : plan.name === 'Premium' ? '🥇' : '💎'
             const isActive = plan.isActive
-            
+
             return (
-              <div key={plan.id} className={`plan-card ${!isActive ? 'inactive' : ''}`}>
+              <div key={plan.id} className={`plan-card ${!isActive ? 'inactive' : ''} ${plan.isFeatured ? 'featured' : ''}`}>
                 {/* Plan Header */}
                 <div className="plan-header">
                   <div>
@@ -746,14 +919,19 @@ export default function SuperAdminPlans() {
                       <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '4px 0 0' }}>{plan.description}</p>
                     )}
                   </div>
-                  <span className={`plan-badge ${isActive ? 'active' : 'inactive'}`}>
-                    <span style={{
-                      width: 5, height: 5, borderRadius: '50%',
-                      background: isActive ? SUCCESS : WARNING,
-                      display: 'inline-block',
-                    }} />
-                    {isActive ? t.active : t.inactive}
-                  </span>
+                  <div className="plan-badges">
+                    <span className={`plan-badge ${isActive ? 'active' : 'inactive'}`}>
+                      <span style={{
+                        width: 5, height: 5, borderRadius: '50%',
+                        background: isActive ? SUCCESS : WARNING,
+                        display: 'inline-block',
+                      }} />
+                      {isActive ? t.active : t.inactive}
+                    </span>
+                    {plan.isFeatured && (
+                      <span className="plan-badge featured">⭐ {t.featured}</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Plan Body */}
@@ -800,6 +978,20 @@ export default function SuperAdminPlans() {
                         ) : plan.maxPatients}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Features preview — mirrors exactly what the public pricing page shows */}
+                  <div className="features-list">
+                    {plan.features && plan.features.length > 0 ? (
+                      plan.features.map((f, i) => (
+                        <div key={i} className="feature-row">
+                          <span className="feature-check">✓</span>
+                          <span>{f}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="features-list-empty">{t.noFeatures}</span>
+                    )}
                   </div>
 
                   {/* Actions */}

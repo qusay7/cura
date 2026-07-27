@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
-import { getRole } from '../utils/permissions'
+import SearchableSelect from '../components/SearchableSelect'
+import { useSubmitGuard } from '../hooks/useSubmitGuard'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -38,13 +39,13 @@ const SPECIALTIES = {
 
 export default function AddUser() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [lang] = useState<'ar' | 'en'>(getStoredLang())
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
+  const [roles, setRoles] = useState<{ id: string; name: string; nameEn: string|null; description: string|null }[]>([])
+  const [rolesLoading, setRolesLoading] = useState(false)
   const isAr = lang === 'ar'
-  const currentRole = getRole()
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -62,21 +63,26 @@ export default function AddUser() {
     }
   }, [])
 
-  const availableRoles = () => {
-    if (currentRole === 'SuperAdmin') {
-      return [
-        { value: 'ClinicAdmin',  label: isAr ? 'مدير عيادة'   : 'Clinic Admin' },
-        { value: 'Doctor',       label: isAr ? 'طبيب'          : 'Doctor' },
-        { value: 'Receptionist', label: isAr ? 'موظف استقبال' : 'Receptionist' },
-        { value: 'ClinicStaff',  label: isAr ? 'موظف الشركة'  : 'Clinic Staff' },
-      ]
-    }
-    return [
-      { value: 'Doctor',       label: isAr ? 'طبيب'          : 'Doctor' },
-      { value: 'Receptionist', label: isAr ? 'موظف استقبال' : 'Receptionist' },
-      { value: 'ClinicStaff',  label: isAr ? 'موظف عيادة'   : 'Clinic Staff' },
-    ]
-  }
+  // ✅ الأدوار وتسمياتها تُجلب بالكامل من قاعدة البيانات (GET /api/roles) —
+  // بدون أي قائمة أو خريطة ترجمة ثابتة بالكود.
+  // Role.Description = التسمية العربية، Role.NameEn = التسمية الإنجليزية (كلاهما مخزّن
+  // فعلياً بجدول Roles من لحظة إنشاء العيادة عبر RoleSeedingService)
+  useEffect(() => {
+    if (!form.clinicId) return
+    setRolesLoading(true)
+    api.get('/roles', { params: { clinicId: form.clinicId } })
+      .then(res => setRoles(res.data.map((r: any) => ({ id: r.id, name: r.name, nameEn: r.nameEn, description: r.description }))))
+      .catch(() => setRoles([]))
+      .finally(() => setRolesLoading(false))
+  }, [form.clinicId])
+
+  const roleLabel = (role: { name: string; nameEn: string|null; description: string|null }) =>
+    (isAr ? role.description : role.nameEn) || role.name
+
+  // SuperAdmin لا يُنشئ حساب SuperAdmin آخر من هذي الشاشة
+  const roleOptions = roles
+    .filter(r => r.name !== 'SuperAdmin')
+    .map(r => ({ value: r.name, label: roleLabel(r) }))
 
   const showDepartment = ['Doctor', 'Receptionist', 'ClinicStaff'].includes(form.role)
   const showSpecialty  = form.role === 'Doctor'
@@ -90,7 +96,7 @@ export default function AddUser() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitRaw = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(''); setSuccess('')
 
@@ -113,7 +119,6 @@ export default function AddUser() {
 
     const email = `${form.username}@CURA.COM`
 
-    setLoading(true)
     try {
       await api.post('/users', {
         fullName:     form.fullName,
@@ -131,10 +136,11 @@ export default function AddUser() {
     } catch (err: any) {
       const errData = err.response?.data
       setError(typeof errData === 'string' ? errData : (isAr ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred'))
-    } finally {
-      setLoading(false)
     }
   }
+
+  // ✅ يمنع الضغط المزدوج على زر الحفظ (مثلاً وقت نت بطيء وتأخر رد الـ API)
+  const { run: handleSubmit, loading } = useSubmitGuard(handleSubmitRaw)
 
   const generatedEmail = form.username ? `${form.username}@CURA.COM` : ''
 
@@ -195,12 +201,21 @@ export default function AddUser() {
 
             {/* الدور */}
             <Field label={isAr ? 'الدور *' : 'Role *'}>
-              <select name="role" value={form.role} onChange={handleChange} style={inputStyle}>
-                <option value="">{isAr ? 'اختر دوراً...' : 'Select role...'}</option>
-                {availableRoles().map(r => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
+              {!form.clinicId ? (
+                <div style={{ fontSize: 12, color: ERROR_TEXT, padding: '10px 14px', border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, background: '#FDF5F5' }}>
+                  ⚠️ {isAr ? 'لا يمكن تحميل الأدوار بدون عيادة محددة' : 'Cannot load roles without a selected clinic'}
+                </div>
+              ) : (
+                <SearchableSelect
+                  isRtl={isAr}
+                  value={form.role}
+                  onChange={v => setForm(prev => ({ ...prev, role: v }))}
+                  loading={rolesLoading}
+                  placeholder={isAr ? 'اختر دوراً...' : 'Select role...'}
+                  emptyText={isAr ? 'لا توجد أدوار — أنشئها أولاً من إعدادات العيادة' : 'No roles found — create some in clinic settings first'}
+                  options={roleOptions}
+                />
+              )}
             </Field>
 
             {/* ✅ التخصص — إجباري للطبيب */}
