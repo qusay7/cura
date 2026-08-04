@@ -513,12 +513,13 @@ interface PaymentModalProps {
 
 function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSuccess }: PaymentModalProps) {
   const isAr = lang === 'ar'
+  const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [loadingInsurance, setLoadingInsurance] = useState(true)
   const [patientHasInsurance, setPatientHasInsurance] = useState(false)
   const [items, setItems] = useState<InvoiceItem[]>([emptyItem()])
-  const [form, setForm] = useState({ diagnosis: '', prescription: '', notes: '', paymentMethod: 'cash', amountPaidNow: '' })
+  const [form, setForm] = useState({ diagnosis: '', prescription: '', notes: '', paymentMethod: 'cash', amountPaidNow: '', nextVisitDate: '' })
   // ✅ لو فيه دفعة مسجّلة أصلاً لهذا الموعد (حتى لو بمبلغ صفر) — نعدّلها بدل ما نحاول
   // ننشئ وحدة جديدة، لأن AppointmentId فريد بجدول الدفعات وأي محاولة إنشاء ثانية بترمي خطأ
   const [existingPayment, setExistingPayment] = useState<any>(null)
@@ -534,6 +535,21 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
     api.get('/treatmentplans/templates')
       .then(res => setVisitTemplates(res.data))
       .catch(() => setVisitTemplates([]))
+
+    // ✅ نجيب ملاحظة الزيارة اللي أدخلها الطبيب وقت الدخول (شاشة "زيارة الطبيب") — تشخيص/
+    // وصفة/موعد قادم — عشان ما يحتاج الموظف يعيد كتابتها وقت الخروج
+    api.get(`/visitnotes/appointment/${appointmentId}`)
+      .then(res => {
+        if (res.data) {
+          setForm(prev => ({
+            ...prev,
+            diagnosis: res.data.diagnosis || prev.diagnosis,
+            prescription: res.data.prescription || prev.prescription,
+            nextVisitDate: res.data.nextVisitDate ? res.data.nextVisitDate.split('T')[0] : prev.nextVisitDate,
+          }))
+        }
+      })
+      .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointmentId])
 
@@ -678,6 +694,29 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
         isPaid: skip ? false : totals.remaining <= 0,
         amountPaid: skip ? undefined : (parseFloat(form.amountPaidNow) || 0),
       })
+
+      // ✅ لو فيه موعد قادم محدَّد (من ملاحظة الزيارة)، ننتقل تلقائياً:
+      // لو فيه موعد فعلي موجود أصلاً بنفس التاريخ لهذا المريض → نفتحه للتأكيد
+      // وإلا → نفتح شاشة حجز جديدة معبّاة مسبقاً بالمريض والتاريخ، الموظف يحدد الوقت بس
+      if (mode === 'checkout' && !skip && form.nextVisitDate) {
+        try {
+          const checkRes = await api.get(`/appointments?date=${form.nextVisitDate}`)
+          const existing = (checkRes.data as any[]).find(a =>
+            a.patientId === appointment?.patientId && a.status !== 'cancelled' && a.id !== appointmentId)
+
+          if (existing) {
+            navigate(`/appointments/${existing.id}`)
+          } else {
+            navigate('/appointments/add', {
+              state: {
+                prefillPatientId: appointment?.patientId,
+                prefillDoctorId: appointment?.doctorId,
+                prefillDate: form.nextVisitDate,
+              },
+            })
+          }
+        } catch { /* تعذّر التحقق — النافذة تُغلق عادي بدون انتقال إضافي */ }
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data || t.quickCheckoutError)
     } finally {
@@ -761,6 +800,17 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
               <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2}
                 style={{ width: '100%', ...inputStyle, padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none' }} />
             </div>
+            {form.nextVisitDate && (
+              <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>📅</span>
+                <div>
+                  <p style={{ fontSize: 10.5, color: TEXT_MUTED, margin: 0 }}>{isAr ? 'الطبيب حدّد موعد للمراجعة' : "Doctor set a follow-up date"}</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: PRIMARY, margin: '2px 0 0', fontFamily: "'Inter',sans-serif" }}>
+                    {new Date(form.nextVisitDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </p>
+                </div>
+              </div>
+            )}
           </>
         )}
 

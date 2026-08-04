@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
@@ -194,6 +194,10 @@ interface VisitTemplate {
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function AddAppointment() {
   const navigate = useNavigate()
+  const location = useLocation()
+  // ✅ لو جينا من "إنهاء الزيارة" بموعد قادم مقترح — نعبّي المريض/الطبيب تلقائياً،
+  // والموظف يحدد الوقت بس من التقويم (التاريخ موضّح له بشريط تذكير)
+  const prefill = (location.state as { prefillPatientId?: string; prefillDoctorId?: string; prefillDate?: string } | null) || {}
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState('')
@@ -220,7 +224,7 @@ export default function AddAppointment() {
   const [overrideRate, setOverrideRate] = useState('')
 
   const [form, setForm] = useState({
-    patientId: '', doctorId: '', appointmentDate: '',
+    patientId: prefill.prefillPatientId || '', doctorId: prefill.prefillDoctorId || '', appointmentDate: '',
     appointmentPrice: undefined as number | undefined,
     type: '', templateId: '', price: '', notes: '',
   })
@@ -568,6 +572,18 @@ export default function AddAppointment() {
             {t.title}
           </h2>
         </div>
+
+        {/* ✅ تذكير بالتاريخ المقترح — لو جينا من "إنهاء الزيارة" بموعد مراجعة محدَّد */}
+        {prefill.prefillDate && (
+          <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18 }}>📅</span>
+            <p style={{ fontSize: 12.5, color: TEXT_DARK, margin: 0 }}>
+              {isAr
+                ? <>الطبيب حدّد موعد مراجعة بتاريخ <strong>{new Date(prefill.prefillDate).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}</strong> — اختر الوقت المناسب من التقويم بالأسفل</>
+                : <>Doctor set a follow-up for <strong>{new Date(prefill.prefillDate).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}</strong> — pick the time slot below</>}
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-container" style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:24, padding:'28px' }}>

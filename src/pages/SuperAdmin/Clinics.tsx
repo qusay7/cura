@@ -309,6 +309,38 @@ console.log('Departments result:', deptRes.data)
     }
   }
 
+  // ✅ تجديد الاشتراك — نافذة مصغّرة: اختر خطة + دورة فوترة، النظام يحسب تاريخ البداية تلقائياً
+  const [renewClinic, setRenewClinic] = useState<Clinic | null>(null)
+  const [renewPlanId, setRenewPlanId] = useState('')
+  const [renewCycle, setRenewCycle] = useState<'monthly' | 'yearly'>('monthly')
+  const [renewSaving, setRenewSaving] = useState(false)
+
+  const openRenewModal = (clinic: Clinic) => {
+    setRenewClinic(clinic)
+    setRenewPlanId('')
+    setRenewCycle('monthly')
+  }
+
+  const submitRenew = async () => {
+    if (!renewClinic || !renewPlanId) return
+    setRenewSaving(true); setError('')
+    try {
+      const res = await api.post(`/subscriptions/${renewClinic.id}/renew`, {
+        planId: renewPlanId,
+        billingCycle: renewCycle,
+      })
+      setSuccess(isAr
+        ? `✅ تم تجديد اشتراك "${renewClinic.name}" — ساري حتى ${new Date(res.data.endDate).toLocaleDateString('ar-EG')}`
+        : `✅ Subscription renewed for "${renewClinic.name}" — valid until ${new Date(res.data.endDate).toLocaleDateString('en-US')}`)
+      setTimeout(() => setSuccess(''), 8000)
+      setRenewClinic(null)
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تجديد الاشتراك' : 'Failed to renew subscription'))
+    } finally {
+      setRenewSaving(false)
+    }
+  }
+
   const fields = getFieldLabels(lang)
 
   const t = {
@@ -590,6 +622,9 @@ console.log('Departments result:', deptRes.data)
                       >
                         🔄 {isAr ? 'تحديث الصلاحيات' : 'Resync Permissions'}
                       </button>
+                      <button onClick={() => openRenewModal(clinic)} className="btn-details" style={{ color: '#16A34A', borderColor: '#16A34A40' }}>
+                        💳 {isAr ? 'تجديد الاشتراك' : 'Renew Subscription'}
+                      </button>
                       <button onClick={() => handleToggle(clinic.id)} className={`btn-toggle ${clinic.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}>
                         {clinic.isActive ? `🔴 ${t.deactivate}` : `🟢 ${t.activate}`}
                       </button>
@@ -601,6 +636,61 @@ console.log('Departments result:', deptRes.data)
           </table>
         </div>
       </div>
+
+      {/* ✅ نافذة تجديد الاشتراك */}
+      {renewClinic && (
+        <div onClick={() => !renewSaving && setRenewClinic(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: CARD_BG, borderRadius: 20, padding: 24, maxWidth: 420, width: '100%' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}>💳 {isAr ? 'تجديد الاشتراك' : 'Renew Subscription'}</h3>
+            <p style={{ fontSize: 12.5, color: TEXT_MUTED, marginBottom: 18 }}>{renewClinic.name}</p>
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+              {(['monthly', 'yearly'] as const).map(cycle => (
+                <button key={cycle} type="button" onClick={() => setRenewCycle(cycle)}
+                  style={{
+                    flex: 1, padding: '9px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    background: renewCycle === cycle ? PRIMARY : PRIMARY_SOFT,
+                    color: renewCycle === cycle ? '#fff' : TEXT_MUTED,
+                  }}>
+                  {cycle === 'monthly' ? `📅 ${t.monthly}` : `📆 ${t.yearly}`}
+                </button>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.planSection}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
+              {plans.map(plan => {
+                const price = renewCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
+                const isSelected = renewPlanId === plan.id
+                return (
+                  <div key={plan.id} onClick={() => setRenewPlanId(plan.id)}
+                    style={{
+                      padding: 14, borderRadius: 12, cursor: 'pointer',
+                      border: `2px solid ${isSelected ? PRIMARY : BORDER}`,
+                      background: isSelected ? `${PRIMARY}10` : CARD_BG,
+                    }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, margin: '0 0 6px' }}>{plan.name}</p>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: PRIMARY, margin: 0 }}>
+                      {price} <span style={{ fontSize: 10, color: TEXT_MUTED }}>{t.sar}</span>
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={submitRenew} disabled={!renewPlanId || renewSaving}
+                style={{ flex: 1, background: '#16A34A', color: '#FFF', border: 'none', borderRadius: 12, padding: '11px', fontSize: 13.5, fontWeight: 700, cursor: (!renewPlanId || renewSaving) ? 'not-allowed' : 'pointer', opacity: (!renewPlanId || renewSaving) ? 0.6 : 1 }}>
+                {renewSaving ? t.saving : `✅ ${isAr ? 'تأكيد التجديد' : 'Confirm Renewal'}`}
+              </button>
+              <button onClick={() => setRenewClinic(null)} disabled={renewSaving} className="btn-secondary">
+                {t.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

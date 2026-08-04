@@ -4,6 +4,7 @@ import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
 import { PatientInsuranceTab } from '../components/PatientInsuranceTab'
+import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -61,7 +62,7 @@ const T = {
     loadingMessage: 'جاري تحميل بيانات المريض',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات', yearsOld: 'سنة',
     // Tabs
-    tabInfo: '📋 البيانات', tabInsurance: '🏥 التأمين',
+    tabInfo: '📋 البيانات', tabInsurance: '🏥 التأمين', tabAttachments: '📎 المرفقات',
   },
   en: {
     back: 'Back', edit: 'Edit', delete: 'Delete',
@@ -79,7 +80,7 @@ const T = {
     loadingMessage: 'Loading Patient Data',
     loadingSub: 'Please wait while we load patient information', yearsOld: 'years',
     // Tabs
-    tabInfo: '📋 Info', tabInsurance: '🏥 Insurance',
+    tabInfo: '📋 Info', tabInsurance: '🏥 Insurance', tabAttachments: '📎 Attachments',
   },
 }
 
@@ -168,7 +169,7 @@ export default function PatientDetail() {
   const [patient, setPatient] = useState<PatientDetail|null>(null)
   const [loading, setLoading]  = useState(true)
   const [lang, setLang]        = useState<'ar'|'en'>(getStoredLang())
-  const [activeTab, setActiveTab] = useState<'info'|'insurance'>('info')  // ✅ تبويبات
+  const [activeTab, setActiveTab] = useState<'info'|'insurance'|'attachments'>('info')  // ✅ تبويبات
 
   useEffect(() => {
     const styleId = 'cura-patient-detail-css'
@@ -277,6 +278,9 @@ export default function PatientDetail() {
           <button className={`ptab-btn${activeTab==='insurance'?' active':''}`} onClick={()=>setActiveTab('insurance')}>
             {t.tabInsurance}
           </button>
+          <button className={`ptab-btn${activeTab==='attachments'?' active':''}`} onClick={()=>setActiveTab('attachments')}>
+            {t.tabAttachments}
+          </button>
         </div>
 
         {/* ✅ Tab: Info */}
@@ -333,6 +337,11 @@ export default function PatientDetail() {
           <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, padding:24 }}>
             <PatientInsuranceTab patientId={patient.id} lang={lang} isAr={isAr} />
           </div>
+        )}
+
+        {/* ✅ Tab: Attachments */}
+        {activeTab==='attachments' && (
+          <PatientAttachmentsTab patientId={patient.id} lang={lang} />
         )}
 
       </div>

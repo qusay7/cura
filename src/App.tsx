@@ -32,6 +32,9 @@ import LandingPage from './pages/LandingPage'
 import Insurance from './pages/Insurance'
 import Payments from './pages/Payments'
 import Staff from './pages/Staff'
+import Settlements from './pages/Settlements'
+import DoctorDaily from './pages/DoctorDaily'
+import VisitWorkspace from './pages/VisitWorkspace'
 
 function App() {
   return (
@@ -211,12 +214,28 @@ function App() {
         <Route path="/staff" element={
           <ProtectedRoute>
             <Layout><Staff /></Layout>
-            </ProtectedRoute>}
-             />
+          </ProtectedRoute>
+        } />
 
+        {/* ── التسويات المالية ── */}
+        <Route path="/settlements" element={
+          <ProtectedRoute permission="reports.view">
+            <Layout><Settlements /></Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/daily" element={
+          <ProtectedRoute>
+            <Layout><DoctorDaily /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/visit/:appointmentId" element={
+            <ProtectedRoute><Layout><VisitWorkspace /></Layout>
+            </ProtectedRoute>
+            } />
 
         {/* ── Redirects ── */}
-<Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       {/* ✅ PWA Install Prompt */}
