@@ -1,18 +1,123 @@
 import axios from 'axios'
+import type { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
+//import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
-const API_BASE_URL = window.location.hostname === 'localhost'
-  ? '/api'
-  : `http://${window.location.hostname}:5192/api`
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 إعدادات API الآمنة
+// ═══════════════════════════════════════════════════════════════════════════
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // ✅ لإرسال httpOnly cookies
+  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
 })
 
-// ✅ روابط عامة — بس لو الطلب "قراءة" (GET). أي طلب تاني (إنشاء/تعديل/حذف)
-// لنفس الرابط يبقى محمي ولازم توكن، حتى لو فيه '/plans' بعنوانه.
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 إدارة التوكنات — في الذاكرة بدل localStorage (أمان من XSS)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface AuthTokens {
+  accessToken: string | null
+  refreshToken: string | null
+  expiresAt: number | null
+}
+
+let authTokens: AuthTokens = {
+  accessToken: null,
+  refreshToken: null,
+  expiresAt: null,
+}
+
+// ✅ محاولة استرجاع التوكنات من localStorage عند التحميل
+// ✅ محاولة استرجاع التوكنات من sessionStorage عند التحميل
+// ✅ استخدم localStorage فقط (ليس sessionStorage)
+const initializeTokens = () => {
+  try {
+    const stored = localStorage.getItem('_auth_tokens')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      authTokens = {
+        accessToken: parsed.accessToken,
+        refreshToken: parsed.refreshToken,
+        expiresAt: parsed.expiresAt
+      }
+      if (authTokens.expiresAt && Date.now() > authTokens.expiresAt) {
+        clearAuthTokens()
+      }
+    }
+  } catch (e) {
+    console.error('Failed to initialize tokens:', e)
+    clearAuthTokens()
+  }
+}
+
+const setAuthTokens = (accessToken: string, refreshToken: string | null, expiresIn?: number) => {
+  authTokens.accessToken = accessToken
+  authTokens.refreshToken = refreshToken
+  authTokens.expiresAt = expiresIn ? Date.now() + expiresIn * 1000 : null
+
+  try {
+    localStorage.setItem('_auth_tokens', JSON.stringify({
+      accessToken,
+      refreshToken,
+      expiresAt: authTokens.expiresAt
+    }))
+    console.log('✅ Tokens saved to localStorage')
+  } catch (e) {
+    console.error('❌ Failed to save tokens:', e)
+  }
+}
+
+const clearAuthTokens = () => {
+  authTokens = { accessToken: null, refreshToken: null, expiresAt: null }
+  try {
+    localStorage.removeItem('_auth_tokens')
+  } catch {}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+const getAccessToken = () => {
+  const token = authTokens.accessToken
+  console.log('Getting token:', token ? '✅ Found' : '❌ Not found')
+  return token
+}
+
+
+
+
+const getRefreshToken = () => authTokens.refreshToken
+
+
+
+initializeTokens()
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 Endpoints عامة (بدون توكن مطلوب)
+// ═══════════════════════════════════════════════════════════════════════════
+
 const PUBLIC_GET_ENDPOINTS = ['/plans', '/clinics/by-subdomain']
 
 function isPublicGetRequest(url: string, method?: string) {
@@ -21,14 +126,9 @@ function isPublicGetRequest(url: string, method?: string) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ✅ منع تنفيذ نفس عملية الحفظ/التعديل/الحذف أكثر من مرة بالتوازي —
-// يحمي كل صفحات المشروع تلقائياً بدون تعديل أي واحدة منها.
-//
-// الفكرة: أي طلب POST/PUT/PATCH/DELETE له "بصمة" (الرابط + نوعه + محتوى الطلب).
-// لو نفس البصمة أصلاً "قيد التنفيذ" (لسا الرد ما وصل)، أي استدعاء ثاني بنفس
-// اللحظة يرجعله نفس الـ Promise الأول — بدون ما يرسل طلب شبكي ثاني إطلاقاً.
-// أول ما يوصل الرد (نجاح أو فشل)، البصمة تُحذف وتصير العملية جاهزة تُعاد من جديد.
+// ✅ منع تضاهي طلبات المتحورة (POST/PUT/PATCH/DELETE) — Deduplication
 // ═══════════════════════════════════════════════════════════════════════════
+
 const pendingRequests = new Map<string, Promise<any>>()
 const MUTATING_METHODS = ['post', 'put', 'patch', 'delete'] as const
 
@@ -45,15 +145,13 @@ function buildRequestKey(method: string, url: string, data: unknown): string {
 MUTATING_METHODS.forEach((method) => {
   const original = api[method].bind(api)
 
-   // نعيد تعريف التوقيع يدوياً لأن axios overloads معقدة هنا
   api[method] = (url: string, dataOrConfig?: any, maybeConfig?: any) => {
-    // delete(url, config) عندها توقيع مختلف شوي عن post/put/patch(url, data, config)
     const data = method === 'delete' ? undefined : dataOrConfig
     const key = buildRequestKey(method, url, data)
 
     const existing = pendingRequests.get(key)
     if (existing) {
-      // ✅ نفس العملية شغّالة أصلاً — رجّع نفس النتيجة بدل ما نرسل طلب مكرر
+      // ✅ نفس العملية شغّالة — رجّع نفس النتيجة
       return existing
     }
 
@@ -68,65 +166,148 @@ MUTATING_METHODS.forEach((method) => {
   }
 })
 
-// ─── Request Interceptor ──────────────────────────────────────────────────
-api.interceptors.request.use((config) => {
-  const url = config.url || ''
-  if (isPublicGetRequest(url, config.method)) return config
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 حماية من Race Conditions في تجديد التوكن
+// ═══════════════════════════════════════════════════════════════════════════
 
-  const token = localStorage.getItem('token')
+let isRefreshing = false
+let refreshQueue: Array<{
+  resolve: (token: string) => void
+  reject: (error: any) => void
+}> = []
+
+const processRefreshQueue = (error: any, newToken: string | null = null) => {
+  refreshQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error)
+    } else if (newToken) {
+      resolve(newToken)
+    } else {
+      reject(new Error('Token refresh failed'))
+    }
+  })
+  refreshQueue = []
+}
+
+// ─── Request Interceptor ──────────────────────────────────────────────────
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const url = config.url || ''
+
+  // ✅ Endpoints عامة: بدون توكن
+  if (isPublicGetRequest(url, config.method)) {
+    return config
+  }
+
+  // ✅ إضافة التوكن من الذاكرة
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
   return config
 })
 
 // ─── Response Interceptor ────────────────────────────────────────────────
 api.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => response,
 
-  async (error) => {
-    const originalRequest = error.config
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
     const url = originalRequest?.url || ''
 
+    // ❌ Endpoints عامة: لا تحاول تجديد
     if (isPublicGetRequest(url, originalRequest?.method)) {
       return Promise.reject(error)
     }
 
+    // ❌ Endpoints المصادقة: لا تحاول تجديد
     if (url.includes('/auth/') || url.includes('my-permissions')) {
       return Promise.reject(error)
     }
 
+    // ✅ معالجة 401 (انتهت الصلاحية)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      const refreshToken = localStorage.getItem('refreshToken')
+      const refreshToken = getRefreshToken()
+
+      // ❌ لا يوجد refresh token — اذهب إلى login
       if (!refreshToken) {
-        localStorage.clear()
+        clearAuthTokens()
         window.location.href = '/login'
-        return Promise.reject(error)
+        return Promise.reject(new Error('No refresh token available'))
       }
 
+      // ✅ إذا كان تجديد قيد التنفيذ، انتظر النتيجة
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({
+            resolve: (token: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`
+              }
+              resolve(api(originalRequest))
+            },
+            reject: (err: any) => {
+              reject(err)
+            },
+          })
+        })
+      }
+
+      // ✅ ابدأ عملية التجديد
+      isRefreshing = true
+
       try {
-        const response = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          { refreshToken }
-        )
+        // 🔄 طلب التجديد
+     const refreshResponse = await api.post(
+  '/auth/refresh',
+  { refreshToken },
+  {
+    withCredentials: true,
+  }
+)
 
-        const { token, refreshToken: newRefreshToken } = response.data
-        localStorage.setItem('token', token)
-        localStorage.setItem('refreshToken', newRefreshToken)
+        const { token, refreshToken: newRefreshToken, expiresIn } = refreshResponse.data
 
-        originalRequest.headers.Authorization = `Bearer ${token}`
+        // ✅ تحديث التوكنات
+        setAuthTokens(token, newRefreshToken, expiresIn)
+
+        // ✅ إعادة محاولة الطلب الأصلي
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${token}`
+        }
+
+        // ✅ معالجة جميع الطلبات المعلقة
+        processRefreshQueue(null, token)
+        isRefreshing = false
+
         return api(originalRequest)
+      } catch (refreshError) {
+        // ❌ فشل التجديد
+        clearAuthTokens()
+        processRefreshQueue(refreshError, null)
+        isRefreshing = false
 
-      } catch {
-        localStorage.clear()
         window.location.href = '/login'
+        return Promise.reject(refreshError)
       }
     }
 
     return Promise.reject(error)
   }
 )
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 تصدير الدوال للاستخدام الخارجي
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const authService = {
+  setTokens: setAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  clearTokens: clearAuthTokens,
+  isAuthenticated: () => !!getAccessToken(),
+}
 
 export default api

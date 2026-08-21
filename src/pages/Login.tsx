@@ -5,7 +5,7 @@ import type { AuthResponse } from '../types'
 import logo from '../assets/logo.png'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { ECGAnimation } from '../components/ECGAnimation'
-
+import { authService } from '../api/axios'
 const translations = {
   en: {
     dir: 'ltr' as const,
@@ -338,30 +338,48 @@ export default function Login() {
   }
 
   // ── Step 2: Login ──────────────────────────────────────────────────────────
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(''); setLoading(true)
-    try {
-      const response = await api.post<AuthResponse>(`/auth/login?lang=${lang}&subdomain=${subdomain}`, { emailOrUsername, password }
-)
-      const data = response.data
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('refreshToken', data.refreshToken)
-      localStorage.setItem('user', JSON.stringify({
-        fullName: data.fullName, email: data.email, role: data.role,
-        clinicId: data.clinicId, clinicName: data.clinicName,
-      }))
-      try {
-        const permRes = await api.get('/roles/my-permissions')
-        localStorage.setItem('permissions', JSON.stringify(permRes.data.permissions))
-      } catch { localStorage.setItem('permissions', JSON.stringify([])) }
-      navigate('/dashboard')
-    } catch {
-      setError(isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials')
-      setShakeForm(true); setTimeout(() => setShakeForm(false), 400)
-    } finally { setLoading(false) }
-  }
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setError(''); setLoading(true)
+  try {
+    const response = await api.post<AuthResponse>(
+      `/auth/login?lang=${lang}&subdomain=${subdomain}`, 
+      { emailOrUsername, password }
+    )
+    const data = response.data
+    
+    // ✅ استخدم authService للتوكنات
+    authService.setTokens(data.token, data.refreshToken, data.expiresIn)
+    
+    // ✅ احفظ البيانات الأخرى في localStorage
+    localStorage.setItem('clinicSubdomain', subdomain)
+    localStorage.setItem('user', JSON.stringify({
+      fullName: data.fullName,
+      email: data.email,
+      role: data.role,
+      clinicId: data.clinicId,
+      clinicName: data.clinicName,
+    }))
+    
+    // ✅ جديد — احفظ permissions من نفس Login Response
+    localStorage.setItem('permissions', JSON.stringify(data.permissions || []))
+    
+   console.log('✅ Login successful, role:', data.role)
 
+if (data.role?.toLowerCase() === 'doctor') {
+  navigate('/daily')
+} else {
+  navigate('/dashboard')
+}
+  } catch (err) {
+    console.error('❌ Login error:', err)
+    setError(isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials')
+    setShakeForm(true)
+    setTimeout(() => setShakeForm(false), 400)
+  } finally {
+    setLoading(false)
+  }
+}
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/login/${subdomain}`
     try {

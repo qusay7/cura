@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 
-const getStoredLang = (): 'ar' | 'en' =>
-  (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
+// ✅ تحسين #11: التحقق الصحيح من اللغة المحفوظة
+const getStoredLang = (): 'ar' | 'en' => {
+  const lang = localStorage.getItem('cura-lang')
+  return lang === 'ar' ? 'ar' : 'en'
+}
 
 const PRIMARY      = '#5B8C8F'
 const PRIMARY_DARK = '#4A7679'
@@ -144,8 +150,13 @@ const T = {
     copied:'تم نسخ جدول العيادة بنجاح',
     errSave:'حدث خطأ أثناء الحفظ', errDel:'حدث خطأ أثناء الحذف',
     errNoDays:'اختر يوماً على الأقل', errNoClinic:'لا يوجد جدول للعيادة للنسخ منه',
+    errAllClinicDaysAdded:'جميع أيام العيادة مضافة للطبيب مسبقاً',
+    errEndDateBefore:'تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية',
+    errEndTimeBeforeStart:'وقت النهاية يجب أن يكون بعد وقت البداية',
+    errClinicTimeInvalid:'وقت النهاية يجب أن يكون بعد وقت البداية للعيادة',
+    errPartialAdd:'تمت إضافة بعض الأيام. يرجى التحقق من التحذيرات',
     saved:'تم الحفظ بنجاح', deleted:'تم الحذف',
-    riyal:'د.أ', min:'د',
+    min:'د',
     days:['أحد','إث','ثل','أرب','خم','جم','سبت'],
     daysLong:['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],
     // Absence
@@ -174,8 +185,13 @@ const T = {
     copied:'Clinic schedule copied successfully',
     errSave:'Error saving', errDel:'Error deleting',
     errNoDays:'Select at least one day', errNoClinic:'No clinic schedule to copy from',
+    errAllClinicDaysAdded:'All clinic days are already assigned to this doctor',
+    errEndDateBefore:'End date must be after or equal to start date',
+    errEndTimeBeforeStart:'End time must be after start time',
+    errClinicTimeInvalid:'Close time must be after open time',
+    errPartialAdd:'Some days were added. Please check the warnings',
     saved:'Saved successfully', deleted:'Deleted',
-    riyal:'JD', min:'m',
+    min:'m',
     days:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
     daysLong:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     // Absence
@@ -216,6 +232,26 @@ const typeColor = (type:string) => {
   }
 }
 
+// ✅ تحسين #10: دالة مساعدة للتحقق من صحة الأوقات
+const isValidTimeRange = (startTime: string, endTime: string): boolean => {
+  if (!startTime || !endTime) return false
+  return endTime > startTime
+}
+
+// ✅ تحسين #5: دالة لاستخراج رسالة الخطأ من Axios
+const getErrorMessage = (err: any, fallback: string): string => {
+  if (typeof err.response?.data === 'string') {
+    return err.response.data
+  }
+  if (err.response?.data?.message) {
+    return err.response.data.message
+  }
+  if (err.message) {
+    return err.message
+  }
+  return fallback
+}
+
 const Spinner = () => (
   <div style={{ textAlign:'center', padding:40 }}>
     <div style={{ width:36, height:36, borderRadius:'50%', border:`3px solid ${PRIMARY_SOFT}`, borderTopColor:PRIMARY, animation:'spin 0.8s linear infinite', margin:'0 auto' }} />
@@ -230,7 +266,15 @@ export default function Schedules() {
   const [absences, setABS]        = useState<Absence[]>([])
   const [doctors, setDoctors]     = useState<Doctor[]>([])
   const [selectedDoctor, setSel]  = useState('')
-  const [loading, setLoading]     = useState(false)
+  
+  // ✅ تحسين #1: Loading منفصلة لكل عملية
+  const [clinicLoading, setClinicLoading]     = useState(false)
+  const [doctorLoading, setDoctorLoading]     = useState(false)
+  const [absenceLoading, setAbsenceLoading]   = useState(false)
+  
+  // ✅ تحسين #6: AbortController لمنع مشاكل تغيير الطبيب أثناء التحميل
+  const doctorAbortRef = useRef<AbortController | null>(null)
+  
   const [showClinicForm, setSCF]  = useState(false)
   const [showDoctorForm, setSDF]  = useState(false)
   const [showAbsenceForm, setSAF] = useState(false)
@@ -268,7 +312,32 @@ export default function Schedules() {
 
   const t    = T[lang]
   const isAr = lang === 'ar'
+
+  // ✅ Column visibility for each tab
+  const clinicColumnDefs: ColumnDef[] = [
+    { key: 'day', label: isAr ? 'اليوم' : 'Day', locked: true },
+    { key: 'openTime', label: isAr ? 'وقت الفتح' : 'Open Time' },
+    { key: 'closeTime', label: isAr ? 'وقت الإغلاق' : 'Close Time' },
+  ]
+  const { visibleKeys: clinicVisible, toggle: toggleClinic } = useColumnVisibility('clinic-schedule-fields', clinicColumnDefs)
+
+  const doctorColumnDefs: ColumnDef[] = [
+    { key: 'day', label: isAr ? 'اليوم' : 'Day', locked: true },
+    { key: 'time', label: isAr ? 'الوقت' : 'Time' },
+    { key: 'slotDuration', label: isAr ? 'مدة الموعد' : 'Slot Duration' },
+  ]
+  const { visibleKeys: doctorVisible, toggle: toggleDoctor } = useColumnVisibility('doctor-schedule-fields', doctorColumnDefs)
   const slotOptions = [5,10,15,20,30,45,60,90,120]
+
+  const absenceColumnDefs: ColumnDef[] = [
+    { key: 'type', label: isAr ? 'نوع الإجازة' : 'Absence Type', locked: true },
+    { key: 'person', label: isAr ? 'الطبيب / العيادة' : 'Doctor / Clinic' },
+    { key: 'date', label: isAr ? 'التاريخ' : 'Date' },
+    { key: 'duration', label: isAr ? 'المدة' : 'Duration' },
+    { key: 'notes', label: isAr ? 'الملاحظات' : 'Notes' },
+  ]
+
+  const { visibleKeys: absenceVisible, toggle: toggleAbsence } = useColumnVisibility('absence-schedule-fields', absenceColumnDefs)
 
   useEffect(() => {
     const id = 'cura-sch-css'
@@ -277,30 +346,82 @@ export default function Schedules() {
     }
     const onLang = (e:Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', onLang)
-    return () => window.removeEventListener('cura-lang-change', onLang)
+    
+    // ✅ تحسين #6: تنظيف AbortController عند unmount
+    return () => {
+      window.removeEventListener('cura-lang-change', onLang)
+      if (doctorAbortRef.current) {
+        doctorAbortRef.current.abort()
+      }
+    }
   }, [])
 
   useEffect(() => {
     fetchClinic()
-    api.get('/doctors').then(r => setDoctors(r.data.filter((d:Doctor)=>d.isActive))).catch(()=>{})
+    api.get('/doctors')
+      .then(r => setDoctors(r.data.filter((d:Doctor)=>d.isActive)))
+      .catch(err => console.error('Failed to fetch doctors:', err))
     fetchAbsences()
   }, [])
 
-  useEffect(() => { if (selectedDoctor) fetchDoctor(selectedDoctor) }, [selectedDoctor])
+  // ✅ تحسين #12: تنظيف البيانات عند تغيير الطبيب
+  useEffect(() => {
+    if (selectedDoctor) {
+      setDS([])
+      fetchDoctor(selectedDoctor)
+    }
+  }, [selectedDoctor])
 
   const fetchClinic = async () => {
-    setLoading(true)
-    try { const r = await api.get('/schedules/clinic'); setCS(r.data) }
-    catch {} finally { setLoading(false) }
+    setClinicLoading(true)
+    try {
+      const r = await api.get('/schedules/clinic')
+      setCS(r.data)
+    } catch (err) {
+      console.error('Failed to fetch clinic schedule:', err)
+    } finally {
+      setClinicLoading(false)
+    }
   }
+
   const fetchDoctor = async (id:string) => {
-    setLoading(true)
-    try { const r = await api.get(`/schedules/doctor/${id}`); setDS(r.data) }
-    catch {} finally { setLoading(false) }
+    // ✅ تحسين #6: إلغاء الطلب السابق إذا كان موجوداً
+    if (doctorAbortRef.current) {
+      doctorAbortRef.current.abort()
+    }
+    
+    const abortController = new AbortController()
+    doctorAbortRef.current = abortController
+    
+    setDoctorLoading(true)
+    try {
+      const r = await api.get(`/schedules/doctor/${id}`, {
+        signal: abortController.signal
+      })
+      // ✅ تحقق إذا كانت العملية لم يتم إلغاؤها
+      if (!abortController.signal.aborted) {
+        setDS(r.data)
+      }
+    } catch (err: any) {
+      // عدم عرض خطأ إذا تم إلغاء الطلب
+      if (err.name !== 'AbortError') {
+        console.error('Failed to fetch doctor schedule:', err)
+      }
+    } finally {
+      setDoctorLoading(false)
+    }
   }
+
   const fetchAbsences = async () => {
-    try { const r = await api.get('/absences'); setABS(r.data) }
-    catch {}
+    setAbsenceLoading(true)
+    try {
+      const r = await api.get('/absences')
+      setABS(r.data)
+    } catch (err) {
+      console.error('Failed to fetch absences:', err)
+    } finally {
+      setAbsenceLoading(false)
+    }
   }
 
   const showAlert = (type:'ok'|'err', msg:string) => {
@@ -311,104 +432,318 @@ export default function Schedules() {
     setArr(arr.includes(d) ? arr.filter(x=>x!==d) : [...arr,d])
 
   const handleAddClinicDays = async () => {
-    if (cDays.length===0) { showAlert('err',t.errNoDays); return }
+    // ✅ تحسين #1: التحقق من اختيار الأيام
+    if (cDays.length===0) {
+      showAlert('err', t.errNoDays)
+      return
+    }
+    
+    // ✅ تحسين #9: التحقق من صحة أوقات العيادة (التحقق #1)
+    if (!c24 && !isValidTimeRange(cOpen, cClose)) {
+      showAlert('err', t.errClinicTimeInvalid)
+      return
+    }
+
     try {
-      await Promise.all(cDays.map(day => api.post('/schedules/clinic', {
-        dayOfWeek:day, openTime:c24?'00:00:00':cOpen+':00', closeTime:c24?'23:59:59':cClose+':00',
-      })))
-      showAlert('ok',t.saved); setSCF(false); setCDays([]); setC24(false); fetchClinic()
-    } catch { showAlert('err',t.errSave) }
+      // ✅ تحسين #2: معالجة أفضل لنتائج إضافة عدة أيام باستخدام allSettled
+      const results = await Promise.allSettled(
+        cDays.map(day => 
+          api.post('/schedules/clinic', {
+            dayOfWeek:day, 
+            openTime:c24?'00:00:00':cOpen+':00', 
+            closeTime:c24?'23:59:59':cClose+':00',
+          })
+        )
+      )
+
+      // ✅ تحسين #3: منع التكرار والتحقق من النتائج
+      const failures = results.filter(r => r.status === 'rejected')
+      const successes = results.filter(r => r.status === 'fulfilled')
+
+      if (failures.length > 0 && successes.length > 0) {
+        showAlert('err', t.errPartialAdd)
+      } else if (failures.length > 0) {
+        const firstError = (failures[0] as PromiseRejectedResult).reason
+        const msg = getErrorMessage(firstError, t.errSave)
+        showAlert('err', msg)
+        return
+      } else {
+        showAlert('ok', t.saved)
+      }
+
+      // ✅ تحسين #8: تصفير البيانات بعد الحفظ الناجح
+      setSCF(false)
+      setCDays([])
+      setCOpen('08:00')
+      setCClose('20:00')
+      setC24(false)
+      fetchClinic()
+    } catch (err) {
+      console.error('Failed to add clinic schedule:', err)
+      const msg = getErrorMessage(err, t.errSave)
+      showAlert('err', msg)
+    }
   }
 
   const handleAddDoctorDays = async () => {
-  if (dDays.length===0) { showAlert('err',t.errNoDays); return }
-  try {
-    const results = await Promise.all(dDays.map(day => api.post(`/schedules/doctor?lang=${lang}`, {
-      doctorId:selectedDoctor, dayOfWeek:day,
-      startTime:d24?'00:00:00':dStart+':00', endTime:d24?'23:59:59':dEnd+':00',
-      slotDuration:dSlot,
-    })))
+    // ✅ تحسين #2 و #4: التحقق من اختيار الطبيب والأيام
+    if (!selectedDoctor) {
+      showAlert('err', t.selectDoctor)
+      return
+    }
+    if (dDays.length===0) {
+      showAlert('err', t.errNoDays)
+      return
+    }
+    
+    // ✅ تحسين #5 و #9: التحقق من صحة أوقات البداية والنهاية
+    if (!d24 && !isValidTimeRange(dStart, dEnd)) {
+      showAlert('err', t.errEndTimeBeforeStart)
+      return
+    }
 
-const warnings = results.map(r => r.data?.warning).filter(Boolean)
-if (warnings.length > 0) {
-  showAlert('err', warnings[0])
-} else {
-  showAlert('ok', t.saved)
-}
+    try {
+      // ✅ تحسين #2: معالجة أفضل لنتائج إضافة عدة أيام مع التحذيرات باستخدام allSettled
+      const results = await Promise.allSettled(
+        dDays.map(day => 
+          api.post(`/schedules/doctor?lang=${lang}`, {
+            doctorId: selectedDoctor,
+            dayOfWeek: day,
+            startTime: d24?'00:00:00':dStart+':00',
+            endTime: d24?'23:59:59':dEnd+':00',
+            slotDuration: dSlot,
+          })
+        )
+      )
 
-    setSDF(false); setDDays([]); setD24(false); fetchDoctor(selectedDoctor)
-  } catch (err: any) {
-    const msg = err.response?.data || t.errSave
-    showAlert('err', typeof msg === 'string' ? msg : t.errSave)
+      // ✅ تحسين #2 و #3: التحقق من النتائج والتحذيرات
+      const failures = results.filter(r => r.status === 'rejected')
+      const fulfilled = results.filter(r => r.status === 'fulfilled') as PromiseFulfilledResult<any>[]
+      const warnings = fulfilled
+        .map(r => r.value?.data?.warning)
+        .filter(Boolean)
+
+      if (failures.length > 0 && fulfilled.length > 0) {
+        // بعض الأيام نجحت وبعضها فشل
+        showAlert('err', t.errPartialAdd)
+      } else if (failures.length > 0) {
+        // جميع الأيام فشلت
+        const firstError = (failures[0] as PromiseRejectedResult).reason
+        const msg = getErrorMessage(firstError, t.errSave)
+        showAlert('err', msg)
+        return
+      } else if (warnings.length > 0) {
+        // هناك تحذيرات
+        showAlert('err', warnings[0])
+      } else {
+        // جميع الأيام نجحت بدون تحذيرات
+        showAlert('ok', t.saved)
+      }
+
+      // ✅ تحسين #8: تصفير البيانات بعد الحفظ الناجح
+      setSDF(false)
+      setDDays([])
+      setDStart('08:00')
+      setDEnd('14:00')
+      setD24(false)
+      setDSlot(15)
+      fetchDoctor(selectedDoctor)
+    } catch (err) {
+      console.error('Failed to add doctor schedule:', err)
+      const msg = getErrorMessage(err, t.errSave)
+      showAlert('err', msg)
+    }
   }
-}
+
   const startEdit = (s:DoctorSchedule) => {
     setEditId(s.id); setES(s.startTime.substring(0,5)); setEE(s.endTime.substring(0,5))
     setESl(s.slotDuration)
   }
+
   const handleEdit = async () => {
+    // ✅ تحسين #4: التحقق من البيانات قبل الإرسال
     if (!editId) return
-    const s = doctorSchedules.find(x=>x.id===editId); if (!s) return
+    const s = doctorSchedules.find(x=>x.id===editId)
+    if (!s) return
+    
+    // ✅ تحسين #5 و #9: التحقق من صحة أوقات البداية والنهاية
+    if (!isValidTimeRange(eStart, eEnd)) {
+      showAlert('err', t.errEndTimeBeforeStart)
+      return
+    }
+
     try {
       await api.put(`/schedules/doctor/${editId}`, {
-        doctorId:selectedDoctor, dayOfWeek:s.dayOfWeek,
-        startTime:eStart+':00', endTime:eEnd+':00', slotDuration:eSlot,
+        doctorId: selectedDoctor,
+        dayOfWeek: s.dayOfWeek,
+        startTime: eStart+':00',
+        endTime: eEnd+':00',
+        slotDuration: eSlot,
       })
-      showAlert('ok',t.saved); setEditId(null); fetchDoctor(selectedDoctor)
-    } catch { showAlert('err',t.errSave) }
+      showAlert('ok', t.saved)
+      setEditId(null)
+      fetchDoctor(selectedDoctor)
+    } catch (err) {
+      console.error('Failed to edit doctor schedule:', err)
+      const msg = getErrorMessage(err, t.errSave)
+      showAlert('err', msg)
+    }
   }
 
   const handleCopyClinic = async () => {
-    if (clinicSchedules.length===0) { showAlert('err',t.errNoClinic); return }
+    // ✅ تحسين #2 و #4: التحقق من اختيار الطبيب والبيانات
+    if (!selectedDoctor) {
+      showAlert('err', t.selectDoctor)
+      return
+    }
+    if (clinicSchedules.length===0) {
+      showAlert('err', t.errNoClinic)
+      return
+    }
+    
+    // ✅ تحسين #3 و #6: التحقق من الأيام المضافة مسبقاً ونسخ فقط الجديدة
+    const schedulesToCopy = clinicSchedules.filter(
+      s => !existingDoctorDays.has(s.dayOfWeek)
+    )
+
+    if (schedulesToCopy.length === 0) {
+      showAlert('err', t.errAllClinicDaysAdded)
+      return
+    }
+
     if (!confirm(t.copyConfirm)) return
+
     try {
-      await Promise.all(clinicSchedules.map(s => api.post('/schedules/doctor', {
-        doctorId:selectedDoctor, dayOfWeek:s.dayOfWeek,
-        startTime:s.openTime, endTime:s.closeTime, slotDuration:15,
-      })))
-      showAlert('ok',t.copied); fetchDoctor(selectedDoctor)
-    } catch { showAlert('err',t.errSave) }
+      // ✅ تحسين #2: معالجة أفضل لنتائج النسخ باستخدام allSettled
+      const results = await Promise.allSettled(
+        schedulesToCopy.map(s => 
+          api.post('/schedules/doctor', {
+            doctorId: selectedDoctor,
+            dayOfWeek: s.dayOfWeek,
+            startTime: s.openTime,
+            endTime: s.closeTime,
+            slotDuration: 15,
+          })
+        )
+      )
+
+      const failures = results.filter(r => r.status === 'rejected')
+      const successes = results.filter(r => r.status === 'fulfilled')
+
+      if (failures.length > 0 && successes.length > 0) {
+        showAlert('err', t.errPartialAdd)
+      } else if (failures.length > 0) {
+        const firstError = (failures[0] as PromiseRejectedResult).reason
+        const msg = getErrorMessage(firstError, t.errSave)
+        showAlert('err', msg)
+      } else {
+        showAlert('ok', t.copied)
+      }
+
+      fetchDoctor(selectedDoctor)
+    } catch (err) {
+      console.error('Failed to copy clinic schedule:', err)
+      const msg = getErrorMessage(err, t.errSave)
+      showAlert('err', msg)
+    }
   }
 
   const delClinic = async (id:string) => {
-    try { await api.delete(`/schedules/clinic/${id}`); showAlert('ok',t.deleted); fetchClinic() }
-    catch { showAlert('err',t.errDel) }
+    try { 
+      await api.delete(`/schedules/clinic/${id}`)
+      showAlert('ok', t.deleted)
+      fetchClinic()
+    } catch (err) {
+      console.error('Failed to delete clinic schedule:', err)
+      const msg = getErrorMessage(err, t.errDel)
+      showAlert('err', msg)
+    }
   }
+
   const delDoctor = async (id:string) => {
     if (editId===id) setEditId(null)
-    try { await api.delete(`/schedules/doctor/${id}`); showAlert('ok',t.deleted); fetchDoctor(selectedDoctor) }
-    catch { showAlert('err',t.errDel) }
+    try {
+      await api.delete(`/schedules/doctor/${id}`)
+      showAlert('ok', t.deleted)
+      fetchDoctor(selectedDoctor)
+    } catch (err) {
+      console.error('Failed to delete doctor schedule:', err)
+      const msg = getErrorMessage(err, t.errDel)
+      showAlert('err', msg)
+    }
   }
 
   const handleAddAbsence = async () => {
-  if (!absStart || !absEnd) { showAlert('err', isAr?'حدد التواريخ':'Select dates'); return }
-  try {
-    await api.post(`/absences?lang=${lang}`, {
-      doctorId:    absFor==='doctor' && absDoctor ? absDoctor : null,
-      startDate:   absStart,
-      endDate:     absEnd,
-      isFullDay:   absFullDay,
-      startTime:   absFullDay ? null : absStartT + ':00',
-      endTime:     absFullDay ? null : absEndT + ':00',
-      type:        absType,
-      notes:       absNotes || null,
-    })
-    showAlert('ok', isAr?'تمت إضافة الإجازة':'Absence added')
-    setSAF(false); setAbsStart(''); setAbsEnd(''); setAbsNotes('')
-    fetchAbsences()
-  } catch (err: any) {
-    const msg = err.response?.data
-    showAlert('err', typeof msg === 'string' ? msg : t.errSave)  // ✅ عرض رسالة الـ Backend
+    // ✅ تحسين #4: التحقق الشامل من البيانات قبل الإرسال
+    if (!absStart || !absEnd) {
+      showAlert('err', isAr?'حدد التواريخ':'Select dates')
+      return
+    }
+
+    // ✅ تحسين #4: التحقق من تاريخ النهاية
+    if (absEnd < absStart) {
+      showAlert('err', t.errEndDateBefore)
+      return
+    }
+
+    // ✅ تحسين #9: التحقق من الأوقات في الإجازة الجزئية
+    if (!absFullDay && !isValidTimeRange(absStartT, absEndT)) {
+      showAlert('err', t.errEndTimeBeforeStart)
+      return
+    }
+
+    // ✅ تحسين #3 و #4: التحقق من اختيار الطبيب إذا كانت الإجازة للطبيب
+    if (absFor === 'doctor' && !absDoctor) {
+      showAlert('err', t.selectDoctor)
+      return
+    }
+
+    try {
+      await api.post(`/absences?lang=${lang}`, {
+        doctorId:    absFor==='doctor' && absDoctor ? absDoctor : null,
+        startDate:   absStart,
+        endDate:     absEnd,
+        isFullDay:   absFullDay,
+        startTime:   absFullDay ? null : absStartT + ':00',
+        endTime:     absFullDay ? null : absEndT + ':00',
+        type:        absType,
+        notes:       absNotes || null,
+      })
+      showAlert('ok', isAr?'تمت إضافة الإجازة':'Absence added')
+      
+      // ✅ تحسين #8: تصفير البيانات بعد الإضافة الناجحة
+      setSAF(false)
+      setAbsStart('')
+      setAbsEnd('')
+      setAbsNotes('')
+      setAbsDoctor('')
+      setAbsType('holiday')
+      setAbsFullDay(true)
+      setAbsStartT('09:00')
+      setAbsEndT('12:00')
+      setAbsFor('clinic')
+      
+      fetchAbsences()
+    } catch (err) {
+      console.error('Failed to add absence:', err)
+      const msg = getErrorMessage(err, t.errSave)
+      showAlert('err', msg)
+    }
   }
-}
 
   const delAbsence = async (id:string) => {
-    try { await api.delete(`/absences/${id}`); showAlert('ok',t.deleted); fetchAbsences() }
-    catch { showAlert('err',t.errDel) }
+    try {
+      await api.delete(`/absences/${id}`)
+      showAlert('ok', t.deleted)
+      fetchAbsences()
+    } catch (err) {
+      console.error('Failed to delete absence:', err)
+      const msg = getErrorMessage(err, t.errDel)
+      showAlert('err', msg)
+    }
   }
 
   const selDoc = doctors.find(d=>d.id===selectedDoctor)
-  // ✅ مصدرين منفصلين — كل تبويب يتحقق من بياناته هو بس، مو بيانات تبويب تاني
   const existingClinicDays = new Set(clinicSchedules.map(s => s.dayOfWeek))
   const existingDoctorDays = new Set(doctorSchedules.map(s => s.dayOfWeek))
   const getTypeLabel = (type:string) => ABSENCE_TYPES[lang].find(x=>x.value===type)
@@ -417,19 +752,24 @@ if (warnings.length > 0) {
     <div className="sch-shell" style={{ fontFamily:t.font, direction:t.dir, background:'#F8FAFA', minHeight:'100vh', padding:24 }}>
       <div style={{ maxWidth:1300, margin:'0 auto' }}>
 
+        {/* ✅ طباعة موحدة */}
+        <PrintHeader reportTitle={t.title} lang={lang} />
+
         {/* Header */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:PRIMARY_SOFT, border:`1px solid ${BORDER}`, borderRadius:100, padding:'4px 16px', fontSize:11, fontWeight:600, color:PRIMARY, marginBottom:12 }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:PRIMARY, animation:'soft-pulse 2s infinite' }} />
-            {t.mgmt}
+        <div className="no-print" style={{ marginBottom:24, display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
+          <div>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:PRIMARY_SOFT, border:`1px solid ${BORDER}`, borderRadius:100, padding:'4px 16px', fontSize:11, fontWeight:600, color:PRIMARY, marginBottom:12 }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background:PRIMARY, animation:'soft-pulse 2s infinite' }} />
+              {t.mgmt}
+            </div>
+            <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:28, fontWeight:500, color:TEXT_DARK, margin:0, letterSpacing:'-0.3px' }}>
+              {t.title}
+            </h2>
           </div>
-          <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:28, fontWeight:500, color:TEXT_DARK, margin:0, letterSpacing:'-0.3px' }}>
-            {t.title}
-          </h2>
         </div>
 
         {/* Tabs */}
-        <div className="sch-tabs">
+        <div className="sch-tabs no-print">
           <button className={`sch-tab${tab==='clinic'?' active':''}`} onClick={()=>setTab('clinic')}>🏥 {t.clinicTab}</button>
           <button className={`sch-tab${tab==='doctor'?' active':''}`} onClick={()=>setTab('doctor')}>👨‍⚕️ {t.doctorTab}</button>
           <button className={`sch-tab${tab==='absence'?' active':''}`} onClick={()=>setTab('absence')}>
@@ -454,29 +794,38 @@ if (warnings.length > 0) {
         {tab==='clinic' && (
           <div>
             <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
-              <button className="btn-p" onClick={()=>{ setSCF(!showClinicForm); setCDays([]) }}>
+              <button className="btn-p" onClick={()=>{
+                // ✅ تحسين #8: تصفير البيانات عند الإلغاء
+                if (showClinicForm) {
+                  setCDays([])
+                  setCOpen('08:00')
+                  setCClose('20:00')
+                  setC24(false)
+                }
+                setSCF(!showClinicForm)
+              }}>
                 {showClinicForm ? t.cancel : t.addDay}
               </button>
             </div>
             {showClinicForm && (
               <div className="sch-form">
                 <p style={{ fontSize:13, fontWeight:700, color:TEXT_DARK, marginBottom:14 }}>{t.selectDays}</p>
-              <div className="day-grid" style={{ marginBottom:16 }}>
-  {t.days.map((d,i) => {
-    const taken = existingClinicDays.has(i)
-    return (
-      <button key={i}
-        className={`day-btn${cDays.includes(i)?' sel':''}${taken?' disabled':''}`}
-        disabled={taken}
-        onClick={()=>!taken && toggleDay(cDays,setCDays,i)}
-        title={taken ? (isAr ? 'مضاف مسبقاً' : 'Already added') : ''}
-        style={{ opacity:taken?0.4:1, cursor:taken?'not-allowed':'pointer' }}>
-        {d}
-        {taken && <span style={{ display:'block', fontSize:9, color:ERROR_C }}>✓</span>}
-      </button>
-    )
-  })}
-</div>
+                <div className="day-grid" style={{ marginBottom:16 }}>
+                  {t.days.map((d,i) => {
+                    const taken = existingClinicDays.has(i)
+                    return (
+                      <button key={i}
+                        className={`day-btn${cDays.includes(i)?' sel':''}${taken?' disabled':''}`}
+                        disabled={taken}
+                        onClick={()=>!taken && toggleDay(cDays,setCDays,i)}
+                        title={taken ? (isAr ? 'مضاف مسبقاً' : 'Already added') : ''}
+                        style={{ opacity:taken?0.4:1, cursor:taken?'not-allowed':'pointer' }}>
+                        {d}
+                        {taken && <span style={{ display:'block', fontSize:9, color:ERROR_C }}>✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
                 <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, flexWrap:'wrap' }}>
                   <button className={`h24-toggle${c24?' on':''}`} onClick={()=>setC24(!c24)}>🕐 {t.h24}</button>
                   {!c24 && (
@@ -494,32 +843,45 @@ if (warnings.length > 0) {
                 </div>
                 <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
                   <button className="btn-p" onClick={handleAddClinicDays}>{t.save}</button>
-                  <button className="btn-s" onClick={()=>setSCF(false)}>{t.cancel}</button>
+                  <button className="btn-s" onClick={()=>{
+                    // ✅ تحسين #8: تصفير عند الإلغاء
+                    setCDays([])
+                    setCOpen('08:00')
+                    setCClose('20:00')
+                    setC24(false)
+                    setSCF(false)
+                  }}>{t.cancel}</button>
                 </div>
               </div>
             )}
-            {loading ? <Spinner /> : clinicSchedules.length===0 ? (
+            {clinicLoading ? <Spinner /> : clinicSchedules.length===0 ? (
               <div className="empty"><span style={{ fontSize:48, opacity:0.4 }}>📅</span><p>{t.noData}</p></div>
             ) : (
-              <div className="sch-cards">
-                {clinicSchedules.slice().sort((a,b)=>a.dayOfWeek-b.dayOfWeek).map(s => (
-                  <div key={s.id} className="sch-card">
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                      <div>
-                        <p style={{ fontSize:15, fontWeight:700, color:TEXT_DARK, margin:0 }}>{t.daysLong[s.dayOfWeek]}</p>
-                        <p style={{ fontSize:12, color:TEXT_MUTED, margin:'3px 0 0', fontFamily:"'Inter',sans-serif" }}>
-                          {fmtTime(s.openTime)==='00:00'&&fmtTime(s.closeTime)==='23:59' ? `🕐 ${t.h24}` : `${fmtTime12(s.openTime)} — ${fmtTime12(s.closeTime)}`}
-                        </p>
+              <>
+                <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:12 }}>
+                  <ExportBar endpoint="/schedules/clinic/export" lang={lang} fileName="clinic-schedule" />
+                  <ColumnToggleButton columns={clinicColumnDefs} visibleKeys={clinicVisible} onToggle={toggleClinic} isRtl={isAr} />
+                </div>
+                <div className="sch-cards">
+                  {clinicSchedules.slice().sort((a,b)=>a.dayOfWeek-b.dayOfWeek).map(s => (
+                    <div key={s.id} className="sch-card">
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+                        <div>
+                          <p style={{ fontSize:15, fontWeight:700, color:TEXT_DARK, margin:0 }}>{t.daysLong[s.dayOfWeek]}</p>
+                          <p style={{ fontSize:12, color:TEXT_MUTED, margin:'3px 0 0', fontFamily:"'Inter',sans-serif" }}>
+                            {fmtTime(s.openTime)==='00:00'&&fmtTime(s.closeTime)==='23:59' ? `🕐 ${t.h24}` : `${fmtTime12(s.openTime)} — ${fmtTime12(s.closeTime)}`}
+                          </p>
+                        </div>
+                        <button className="btn-del no-print" onClick={()=>delClinic(s.id)}>✕</button>
                       </div>
-                      <button className="btn-del" onClick={()=>delClinic(s.id)}>✕</button>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {clinicVisible.has('openTime') && <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY }}>🕗 {fmtTime12(s.openTime)}</span>}
+                        {clinicVisible.has('closeTime') && <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY }}>🕓 {fmtTime12(s.closeTime)}</span>}
+                      </div>
                     </div>
-                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                      <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY }}>🕗 {fmtTime12(s.openTime)}</span>
-                      <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY }}>🕓 {fmtTime12(s.closeTime)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -550,29 +912,40 @@ if (warnings.length > 0) {
                     </div>
                   </div>
                   <button className="btn-copy" onClick={handleCopyClinic}>{t.copyClinic}</button>
-                  <button className="btn-p" onClick={()=>{ setSDF(!showDoctorForm); setDDays([]); setEditId(null) }}>
+                  <button className="btn-p" onClick={()=>{
+                    // ✅ تحسين #8: تصفير البيانات عند الإلغاء
+                    if (showDoctorForm) {
+                      setDDays([])
+                      setDStart('08:00')
+                      setDEnd('14:00')
+                      setD24(false)
+                      setDSlot(15)
+                    }
+                    setSDF(!showDoctorForm)
+                    setEditId(null)
+                  }}>
                     {showDoctorForm ? t.cancel : t.addDay}
                   </button>
                 </div>
                 {showDoctorForm && (
                   <div className="sch-form">
                     <p style={{ fontSize:13, fontWeight:700, color:TEXT_DARK, marginBottom:14 }}>{t.selectDays}</p>
-                   <div className="day-grid" style={{ marginBottom:16 }}>
-  {t.days.map((d,i) => {
-    const taken = existingDoctorDays.has(i)
-    return (
-      <button key={i}
-        className={`day-btn${dDays.includes(i)?' sel':''}${taken?' disabled':''}`}
-        disabled={taken}
-        onClick={()=>!taken && toggleDay(dDays,setDDays,i)}
-        title={taken ? (isAr ? 'مضاف مسبقاً' : 'Already added') : ''}
-        style={{ opacity:taken?0.4:1, cursor:taken?'not-allowed':'pointer' }}>
-        {d}
-        {taken && <span style={{ display:'block', fontSize:9, color:ERROR_C }}>✓</span>}
-      </button>
-    )
-  })}
-</div>
+                    <div className="day-grid" style={{ marginBottom:16 }}>
+                      {t.days.map((d,i) => {
+                        const taken = existingDoctorDays.has(i)
+                        return (
+                          <button key={i}
+                            className={`day-btn${dDays.includes(i)?' sel':''}${taken?' disabled':''}`}
+                            disabled={taken}
+                            onClick={()=>!taken && toggleDay(dDays,setDDays,i)}
+                            title={taken ? (isAr ? 'مضاف مسبقاً' : 'Already added') : ''}
+                            style={{ opacity:taken?0.4:1, cursor:taken?'not-allowed':'pointer' }}>
+                            {d}
+                            {taken && <span style={{ display:'block', fontSize:9, color:ERROR_C }}>✓</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
                     <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, flexWrap:'wrap' }}>
                       <button className={`h24-toggle${d24?' on':''}`} onClick={()=>setD24(!d24)}>🕐 {t.h24}</button>
                       {!d24 && (
@@ -597,65 +970,83 @@ if (warnings.length > 0) {
                     </div>
                     <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
                       <button className="btn-p" onClick={handleAddDoctorDays}>{t.save}</button>
-                      <button className="btn-s" onClick={()=>setSDF(false)}>{t.cancel}</button>
+                      <button className="btn-s" onClick={()=>{
+                        // ✅ تحسين #8: تصفير عند الإلغاء
+                        setDDays([])
+                        setDStart('08:00')
+                        setDEnd('14:00')
+                        setD24(false)
+                        setDSlot(15)
+                        setSDF(false)
+                      }}>{t.cancel}</button>
                     </div>
                   </div>
                 )}
-                {loading ? <Spinner /> : doctorSchedules.length===0 ? (
+                {doctorLoading ? <Spinner /> : doctorSchedules.length===0 ? (
                   <div className="empty">
                     <span style={{ fontSize:48, opacity:0.4 }}>📅</span>
                     <p style={{ marginBottom:12 }}>{t.noData}</p>
                     <button className="btn-copy" onClick={handleCopyClinic}>{t.copyClinic}</button>
                   </div>
                 ) : (
-                  <div className="sch-cards">
-                    {doctorSchedules.slice().sort((a,b)=>a.dayOfWeek-b.dayOfWeek).map(s => {
-                      const isEditing = editId===s.id
-                      return (
-                        <div key={s.id} className={`sch-card${isEditing?' editing':''}`}>
-                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                            <p style={{ fontSize:15, fontWeight:700, color:TEXT_DARK, margin:0 }}>{t.daysLong[s.dayOfWeek]}</p>
-                            <div style={{ display:'flex', gap:6 }}>
-                              <button className="btn-edit" onClick={()=>isEditing?setEditId(null):startEdit(s)}>
-                                {isEditing ? t.cancel : `✏️ ${t.edit}`}
-                              </button>
-                              <button className="btn-del" onClick={()=>delDoctor(s.id)}>✕</button>
+                  <>
+                    <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:12 }}>
+                      <ExportBar endpoint={`/schedules/doctor/${selectedDoctor}/export`} lang={lang} fileName="doctor-schedule" />
+                      <ColumnToggleButton columns={doctorColumnDefs} visibleKeys={doctorVisible} onToggle={toggleDoctor} isRtl={isAr} />
+                    </div>
+                    <div className="sch-cards">
+                      {doctorSchedules.slice().sort((a,b)=>a.dayOfWeek-b.dayOfWeek).map(s => {
+                        const isEditing = editId===s.id
+                        return (
+                          <div key={s.id} className={`sch-card${isEditing?' editing':''}`}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                              <p style={{ fontSize:15, fontWeight:700, color:TEXT_DARK, margin:0 }}>{t.daysLong[s.dayOfWeek]}</p>
+                              <div className="no-print" style={{ display:'flex', gap:6 }}>
+                                <button className="btn-edit" onClick={()=>isEditing?setEditId(null):startEdit(s)}>
+                                  {isEditing ? t.cancel : `✏️ ${t.edit}`}
+                                </button>
+                                <button className="btn-del" onClick={()=>delDoctor(s.id)}>✕</button>
+                              </div>
                             </div>
+                            {isEditing ? (
+                              <div>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                                  <div className="field">
+                                    <label>{t.startTime}</label>
+                                    <input type="time" value={eStart} onChange={e=>setES(e.target.value)} />
+                                  </div>
+                                  <div className="field">
+                                    <label>{t.endTime}</label>
+                                    <input type="time" value={eEnd} onChange={e=>setEE(e.target.value)} />
+                                  </div>
+                                </div>
+                                <div className="field" style={{ marginBottom:8 }}>
+                                  <label>{t.slot}</label>
+                                  <select value={eSlot} onChange={e=>setESl(Number(e.target.value))} style={{ background:PRIMARY_SOFT, fontWeight:600, color:PRIMARY }}>
+                                    {slotOptions.map(v=><option key={v} value={v}>{v} {t.min}</option>)}
+                                  </select>
+                                </div>
+                                <button className="btn-p" onClick={handleEdit} style={{ width:'100%', borderRadius:10, justifyContent:'center' }}>💾 {t.save}</button>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginBottom:8 }}>
+                                  {doctorVisible.has('time') && (
+                                    <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY, fontFamily:"'Inter',sans-serif" }}>
+                                      🕗 {fmtTime12(s.startTime)} — {fmtTime12(s.endTime)}
+                                    </span>
+                                  )}
+                                  {doctorVisible.has('slotDuration') && (
+                                    <span className="badge" style={{ background:AMBER_BG, color:AMBER }}>⏱ {s.slotDuration} {t.min}</span>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
-                          {isEditing ? (
-                            <div>
-                              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
-                                <div className="field">
-                                  <label>{t.startTime}</label>
-                                  <input type="time" value={eStart} onChange={e=>setES(e.target.value)} />
-                                </div>
-                                <div className="field">
-                                  <label>{t.endTime}</label>
-                                  <input type="time" value={eEnd} onChange={e=>setEE(e.target.value)} />
-                                </div>
-                              </div>
-                              <div className="field" style={{ marginBottom:8 }}>
-                                <label>{t.slot}</label>
-                                <select value={eSlot} onChange={e=>setESl(Number(e.target.value))} style={{ background:PRIMARY_SOFT, fontWeight:600, color:PRIMARY }}>
-                                  {slotOptions.map(v=><option key={v} value={v}>{v} {t.min}</option>)}
-                                </select>
-                              </div>
-                              <button className="btn-p" onClick={handleEdit} style={{ width:'100%', borderRadius:10, justifyContent:'center' }}>💾 {t.save}</button>
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginBottom:8 }}>
-                                <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY, fontFamily:"'Inter',sans-serif" }}>
-                                  🕗 {fmtTime12(s.startTime)} — {fmtTime12(s.endTime)}
-                                </span>
-                                <span className="badge" style={{ background:AMBER_BG, color:AMBER }}>⏱ {s.slotDuration} {t.min}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -669,7 +1060,21 @@ if (warnings.length > 0) {
         {tab==='absence' && (
           <div>
             <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
-              <button className="btn-amber" onClick={()=>setSAF(!showAbsenceForm)}>
+              <button className="btn-amber" onClick={()=>{
+                // ✅ تحسين #8: تصفير البيانات عند الإلغاء
+                if (showAbsenceForm) {
+                  setAbsStart('')
+                  setAbsEnd('')
+                  setAbsNotes('')
+                  setAbsDoctor('')
+                  setAbsType('holiday')
+                  setAbsFullDay(true)
+                  setAbsStartT('09:00')
+                  setAbsEndT('12:00')
+                  setAbsFor('clinic')
+                }
+                setSAF(!showAbsenceForm)
+              }}>
                 {showAbsenceForm ? t.cancel : t.addAbsence}
               </button>
             </div>
@@ -758,13 +1163,30 @@ if (warnings.length > 0) {
 
                 <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
                   <button className="btn-amber" onClick={handleAddAbsence}>{t.save}</button>
-                  <button className="btn-s" onClick={()=>setSAF(false)}>{t.cancel}</button>
+                  <button className="btn-s" onClick={()=>{
+                    // ✅ تحسين #8: تصفير عند الإلغاء
+                    setAbsStart('')
+                    setAbsEnd('')
+                    setAbsNotes('')
+                    setAbsDoctor('')
+                    setAbsType('holiday')
+                    setAbsFullDay(true)
+                    setAbsStartT('09:00')
+                    setAbsEndT('12:00')
+                    setAbsFor('clinic')
+                    setSAF(false)
+                  }}>{t.cancel}</button>
                 </div>
               </div>
             )}
 
             {/* قائمة الإجازات */}
-            {absences.length===0 ? (
+            <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:12 }}>
+              <ExportBar endpoint="/absences/export" lang={lang} fileName="absence-schedule" />
+              <ColumnToggleButton columns={absenceColumnDefs} visibleKeys={absenceVisible} onToggle={toggleAbsence} isRtl={isAr} />
+            </div>
+
+            {absenceLoading ? <Spinner /> : absences.length===0 ? (
               <div className="empty">
                 <span style={{ fontSize:48, opacity:0.4 }}>🚫</span>
                 <p>{t.noAbsences}</p>
@@ -780,31 +1202,44 @@ if (warnings.length > 0) {
                         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                           <span style={{ fontSize:22 }}>{tp?.icon}</span>
                           <div>
-                            <p style={{ fontSize:14, fontWeight:700, color:TEXT_DARK, margin:0 }}>{tp?.label}</p>
-                            <p style={{ fontSize:11, color:TEXT_MUTED, margin:'2px 0 0' }}>
-                              {a.doctorName ? `👨‍⚕️ ${a.doctorName}` : `🏥 ${t.clinicHoliday}`}
-                            </p>
+                            {absenceVisible.has('type') && (
+                              <p style={{ fontSize:14, fontWeight:700, color:TEXT_DARK, margin:0 }}>
+                                {tp?.label}
+                              </p>
+                            )}
+                            {absenceVisible.has('person') && (
+                              <p style={{ fontSize:11, color:TEXT_MUTED, margin:'2px 0 0' }}>
+                                {a.doctorName ? `👨‍⚕️ ${a.doctorName}` : `🏥 ${t.clinicHoliday}`}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <button className="btn-del" onClick={()=>delAbsence(a.id)}>✕</button>
+                        <button className="btn-del no-print" onClick={()=>delAbsence(a.id)}>✕</button>
                       </div>
 
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-                        <span className="badge" style={{ background:col.bg, color:col.color, border:`1px solid ${col.border}` }}>
-                          📅 {fmtDate(a.startDate)}
-                          {a.endDate!==a.startDate && ` → ${fmtDate(a.endDate)}`}
-                        </span>
-                        {a.isFullDay ? (
-                          <span className="badge" style={{ background:AMBER_BG, color:'#92400E' }}>🕐 {t.fullDay}</span>
-                        ) : (
-                          <span className="badge" style={{ background:AMBER_BG, color:'#92400E', fontFamily:"'Inter',sans-serif" }}>
-                            ⏰ {fmtTime12(a.startTime||'')} — {fmtTime12(a.endTime||'')}
+                        {absenceVisible.has('date') && (
+                          <span className="badge" style={{ background:col.bg, color:col.color, border:`1px solid ${col.border}` }}>
+                            📅 {fmtDate(a.startDate)}
+                            {a.endDate!==a.startDate && ` → ${fmtDate(a.endDate)}`}
                           </span>
                         )}
+                        {absenceVisible.has('duration') && (
+                          a.isFullDay ? (
+                            <span className="badge" style={{ background:AMBER_BG, color:'#92400E' }}>
+                              🕐 {t.fullDay}
+                            </span>
+                          ) : (
+                            <span className="badge" style={{ background:AMBER_BG, color:'#92400E', fontFamily:"'Inter',sans-serif" }}>
+                              ⏰ {fmtTime12(a.startTime||'')} — {fmtTime12(a.endTime||'')}
+                            </span>
+                          )
+                        )}
                       </div>
-
-                      {a.notes && (
-                        <p style={{ fontSize:12, color:TEXT_MUTED, margin:0, fontStyle:'italic' }}>📝 {a.notes}</p>
+                      {absenceVisible.has('notes') && a.notes && (
+                        <p style={{ fontSize:12, color:TEXT_MUTED, margin:0, fontStyle:'italic' }}>
+                          📝 {a.notes}
+                        </p>
                       )}
                     </div>
                   )

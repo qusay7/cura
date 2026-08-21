@@ -8,12 +8,20 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, permission }: Props) {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('_auth_tokens')  // ✅ الـ key الصحيح!
 
-  if (!token) return <Navigate to="/login" replace />
+  console.log('🔐 ProtectedRoute check:', token ? '✅ Has token' : '❌ No token')
 
-  if (permission && !hasPermission(permission))
+  if (!token) {
+    console.log('❌ No token, redirecting to login')
+    return <Navigate to="/login" replace />
+  }
+
+  if (permission && !hasPermission(permission)) {
+    console.log('❌ Permission denied:', permission)
     return <Navigate to="/dashboard" replace />
+  }
 
+  console.log('✅ ProtectedRoute passed')
   return <>{children}</>
 }

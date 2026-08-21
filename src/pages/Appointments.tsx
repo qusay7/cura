@@ -7,6 +7,9 @@ import { hasPermission } from '../utils/permissions'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import SearchableSelect from '../components/SearchableSelect'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -1057,6 +1060,19 @@ export default function Appointments() {
   const filteredAppointments = getFilteredAppointments()
   const hasActiveFilters = searchPatient || searchDoctor || searchDateFrom || searchDateTo || statusFilter !== 'all_status'
 
+  // ✅ إظهار/إخفاء الأعمدة
+  const columnDefs: ColumnDef[] = [
+    { key: 'patient', label: t.patient, locked: true },
+    { key: 'doctor', label: t.doctor },
+    { key: 'date', label: t.date, locked: true },
+    { key: 'type', label: t.type },
+    { key: 'price', label: t.price },
+    { key: 'status', label: t.status },
+    { key: 'actions', label: t.actions, locked: true },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('appointments-table', columnDefs)
+  const colVisible = (key: string) => visibleKeys.has(key)
+
   const formatDate = (dateStr: string) => {
     const [datePart, timePart] = dateStr.split('T')
     const [year, month, day] = datePart.split('-').map(Number)
@@ -1075,8 +1091,11 @@ export default function Appointments() {
     <div className="appointments-shell" style={{ direction:isAr?'rtl':'ltr', background:'#F8FAFA', minHeight:'100vh', padding:'24px' }}>
       <div style={{ maxWidth:1400, margin:'0 auto' }}>
 
+        {/* ✅ رأس الطباعة الموحّد */}
+        <PrintHeader reportTitle={t.title} lang={lang} />
+
         {/* Header */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16, marginBottom:24 }}>
+        <div className="no-print" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16, marginBottom:24 }}>
           <div>
             <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:PRIMARY_SOFT, border:`1px solid ${BORDER}`, borderRadius:100, padding:'4px 16px', fontSize:11, fontWeight:600, color:PRIMARY, marginBottom:12 }}>
               <span style={{ width:6, height:6, borderRadius:'50%', background:PRIMARY, animation:'soft-pulse 2s infinite' }} />{t.schedule}
@@ -1099,9 +1118,11 @@ export default function Appointments() {
         </div>
 
         {/* Filter Bar */}
-        <FilterBar currentFilter={filter} onFilterChange={setFilter} statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
-          searchPatient={searchPatient} onSearchPatientChange={setSearchPatient} searchDoctor={searchDoctor} onSearchDoctorChange={setSearchDoctor}
-          searchDateFrom={searchDateFrom} onSearchDateFromChange={setSearchDateFrom} searchDateTo={searchDateTo} onSearchDateToChange={setSearchDateTo} lang={lang} />
+        <div className="no-print">
+          <FilterBar currentFilter={filter} onFilterChange={setFilter} statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
+            searchPatient={searchPatient} onSearchPatientChange={setSearchPatient} searchDoctor={searchDoctor} onSearchDoctorChange={setSearchDoctor}
+            searchDateFrom={searchDateFrom} onSearchDateFromChange={setSearchDateFrom} searchDateTo={searchDateTo} onSearchDateToChange={setSearchDateTo} lang={lang} />
+        </div>
 
         {/* رسالة لا مواعيد */}
         {filter==='today' && filteredAppointments.length===0 && !hasActiveFilters && (
@@ -1121,20 +1142,27 @@ export default function Appointments() {
 
         {/* الجدول */}
         {(filter!=='today' || filteredAppointments.length>0 || hasActiveFilters) && (
+          <>
+            <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:8 }}>
+              <ExportBar
+                endpoint={`/appointments/export${searchDateFrom ? `?dateFrom=${searchDateFrom.toISOString()}` : ''}`}
+                lang={lang} fileName="appointments" />
+              <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+            </div>
           <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.02)' }}>
             <div style={{ overflowX:'auto' }}>
               <table className="appointments-table" style={{ width:'100%', borderCollapse:'collapse', minWidth:780 }}>
                 <thead>
                   <tr style={{ borderBottom:`1px solid ${BORDER}`, background:PRIMARY_SOFT }}>
-                    {[t.patient, t.doctor, t.date, t.type, t.price, t.status, t.actions].map((h,i) => (
-                      <th key={i} style={{ padding:'14px 16px', textAlign:isAr?'right':'left', fontSize:12, fontWeight:600, color:TEXT_MUTED }}>{h}</th>
+                    {columnDefs.filter(c => visibleKeys.has(c.key)).map((c) => (
+                      <th key={c.key} style={{ padding:'14px 16px', textAlign:isAr?'right':'left', fontSize:12, fontWeight:600, color:TEXT_MUTED }}>{c.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAppointments.length===0 ? (
                     <tr>
-                      <td colSpan={7} style={{ padding:'48px 24px', textAlign:'center' }}>
+                      <td colSpan={columnDefs.filter(c => visibleKeys.has(c.key)).length} style={{ padding:'48px 24px', textAlign:'center' }}>
                         <span style={{ fontSize:48, opacity:0.5 }}>📅</span>
                         <p style={{ fontSize:14, color:TEXT_MUTED, marginTop:12 }}>{t.noAppointments}</p>
                         {hasActiveFilters && (
@@ -1187,15 +1215,20 @@ export default function Appointments() {
                         onClick={()=>navigate(`/appointments/${appointment.id}`)}>
 
                         {/* المريض */}
+                        {colVisible('patient') && (
                         <td style={{ padding:'14px 16px' }}>
                           <p style={{ fontSize:14, fontWeight:500, color:TEXT_DARK, margin:0, marginBottom:2 }}>{appointment.patientName}</p>
                           <p style={{ fontSize:10, color:TEXT_MUTED, margin:0 }}>#{appointment.patientNumber}</p>
                         </td>
+                        )}
 
                         {/* الطبيب */}
+                        {colVisible('doctor') && (
                         <td style={{ padding:'14px 16px', fontSize:13, color:TEXT_MUTED }}>{getDoctorName(appointment)}</td>
+                        )}
 
                         {/* التاريخ */}
+                        {colVisible('date') && (
                         <td style={{ padding:'14px 16px' }}>
                           <span style={{ fontSize:13, fontWeight:500, color:isDue?'#EF4444':isOverdue?'#F59E0B':TEXT_DARK }}>
                             {formatDate(appointment.appointmentDate)}
@@ -1214,25 +1247,33 @@ export default function Appointments() {
                             </span>
                           )}
                         </td>
+                        )}
 
                         {/* النوع */}
+                        {colVisible('type') && (
                         <td style={{ padding:'14px 16px', fontSize:13, color:TEXT_MUTED }}>{appointment.type||'—'}</td>
+                        )}
 
                         {/* السعر */}
+                        {colVisible('price') && (
                         <td style={{ padding:'14px 16px', fontSize:13, fontWeight:500, color:TEXT_DARK }}>
                           {appointment.price ? `${appointment.price} ${t.riyal}` : '—'}
                         </td>
+                        )}
 
                         {/* الحالة */}
+                        {colVisible('status') && (
                         <td style={{ padding:'14px 16px' }}>
                           <div style={{ display:'flex', flexDirection:'column', gap:5, alignItems:'flex-start' }}>
                             <StatusBadge status={appointment.status} lang={lang} />
                             <PaymentBadge isPaid={(appointment as any).isPaid} lang={lang} />
                           </div>
                         </td>
+                        )}
 
                         {/* الإجراءات */}
-                        <td style={{ padding:'14px 16px' }}>
+                        {colVisible('actions') && (
+                        <td className="no-print" style={{ padding:'14px 16px' }}>
                           <div style={{ display:'flex', gap:5, flexWrap:'wrap', alignItems:'center' }}>
 
                             {/* ✅ CheckIn — للمواعيد المجدولة أو المؤكدة التي لم يتم دخولها */}
@@ -1290,6 +1331,7 @@ export default function Appointments() {
                             {changingStatus===appointment.id && <span style={{ fontSize:14, color:TEXT_MUTED }}>⏳</span>}
                           </div>
                         </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -1297,6 +1339,7 @@ export default function Appointments() {
               </table>
             </div>
           </div>
+          </>
         )}
 
         {/* الإحصائيات */}

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
-
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
@@ -32,7 +32,12 @@ const css = `
 .tab-btn.active{background:${PRIMARY};color:#FFF;border-color:${PRIMARY};}
 .tab-btn:not(.active):hover{background:${PRIMARY_SOFT};color:${PRIMARY};}
 `
-
+const globalCss = `
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; padding: 10px; }
+}
+`
 const CONTRACTS_AR = ['دوام كامل','دوام جزئي','عقد مؤقت']
 const CONTRACTS_EN = ['Full Time','Part Time','Contract']
 const CONTRACT_VALS = ['fulltime','parttime','contract']
@@ -78,7 +83,9 @@ const T = {
     createLogin:'إنشاء حساب دخول للنظام؟',
     loginEmail:'البريد الإلكتروني', loginUsername:'اسم المستخدم',
     loginPassword:'كلمة المرور', alreadyLinkedUser:'هذا الموظف مرتبط بحساب دخول بالفعل',
-    selectPlaceholder:'اختر...',
+    selectPlaceholder:'اختر...',    print: 'طباعة',
+    exportPdf: 'تصدير PDF',
+    exportExcel: 'تصدير Excel',
   },
   en: {
     font:"'Inter',sans-serif", dir:'ltr' as const,
@@ -116,6 +123,9 @@ const T = {
     loginEmail:'Email', loginUsername:'Username',
     loginPassword:'Password', alreadyLinkedUser:'This staff member already has a login account',
     selectPlaceholder:'Select...',
+    print: 'Print',
+    exportPdf: 'Export PDF',
+    exportExcel: 'Export Excel',
   },
 }
 
@@ -205,6 +215,19 @@ export default function Staff() {
 
   const t    = T[lang]
   const isAr = lang === 'ar'
+// ✅ إعدادات الأعمدة
+const columnDefs: ColumnDef[] = [
+  { key: 'fullName', label: t.fullName, locked: true },
+  { key: 'phone', label: t.phone },
+  { key: 'email', label: t.email },
+  { key: 'role', label: t.role },
+  { key: 'department', label: t.department },
+  { key: 'contractType', label: t.contractType },
+  { key: 'salary', label: t.salary },
+  { key: 'yearsInClinic', label: t.yearsInClinic },
+  { key: 'jobTitle', label: t.jobTitle },
+]
+const { visibleKeys, toggle } = useColumnVisibility('staff-table', columnDefs)
 
   useEffect(() => {
     const id = 'cura-staff-css'
@@ -396,6 +419,8 @@ const [departments, setDepartments] = useState<Department[]>([])
   }
 
   return (
+  <>
+    <style>{globalCss}</style>
     <div className="staff-shell" dir={t.dir} style={{ background:'#F8FAFA', minHeight:'100vh', padding:24, fontFamily:t.font }}>
       <div style={{ maxWidth:1300, margin:'0 auto' }}>
 
@@ -422,6 +447,68 @@ const [departments, setDepartments] = useState<Department[]>([])
             + {t.add}
           </button>
         </div>
+        {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
+<div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap', alignItems:'center' }} className="no-print">
+  <button onClick={() => window.print()}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+    🖨️ {t.print || 'Print'}
+  </button>
+  <button onClick={() => {
+    const rows = filtered.map(s => [
+      s.fullName,
+      s.phone || '—',
+      s.email || '—',
+      (isAr ? s.roleNameAr : s.roleNameEn) || s.roleName || '—',
+      s.departmentName || '—',
+      contractLabel(s.contractType) || '—',
+      s.salary ? `${s.salary} ${t.riyal}` : '—',
+      s.yearsInClinic || '—',
+      s.jobTitle || '—',
+    ])
+    api.post('/export/pdf', {
+      title: t.title,
+      columns: columnDefs.map(c => c.label),
+      rows,
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'staff.pdf'; a.click()
+      URL.revokeObjectURL(url)
+      }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📄 {t.exportPdf || 'Export PDF'}
+  </button>
+  <button onClick={() => {
+    const rows = filtered.map(s => [
+      s.fullName,
+      s.phone || '—',
+      s.email || '—',
+      (isAr ? s.roleNameAr : s.roleNameEn) || s.roleName || '—',
+      s.departmentName || '—',
+      contractLabel(s.contractType) || '—',
+      s.salary ? `${s.salary} ${t.riyal}` : '—',
+      s.yearsInClinic || '—',
+      s.jobTitle || '—',
+    ])
+    api.post('/export/excel', {
+      title: t.title,
+      columns: columnDefs.map(c => c.label),
+      rows,
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'staff.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+   }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📊 {t.exportExcel || 'Export Excel'}
+  </button>
+  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+</div>
 
         {/* إحصائيات */}
         {stats && (
@@ -818,8 +905,73 @@ const [departments, setDepartments] = useState<Department[]>([])
                 </div>
               ))}
 
-              <div style={{ display:'flex', gap:10, marginTop:20 }}>
-                <button onClick={()=>openEdit(selected)}
+          {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
+<div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }} className="no-print">
+  <button onClick={() => window.print()}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+    🖨️
+  </button>
+  <button onClick={() => {
+    const rowData = [
+      selected.fullName,
+      selected.phone || '—',
+      selected.email || '—',
+      (isAr ? selected.roleNameAr : selected.roleNameEn) || selected.roleName || '—',
+      selected.departmentName || '—',
+      contractLabel(selected.contractType) || '—',
+      selected.salary ? `${selected.salary} ${t.riyal}` : '—',
+      selected.yearsInClinic || '—',
+      selected.jobTitle || '—',
+    ]
+    api.post('/export/pdf', {
+      title: `${t.title} - ${selected.fullName}`,
+      columns: columnDefs.map(c => c.label),
+      rows: [rowData],
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = `staff-${selected.fullName}.pdf`; a.click()
+      URL.revokeObjectURL(url)
+    }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📄
+  </button>
+  <button onClick={() => {
+    const rowData = [
+      selected.fullName,
+      selected.phone || '—',
+      selected.email || '—',
+      (isAr ? selected.roleNameAr : selected.roleNameEn) || selected.roleName || '—',
+      selected.departmentName || '—',
+      contractLabel(selected.contractType) || '—',
+      selected.salary ? `${selected.salary} ${t.riyal}` : '—',
+      selected.yearsInClinic || '—',
+      selected.jobTitle || '—',
+    ]
+    api.post('/export/excel', {
+      title: `${t.title} - ${selected.fullName}`,
+      columns: columnDefs.map(c => c.label),
+      rows: [rowData],
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = `staff-${selected.fullName}.xlsx`; a.click()
+      URL.revokeObjectURL(url)
+    }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📊
+  </button>
+  
+  {/* ✅ زر الأعمدة */}
+  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+</div>
+
+<div style={{ display:'flex', gap:10, marginTop:20 }}>
+  <button onClick={()=>openEdit(selected)}
                   style={{ flex:1, padding:'9px', border:`1px solid ${PRIMARY}`, borderRadius:10, background:'transparent', color:PRIMARY, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                   ✏️ {t.edit}
                 </button>
@@ -837,6 +989,7 @@ const [departments, setDepartments] = useState<Department[]>([])
         )}
 
       </div>
-    </div>
-  )
+   </div>
+  </>
+)
 }

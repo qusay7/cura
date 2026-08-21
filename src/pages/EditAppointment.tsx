@@ -3,45 +3,137 @@ import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
+import AppointmentCalendar from '../components/AppointmentCalendar'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-// ─── Global CSS with Comfortable Colors ──────────────────────────────────────
+// ─── Global CSS with Comfortable Colors ────────────────────────────────────
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes soft-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
 
-.edit-appointment-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
-.edit-appointment-shell * { box-sizing:border-box; }
+  .edit-appointment-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
+  .edit-appointment-shell * { box-sizing:border-box; }
 
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-  border-color: #5B8C8F !important;
-  box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1) !important;
-}
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: #5B8C8F !important;
+    box-shadow: 0 0 0 3px rgba(91, 140, 143, 0.1) !important;
+  }
 
-@media(max-width: 768px) {
-  .edit-appointment-title { font-size: 24px !important; }
-  .form-container { padding: 20px !important; }
-  .action-buttons { flex-direction: column !important; }
-}
+  .disabled-message {
+    background: linear-gradient(135deg,#F8FAFA 0%,#FFFFFF 100%);
+    border: 2px dashed #DCE5E5;
+    border-radius:20px;
+    padding:40px 24px;
+    text-align:center;
+    transition:all 0.3s ease;
+  }
+
+  .disabled-message:hover { 
+    border-color:#5B8C8F; 
+    background:#F8FAFA; 
+  }
+
+  .calendar-container {
+    background:white;
+    border-radius:16px;
+    border:1px solid #DCE5E5;
+    overflow:hidden;
+    transition:all 0.3s ease;
+  }
+
+  .calendar-container:hover { 
+    border-color:#5B8C8F; 
+    box-shadow:0 4px 12px rgba(91,140,143,0.1); 
+  }
+
+  .calendar-container .rbc-toolbar { 
+    padding:16px; 
+    background:#F8FAFA; 
+    border-bottom:1px solid #DCE5E5; 
+    flex-wrap:wrap; 
+    gap:12px; 
+  }
+
+  .calendar-container .rbc-toolbar button { 
+    color:#2C3E3F; 
+    border:1px solid #DCE5E5; 
+    background:white; 
+    border-radius:8px; 
+    padding:6px 14px; 
+    font-size:13px; 
+    font-weight:500; 
+    transition:all 0.2s ease; 
+  }
+
+  .calendar-container .rbc-toolbar button:hover { 
+    background:#E8F0F0; 
+    border-color:#5B8C8F; 
+    color:#5B8C8F; 
+  }
+
+  .calendar-container .rbc-toolbar button.rbc-active { 
+    background:#5B8C8F; 
+    border-color:#5B8C8F; 
+    color:white; 
+  }
+
+  .calendar-container .rbc-toolbar-label { 
+    font-weight:600; 
+    color:#2C3E3F; 
+    font-size:15px; 
+  }
+
+  .calendar-container .rbc-header { 
+    padding:12px 8px; 
+    background:#F8FAFA; 
+    font-weight:600; 
+    font-size:12px; 
+    text-transform:uppercase; 
+    letter-spacing:0.5px; 
+    color:#6B8A8C; 
+    border-bottom:1px solid #DCE5E5; 
+  }
+
+  .calendar-container .rbc-event { 
+    background:#5B8C8F; 
+    border-radius:8px; 
+    padding:4px 8px; 
+    font-size:12px; 
+    transition:all 0.2s ease; 
+    border:none; 
+  }
+
+  .calendar-container .rbc-event:hover { 
+    background:#4A7679; 
+    transform:scale(1.02); 
+    box-shadow:0 2px 8px rgba(91,140,143,0.3); 
+  }
+
+  @media(max-width: 768px) {
+    .edit-appointment-title { font-size: 24px !important; }
+    .form-container { padding: 20px !important; }
+    .action-buttons { flex-direction: column !important; }
+  }
 `
 
 // Comfortable color palette
 const PRIMARY = '#5B8C8F'
+const PRIMARY_DARK = '#4A7679'
 const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
@@ -50,7 +142,7 @@ const CARD_BG = '#FFFFFF'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
 
-// ─── Translations ─────────────────────────────────────────────────────────────
+// ─── Translations ───────────────────────────────────────────────────────────
 const T = {
   ar: {
     title: 'تعديل الموعد',
@@ -83,6 +175,14 @@ const T = {
     required: 'هذا الحقل مطلوب',
     loadingMessage: 'جاري تحميل بيانات الموعد',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات',
+    selectDoctorFirst: 'اختر الطبيب أولاً',
+    selectDoctorHint: 'يرجى اختيار الطبيب من القائمة أعلاه لعرض المواعيد المتاحة',
+    queueBooking: 'حجز دور',
+    queueBookingHint: 'سيتم تسجيل الموعد بوقت الحجز تلقائياً',
+    queueUnavailable: 'الطبيب غير متاح',
+    checkingAvailability: 'جارٍ التحقق من التوفر...',
+    timeConflict: 'الطبيب لديه موعد في',
+    selectedTime: 'الموعد المحدد',
   },
   en: {
     title: 'Edit Appointment',
@@ -115,10 +215,18 @@ const T = {
     required: 'This field is required',
     loadingMessage: 'Loading Appointment Data',
     loadingSub: 'Please wait while we load appointment information',
+    selectDoctorFirst: 'Select Doctor First',
+    selectDoctorHint: 'Please select a doctor from above to see available time slots',
+    queueBooking: 'Queue Booking',
+    queueBookingHint: 'Appointment will be set to current time automatically',
+    queueUnavailable: 'Doctor Unavailable',
+    checkingAvailability: 'Checking availability...',
+    timeConflict: 'Doctor has an appointment at',
+    selectedTime: 'Selected Time',
   },
 }
 
-// ─── Loading Screen with ECG ─────────────────────────────────────────────────
+// ─── Loading Screen with ECG ───────────────────────────────────────────────
 const EditAppointmentLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => (
   <div style={{
     position: 'fixed',
@@ -200,10 +308,10 @@ const EditAppointmentLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: st
   </div>
 )
 
-// ─── Form Field Component ────────────────────────────────────────────────────
-const FormField = ({ label, required, children, error }: { 
-  label: string; 
-  required?: boolean; 
+// ─── Form Field Component ──────────────────────────────────────────────────
+const FormField = ({ label, required, children, error }: {
+  label: string;
+  required?: boolean;
   children: React.ReactNode;
   error?: string;
 }) => (
@@ -232,6 +340,9 @@ export default function EditAppointment() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [queueAbsence, setQueueAbsence] = useState<{ available: boolean; message?: string } | null>(null)
+  const [checkingAbsence, setCheckingAbsence] = useState(false)
 
   const [form, setForm] = useState({
     patientId: '',
@@ -242,6 +353,40 @@ export default function EditAppointment() {
     status: '',
     notes: '',
   })
+
+  // ✅ التحقق من تضارب الأوقات
+  const checkTimeConflict = async (doctorId: string | undefined, dateTime: string) => {
+    if (!doctorId) return { conflict: false }
+
+    try {
+      const response = await api.get(`/appointments?doctorId=${doctorId}`)
+      const appointments = response.data || []
+
+      const newTime = new Date(dateTime).getTime()
+      const minGap = 20 * 60 * 1000 // 20 دقيقة
+
+      for (const apt of appointments) {
+        if (apt.id === id) continue // تخطي الموعد الحالي
+
+        const existingTime = new Date(apt.appointmentDate).getTime()
+        const timeDiff = Math.abs(newTime - existingTime)
+
+        if (timeDiff < minGap) {
+          const existingTimeFormatted = new Date(existingTime).toLocaleTimeString(
+            lang === 'ar' ? 'ar-SA' : 'en-US',
+            { hour: '2-digit', minute: '2-digit' }
+          )
+          return {
+            conflict: true,
+            message: `${T[lang].timeConflict} ${existingTimeFormatted}`
+          }
+        }
+      }
+      return { conflict: false }
+    } catch {
+      return { conflict: false }
+    }
+  }
 
   // Inject global styles
   useEffect(() => {
@@ -307,10 +452,58 @@ export default function EditAppointment() {
     fetchData()
   }, [id, navigate])
 
+  // ✅ حسب نوع الطبيب
+  const selectedDoctor = doctors.find(d => d.id === form.doctorId)
+  const isQueueOnly = selectedDoctor?.workType === 'queue'
+  const isDoctorSelected = !!form.doctorId
+
+  // ✅ التحقق من القائمة
+  useEffect(() => {
+    if (!isQueueOnly || !form.doctorId) {
+      setQueueAbsence(null)
+      return
+    }
+    setCheckingAbsence(true)
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+    api.get(`/absences/check?doctorId=${form.doctorId}&date=${dateStr}&time=${timeStr}`)
+      .then(res => setQueueAbsence(res.data))
+      .catch(() => setQueueAbsence(null))
+      .finally(() => setCheckingAbsence(false))
+  }, [isQueueOnly, form.doctorId])
+
+  const isQueueBlocked = isQueueOnly && queueAbsence?.available === false
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  // ✅ معالج التاريخ مع التحقق من التضارب
+  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value
+    setForm({ ...form, appointmentDate: newDate })
+
+    // التحقق من التضارب إذا كان فيه طبيب
+    if (form.doctorId && newDate) {
+      const conflict = await checkTimeConflict(form.doctorId, newDate)
+      if (conflict.conflict) {
+        setError(conflict.message || '')
+      } else {
+        setError('')
+      }
+    }
+  }
+
+  // ✅ دالة اختيار الموعد من التقويم
+  const handleSlotSelect = (dateTime: string, price?: number) => {
+    setForm(prev => ({
+      ...prev,
+      appointmentDate: dateTime,
+      price: price ? String(price) : prev.price
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -360,10 +553,10 @@ export default function EditAppointment() {
 
   // Status options
   const statusOptions = [
-    { value: 'scheduled', label: t.scheduled, icon: '⏰', color: '#8BAFB1' },
-    { value: 'confirmed', label: t.confirmed, icon: '✓', color: '#4A7679' },
-    { value: 'completed', label: t.completed, icon: '✔️', color: '#5B8C8F' },
-    { value: 'cancelled', label: t.cancelled, icon: '✕', color: '#C4A77D' },
+    { value: 'scheduled', label: t.scheduled, icon: '⏰' },
+    { value: 'confirmed', label: t.confirmed, icon: '✓' },
+    { value: 'completed', label: t.completed, icon: '✔️' },
+    { value: 'cancelled', label: t.cancelled, icon: '✕' },
   ]
 
   // Type options
@@ -376,16 +569,16 @@ export default function EditAppointment() {
 
   if (loading) {
     return (
-      <EditAppointmentLoadingScreen 
-        msg={t.loadingMessage} 
+      <EditAppointmentLoadingScreen
+        msg={t.loadingMessage}
         subMsg={t.loadingSub}
       />
     )
   }
 
   return (
-    <div 
-      className="edit-appointment-shell" 
+    <div
+      className="edit-appointment-shell"
       style={{
         direction: isAr ? 'rtl' : 'ltr',
         background: '#F8FAFA',
@@ -414,7 +607,7 @@ export default function EditAppointment() {
             onMouseEnter={(e) => { e.currentTarget.style.color = PRIMARY }}
             onMouseLeave={(e) => { e.currentTarget.style.color = TEXT_MUTED }}
           >
-            <span>←</span> {t.back}
+            <span>{isAr ? '→' : '←'}</span> {t.back}
           </button>
 
           <div>
@@ -449,7 +642,8 @@ export default function EditAppointment() {
               margin: 0,
               letterSpacing: '-0.3px',
             }}>
-             </h2>
+              ✏️ {t.title}
+            </h2>
           </div>
         </div>
 
@@ -524,28 +718,65 @@ export default function EditAppointment() {
             </FormField>
 
             {/* Date Field */}
-            <FormField label={t.date} required>
-              <input
-                type="datetime-local"
-                name="appointmentDate"
-                value={form.appointmentDate}
-                onChange={handleChange}
-                required
-                min={getMinDateTime()}
-                className="form-input"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
+            <FormField label={t.date} required={!isQueueOnly} error={error ? error : ''}>
+              {!isDoctorSelected ? (
+                <div className="disabled-message">
+                  <div style={{ width:'56px', height:'56px', background:PRIMARY_SOFT, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px auto' }}>
+                    <span style={{ fontSize:'28px' }}>📅</span>
+                  </div>
+                  <p style={{ fontSize:'15px', fontWeight:600, margin:'0 0 8px 0', color:PRIMARY }}>{t.selectDoctorFirst}</p>
+                  <p style={{ fontSize:'12px', margin:0, color:TEXT_MUTED }}>{t.selectDoctorHint}</p>
+                </div>
+              ) : isQueueOnly ? (
+                checkingAbsence ? (
+                  <div style={{ background:'#F8FAFA', border:`1px dashed ${BORDER}`, borderRadius:16, padding:'24px', textAlign:'center' }}>
+                    <div style={{ width:28, height:28, borderRadius:'50%', border:`3px solid ${PRIMARY_SOFT}`, borderTopColor:PRIMARY, animation:'spin 0.8s linear infinite', margin:'0 auto 10px' }} />
+                    <p style={{ fontSize:13, color:TEXT_MUTED, margin:0 }}>{t.checkingAvailability}</p>
+                  </div>
+                ) : isQueueBlocked ? (
+                  <div style={{ background:'#FEF3C7', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
+                    <span style={{ fontSize:40 }}>🚫</span>
+                    <p style={{ fontSize:15, fontWeight:700, color:'#92400E', margin:'10px 0 6px' }}>{t.queueUnavailable}</p>
+                    <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{queueAbsence?.message}</p>
+                  </div>
+                ) : (
+                  <div style={{ background:'#FFF8E1', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
+                    <span style={{ fontSize:40 }}>🔢</span>
+                    <p style={{ fontSize:15, fontWeight:700, color:'#F59E0B', margin:'10px 0 6px' }}>{t.queueBooking}</p>
+                    <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{t.queueBookingHint}</p>
+                    <div style={{ marginTop:12, padding:'8px 16px', background:'#FFFBEB', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#92400E' }}>
+                      🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit' })}
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="calendar-container">
+                  <AppointmentCalendar doctorId={form.doctorId} onSelectSlot={handleSlotSelect} />
+                </div>
+              )}
+              {form.appointmentDate && (
+                <div style={{
+                  marginTop: 12,
+                  padding: '12px 16px',
+                  background: PRIMARY_SOFT,
                   border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 600,
                   color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              />
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                  📅 {new Date(form.appointmentDate).toLocaleString(isAr ? 'ar-EG' : 'en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
             </FormField>
 
             {/* Type Field */}
@@ -700,7 +931,7 @@ export default function EditAppointment() {
                   justifyContent: 'center',
                   gap: 8,
                 }}
-                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#4A7679' }}
+                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = PRIMARY_DARK }}
                 onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = PRIMARY }}
               >
                 {saving ? (

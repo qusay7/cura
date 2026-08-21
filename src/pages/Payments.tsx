@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -35,6 +36,9 @@ const T = {
     cash:'نقداً', card:'بطاقة', partial:'جزئي', insurance:'تأمين',
     byMethod:'حسب طريقة الدفع',
     thisMonth:'هذا الشهر', monthRevenue:'إيرادات الشهر', monthCollected:'محصّل الشهر',
+     print: 'طباعة',
+    exportPdf: 'تصدير PDF',
+    exportExcel: 'تصدير Excel',
   },
   en: {
     title:'Payments', subtitle:'Manage and track visit payments',
@@ -53,11 +57,19 @@ const T = {
     cash:'Cash', card:'Card', partial:'Partial', insurance:'Insurance',
     byMethod:'By Payment Method',
     thisMonth:'This Month', monthRevenue:'Month Revenue', monthCollected:'Month Collected',
+    print: 'Print',
+    exportPdf: 'Export PDF',
+    exportExcel: 'Export Excel',
   },
 }
 
 const fmt = (n:number) => n?.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) ?? '0'
-
+const globalCss = `
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; padding: 10px; }
+}
+`
 export default function Payments() {
   const navigate = useNavigate()
   const [lang, setLang]         = useState<'ar'|'en'>(getStoredLang())
@@ -69,8 +81,22 @@ export default function Payments() {
   const [toDate, setTo]         = useState('')
   const [page, setPage]         = useState(1)
 
-  const t    = T[lang]
-  const isAr = lang === 'ar'
+const t    = T[lang]
+const isAr = lang === 'ar'
+
+// ✅ إعدادات الأعمدة
+const columnDefs: ColumnDef[] = [
+  { key: 'patient', label: t.patient, locked: true },
+  { key: 'total', label: t.total },
+  { key: 'insAmount', label: t.insAmount },
+  { key: 'patAmount', label: t.patAmount },
+  { key: 'amountPaid', label: t.amountPaid },
+  { key: 'balance', label: t.balance },
+  { key: 'method', label: t.method },
+  { key: 'claimStatus', label: t.claimStatus },
+  { key: 'date', label: t.date },
+]
+const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs)
 
   useEffect(() => {
     const onLang = (e:Event) => setLang((e as CustomEvent).detail)
@@ -115,9 +141,11 @@ export default function Payments() {
     paid:     { bg:SUCCESS_BG,  color:SUCCESS },
   }[s] ?? { bg:PRIMARY_SOFT, color:PRIMARY })
 
-  return (
-    <div dir={isAr?'rtl':'ltr'} style={{ background:'#F8FAFA', minHeight:'100vh', padding:24, fontFamily:isAr?"'Noto Kufi Arabic',sans-serif":"'Inter',sans-serif" }}>
-      <div style={{ maxWidth:1300, margin:'0 auto' }}>
+ return (
+    <>
+      <style>{globalCss}</style>
+      <div dir={isAr?'rtl':'ltr'} style={{ background:'#F8FAFA', minHeight:'100vh', padding:24, fontFamily:isAr?"'Noto Kufi Arabic',sans-serif":"'Inter',sans-serif" }}>
+             <div style={{ maxWidth:1300, margin:'0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom:24 }}>
@@ -206,58 +234,116 @@ export default function Payments() {
           </button>
         </div>
 
-        {/* جدول المدفوعات */}
-        <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:18, overflow:'hidden' }}>
+      {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
+   <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }} className="no-print">
+   <button onClick={() => window.print()}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+    🖨️ {t.print}
+   </button>
+   <button onClick={() => {
+    const rows = data?.payments?.map((p: any) => [
+      p.patientName,
+      fmt(p.totalAmount),
+      fmt(p.insuranceAmount),
+      fmt(p.patientAmount),
+      fmt(p.amountPaid),
+      fmt(p.patientBalance),
+      methodLabel(p.paymentMethod),
+      p.claimStatus || '—',
+      p.createdAt,
+    ]) || []
+    api.post('/export/pdf', {
+      title: t.title,
+      columns: [t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date],
+      rows,
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'payments.pdf'; a.click()
+      URL.revokeObjectURL(url)
+    }).catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📄 {t.exportPdf}
+  </button>
+  <button onClick={() => {
+    const rows = data?.payments?.map((p: any) => [
+      p.patientName,
+      fmt(p.totalAmount),
+      fmt(p.insuranceAmount),
+      fmt(p.patientAmount),
+      fmt(p.amountPaid),
+      fmt(p.patientBalance),
+      methodLabel(p.paymentMethod),
+      p.claimStatus || '—',
+      p.createdAt,
+    ]) || []
+    api.post('/export/excel', {
+      title: t.title,
+      columns: [t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date],
+      rows,
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'payments.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+    }).catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📊 {t.exportExcel}
+  </button>
+  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+</div>
+
+{/* جدول المدفوعات */}
+<div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:18, overflow:'hidden' }}>
           {loading ? (
             <div style={{ textAlign:'center', padding:60, color:TEXT_MUTED }}>{t.loading}</div>
           ) : data?.payments?.length > 0 ? (
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
                 <thead>
-                  <tr style={{ background:'#F8FAFA' }}>
-                    {[t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date, ''].map((h,i)=>(
-                      <th key={i} style={{ padding:'10px 14px', fontWeight:600, fontSize:11, color:TEXT_MUTED, textAlign:'right', borderBottom:`1px solid ${BORDER}`, whiteSpace:'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.payments.map((p:any, i:number) => {
-                    const bal = p.patientBalance
-                    const cs  = p.claimStatus ? claimStatusColor(p.claimStatus) : null
-                    return (
-                      <tr key={i} style={{ borderBottom:`1px solid ${BORDER}` }}
-                        onMouseEnter={e=>e.currentTarget.style.background='#F8FAFA'}
-                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                        <td style={{ padding:'11px 14px', fontWeight:500, color:TEXT_DARK }}>{p.patientName}</td>
-                        <td style={{ padding:'11px 14px', fontFamily:"'Inter',monospace" }}>{fmt(p.totalAmount)} {t.riyal}</td>
-                        <td style={{ padding:'11px 14px', color:'#16A34A', fontFamily:"'Inter',monospace" }}>{fmt(p.insuranceAmount)} {t.riyal}</td>
-                        <td style={{ padding:'11px 14px', color:WARNING, fontFamily:"'Inter',monospace" }}>{fmt(p.patientAmount)} {t.riyal}</td>
-                        <td style={{ padding:'11px 14px', color:SUCCESS, fontWeight:600, fontFamily:"'Inter',monospace" }}>{fmt(p.amountPaid)} {t.riyal}</td>
-                        <td style={{ padding:'11px 14px' }}>
-                          <span style={{ padding:'3px 8px', borderRadius:100, fontSize:11, fontWeight:600,
-                            background: bal>=0?SUCCESS_BG:DANGER_BG, color: bal>=0?SUCCESS:DANGER }}>
-                            {bal>=0?'+':''}{fmt(bal)} {t.riyal}
-                          </span>
-                        </td>
-                        <td style={{ padding:'11px 14px', color:TEXT_MUTED }}>{methodLabel(p.paymentMethod)}</td>
-                        <td style={{ padding:'11px 14px' }}>
-                          {cs ? (
-                            <span style={{ padding:'3px 8px', borderRadius:100, fontSize:11, fontWeight:600, background:cs.bg, color:cs.color }}>
-                              {p.claimStatus}
-                            </span>
-                          ) : '—'}
-                        </td>
-                        <td style={{ padding:'11px 14px', color:TEXT_MUTED, fontSize:11, fontFamily:"'Inter',monospace" }}>{p.createdAt}</td>
-                        <td style={{ padding:'11px 14px' }}>
-                          <button onClick={()=>navigate(`/appointments/${p.appointmentId}`)}
-                            style={{ padding:'5px 10px', border:`1px solid ${BORDER}`, borderRadius:8, background:'transparent', color:PRIMARY, fontSize:11, cursor:'pointer' }}>
-                            📅
-                          </button>
-                        </td>
+                      <tr style={{ background:'#F8FAFA' }}>
+                        {columnDefs.filter(col => visibleKeys.has(col.key)).map((h,i)=>(
+                          <th key={i} style={{ padding:'10px 14px', fontWeight:600, fontSize:11, color:TEXT_MUTED, textAlign:'right', borderBottom:`1px solid ${BORDER}`, whiteSpace:'nowrap' }}>{h.label}</th>
+                        ))}
+                        <th style={{ padding:'10px 14px', fontWeight:600, fontSize:11, color:TEXT_MUTED, textAlign:'right', borderBottom:`1px solid ${BORDER}`, whiteSpace:'nowrap' }}></th>
                       </tr>
-                    )
-                  })}
-                </tbody>
+                </thead>
+               <tbody>
+  {data.payments.map((p:any, i:number) => {
+    const bal = p.patientBalance
+    const cs  = p.claimStatus ? claimStatusColor(p.claimStatus) : null
+    const cellData = [
+      { key: 'patient', val: p.patientName, style: { fontWeight:500, color:TEXT_DARK } },
+      { key: 'total', val: `${fmt(p.totalAmount)} ${t.riyal}`, style: { fontFamily:"'Inter',monospace" } },
+      { key: 'insAmount', val: `${fmt(p.insuranceAmount)} ${t.riyal}`, style: { color:'#16A34A', fontFamily:"'Inter',monospace" } },
+      { key: 'patAmount', val: `${fmt(p.patientAmount)} ${t.riyal}`, style: { color:WARNING, fontFamily:"'Inter',monospace" } },
+      { key: 'amountPaid', val: `${fmt(p.amountPaid)} ${t.riyal}`, style: { color:SUCCESS, fontWeight:600, fontFamily:"'Inter',monospace" } },
+      { key: 'balance', val: <span style={{ padding:'3px 8px', borderRadius:100, fontSize:11, fontWeight:600, background: bal>=0?SUCCESS_BG:DANGER_BG, color: bal>=0?SUCCESS:DANGER }}>{bal>=0?'+':''}{fmt(bal)} {t.riyal}</span>, style: {} },
+      { key: 'method', val: methodLabel(p.paymentMethod), style: { color:TEXT_MUTED } },
+      { key: 'claimStatus', val: cs ? <span style={{ padding:'3px 8px', borderRadius:100, fontSize:11, fontWeight:600, background:cs.bg, color:cs.color }}>{p.claimStatus}</span> : '—', style: {} },
+      { key: 'date', val: p.createdAt, style: { color:TEXT_MUTED, fontSize:11, fontFamily:"'Inter',monospace" } },
+    ]
+    return (
+      <tr key={i} style={{ borderBottom:`1px solid ${BORDER}` }}
+        onMouseEnter={e=>e.currentTarget.style.background='#F8FAFA'}
+        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+        {cellData.filter(c => visibleKeys.has(c.key)).map((cell, idx) => (
+          <td key={idx} style={{ padding:'11px 14px', ...cell.style }}>{cell.val}</td>
+        ))}
+        <td style={{ padding:'11px 14px' }}>
+          <button onClick={()=>navigate(`/appointments/${p.appointmentId}`)}
+            style={{ padding:'5px 10px', border:`1px solid ${BORDER}`, borderRadius:8, background:'transparent', color:PRIMARY, fontSize:11, cursor:'pointer' }}>
+            📅
+          </button>
+        </td>
+      </tr>
+    )
+  })}
+</tbody>
               </table>
             </div>
           ) : (
@@ -280,6 +366,7 @@ export default function Payments() {
           )}
         </div>
       </div>
-    </div>
+   </div>
+    </>
   )
 }

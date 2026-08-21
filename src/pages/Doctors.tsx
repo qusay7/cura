@@ -4,6 +4,8 @@ import api from '../api/axios'
 import type { Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -436,8 +438,11 @@ export default function Doctors() {
     >
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
+        {/* ✅ رأس الطباعة الموحّد */}
+        <PrintHeader reportTitle={t.title} lang={lang} />
+
         {/* ── Header ── */}
-        <div style={{
+        <div className="no-print" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -523,7 +528,7 @@ export default function Doctors() {
         </div>
 
         {/* ── Search Bar ── */}
-        <div style={{ marginBottom: 24 }}>
+        <div className="no-print" style={{ marginBottom: 24 }}>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -575,6 +580,9 @@ export default function Doctors() {
         </div>
 
         {/* ── Doctors Grid ── */}
+        <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <ExportBar endpoint="/doctors/export" lang={lang} fileName="doctors" />
+        </div>
         {filteredDoctors.length === 0 ? (
           <div style={{
             background: CARD_BG,

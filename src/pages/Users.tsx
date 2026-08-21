@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
 import { ECGAnimation } from '../components/ECGAnimation'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+
+
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -66,6 +71,7 @@ const T = {
     loadingMsg: 'جاري تحميل المستخدمين',
     loadingSub: 'يرجى الانتظار...',
     total: 'إجمالي المستخدمين',
+    print: 'طباعة',
     roles: {
       ClinicAdmin: 'مدير عيادة',
       Doctor: 'طبيب',
@@ -90,6 +96,7 @@ const T = {
     loadingMsg: 'Loading Users',
     loadingSub: 'Please wait...',
     total: 'Total Users',
+    print: 'Print',
     roles: {
       ClinicAdmin: 'Clinic Admin',
       Doctor: 'Doctor',
@@ -208,7 +215,6 @@ export default function Users() {
 
   const getRoleLabel = (role: string) =>
     t.roles[role as keyof typeof t.roles] || role
-
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'ClinicAdmin':   return { bg: `${PRIMARY}15`,  color: PRIMARY }
@@ -219,6 +225,16 @@ export default function Users() {
     }
   }
 
+  // ✅ إظهار/إخفاء الأعمدة
+  const columnDefs: ColumnDef[] = [
+    { key: 'name', label: t.name, locked: true },
+    { key: 'email', label: t.email },
+    { key: 'role', label: t.role },
+    { key: 'status', label: t.status },
+    { key: 'actions', label: t.actions, locked: true },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('users-table', columnDefs)
+
   if (loading) return <LoadingScreen msg={t.loadingMsg} sub={t.loadingSub} />
 
   return (
@@ -228,8 +244,11 @@ export default function Users() {
     }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
+        {/* ✅ رأس الطباعة الموحّد */}
+        <PrintHeader reportTitle={t.title} lang={lang} />
+
         {/* Header */}
-        <div className="users-header" style={{
+        <div className="users-header no-print" style={{
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24,
         }}>
@@ -280,7 +299,7 @@ export default function Users() {
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div className="no-print" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           {/* Search */}
           <div style={{ flex: 2, position: 'relative', minWidth: 200 }}>
             <input
@@ -336,6 +355,58 @@ export default function Users() {
           </select>
         </div>
 
+         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8, flexWrap: 'wrap' }} className="no-print">
+  <button onClick={() => window.print()}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+    🖨️ {t.print}
+  </button>
+  <button onClick={() => {
+    const data = filteredUsers.map(u => ({
+      name: u.fullName,
+      email: u.email,
+      role: getRoleLabel(u.role),
+      status: u.isActive ? t.active : t.inactive,
+    }))
+    api.post('/export/pdf', {
+      title: t.title,
+      columns: [t.name, t.email, t.role, t.status],
+      rows: data.map(d => [d.name, d.email, d.role, d.status]),
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'users.pdf'; a.click()
+      URL.revokeObjectURL(url)
+    })
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📄 {isAr ? 'تصدير PDF' : 'Export PDF'}
+  </button>
+  <button onClick={() => {
+    const data = filteredUsers.map(u => ({
+      name: u.fullName,
+      email: u.email,
+      role: getRoleLabel(u.role),
+      status: u.isActive ? t.active : t.inactive,
+    }))
+    api.post('/export/excel', {
+      title: t.title,
+      columns: [t.name, t.email, t.role, t.status],
+      rows: data.map(d => [d.name, d.email, d.role, d.status]),
+      isRtl: isAr,
+    }, { responseType: 'blob' }).then(r => {
+      const url = URL.createObjectURL(r.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'users.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+    })
+  }}
+    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+    📊 {isAr ? 'تصدير Excel' : 'Export Excel'}
+  </button>
+  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+</div>
+
         {/* Table */}
         <div className="users-table-container" style={{
           background: CARD_BG, border: `1px solid ${BORDER}`,
@@ -346,25 +417,97 @@ export default function Users() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${BORDER}`, background: PRIMARY_SOFT }}>
-                  {[t.name, t.email, t.role, t.status, t.actions].map(h => (
-                    <th key={h} style={{
+                  {columnDefs.filter(c => visibleKeys.has(c.key)).map(c => (
+                    <th key={c.key} style={{
                       padding: '14px 16px',
                       textAlign: isAr ? 'right' : 'left',
                       fontSize: 12, fontWeight: 600, color: TEXT_MUTED,
-                    }}>{h}</th>
+                    }}>{c.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                    <td colSpan={columnDefs.filter(c => visibleKeys.has(c.key)).length} style={{ padding: '48px 24px', textAlign: 'center' }}>
                       <span style={{ fontSize: 48, opacity: 0.5 }}>👥</span>
                       <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 12 }}>{t.noUsers}</p>
                     </td>
                   </tr>
                 ) : filteredUsers.map(u => {
                   const roleStyle = getRoleColor(u.role)
+                  const cellsByKey: Record<string, React.ReactNode> = {
+                    name: (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${PRIMARY} 0%, #8BAFB1 100%)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 600, color: '#FFFFFF', flexShrink: 0,
+                        }}>
+                          {u.fullName[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 14, fontWeight: 500, color: TEXT_DARK, margin: 0 }}>
+                            {u.fullName}
+                          </p>
+                          {u.username && (
+                            <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
+                              @{u.username}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ),
+                    email: u.email,
+                    role: (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '3px 10px', borderRadius: 100,
+                        fontSize: 11, fontWeight: 500,
+                        background: roleStyle.bg, color: roleStyle.color,
+                      }}>
+                        {getRoleLabel(u.role)}
+                      </span>
+                    ),
+                    status: (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 500,
+                        background: u.isActive ? `${SUCCESS}15` : `${WARNING}15`,
+                        color: u.isActive ? SUCCESS : WARNING,
+                      }}>
+                        <span style={{
+                          width: 5, height: 5, borderRadius: '50%',
+                          background: u.isActive ? SUCCESS : WARNING,
+                        }} />
+                        {u.isActive ? t.active : t.inactive}
+                      </span>
+                    ),
+                    actions: (
+                      <div className="no-print" style={{ display: 'flex', gap: 8 }}>
+                        {hasPermission('users.toggle') && (
+                          <button
+                            onClick={() => handleToggle(u.id)}
+                            disabled={toggling === u.id}
+                            style={{
+                              background: u.isActive ? `${WARNING}15` : `${SUCCESS}15`,
+                              border: 'none', borderRadius: 8,
+                              padding: '6px 12px', fontSize: 12,
+                              color: u.isActive ? WARNING : SUCCESS,
+                              cursor: toggling === u.id ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s ease',
+                              opacity: toggling === u.id ? 0.6 : 1,
+                            }}
+                          >
+                            {toggling === u.id ? '...' : u.isActive
+                              ? (isAr ? '🔴 تعطيل' : '🔴 Disable')
+                              : (isAr ? '🟢 تفعيل' : '🟢 Enable')}
+                          </button>
+                        )}
+                      </div>
+                    ),
+                  }
                   return (
                     <tr
                       key={u.id}
@@ -373,87 +516,11 @@ export default function Users() {
                       onMouseEnter={e => e.currentTarget.style.background = PRIMARY_SOFT}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      {/* Name */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{
-                            width: 36, height: 36, borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${PRIMARY} 0%, #8BAFB1 100%)`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 14, fontWeight: 600, color: '#FFFFFF', flexShrink: 0,
-                          }}>
-                            {u.fullName[0]?.toUpperCase()}
-                          </div>
-                          <div>
-                            <p style={{ fontSize: 14, fontWeight: 500, color: TEXT_DARK, margin: 0 }}>
-                              {u.fullName}
-                            </p>
-                            {u.username && (
-                              <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>
-                                @{u.username}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Email */}
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
-                        {u.email}
-                      </td>
-
-                      {/* Role */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '3px 10px', borderRadius: 100,
-                          fontSize: 11, fontWeight: 500,
-                          background: roleStyle.bg, color: roleStyle.color,
-                        }}>
-                          {getRoleLabel(u.role)}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 500,
-                          background: u.isActive ? `${SUCCESS}15` : `${WARNING}15`,
-                          color: u.isActive ? SUCCESS : WARNING,
-                        }}>
-                          <span style={{
-                            width: 5, height: 5, borderRadius: '50%',
-                            background: u.isActive ? SUCCESS : WARNING,
-                          }} />
-                          {u.isActive ? t.active : t.inactive}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          {hasPermission('users.toggle') && (
-                            <button
-                              onClick={() => handleToggle(u.id)}
-                              disabled={toggling === u.id}
-                              style={{
-                                background: u.isActive ? `${WARNING}15` : `${SUCCESS}15`,
-                                border: 'none', borderRadius: 8,
-                                padding: '6px 12px', fontSize: 12,
-                                color: u.isActive ? WARNING : SUCCESS,
-                                cursor: toggling === u.id ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.2s ease',
-                                opacity: toggling === u.id ? 0.6 : 1,
-                              }}
-                            >
-                              {toggling === u.id ? '...' : u.isActive
-                                ? (isAr ? '🔴 تعطيل' : '🔴 Disable')
-                                : (isAr ? '🟢 تفعيل' : '🟢 Enable')}
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      {columnDefs.filter(c => visibleKeys.has(c.key)).map(c => (
+                        <td key={c.key} style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
+                          {cellsByKey[c.key]}
+                        </td>
+                      ))}
                     </tr>
                   )
                 })}

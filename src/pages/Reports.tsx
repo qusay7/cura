@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
-
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -69,7 +69,12 @@ const css = `
   @page { size:A4; margin:15mm; }
 }
 `
-
+const globalCss = `
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; padding: 10px; }
+}
+`
 const T = {
   ar: {
     font:"'Noto Kufi Arabic',sans-serif", dir:'rtl' as const,
@@ -253,7 +258,18 @@ export default function Reports() {
 
   const t    = T[lang]
   const isAr = lang === 'ar'
-
+// ✅ إعدادات الأعمدة
+const columnDefs: ColumnDef[] = [
+  { key: 'name', label: t.doctorName, locked: true },
+  { key: 'specialty', label: t.specialty },
+  { key: 'total', label: t.total },
+  { key: 'completed', label: t.completed },
+  { key: 'cancelled', label: t.cancelled },
+  { key: 'completionRate', label: t.completionRate },
+  { key: 'revenue', label: t.revenue },
+  { key: 'thisMonth', label: t.thisMonthAppts },
+]
+const { visibleKeys, toggle } = useColumnVisibility('reports-table', columnDefs)
   useEffect(() => {
     const id = 'cura-rep-css'
     if (!document.getElementById(id)) {

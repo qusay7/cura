@@ -27,12 +27,21 @@ const globalCss = `
 
 .disabled-message {
   background: linear-gradient(135deg,#F8FAFA 0%,#FFFFFF 100%);
-  border: 2px dashed #DCE5E5; border-radius:20px; padding:40px 24px;
-  text-align:center; transition:all 0.3s ease;
+  border: 2px dashed #DCE5E5;
+  border-radius:20px;
+  padding:40px 24px;
+  text-align:center;
+  transition:all 0.3s ease;
 }
 .disabled-message:hover { border-color:#5B8C8F; background:#F8FAFA; }
 
-.calendar-container { background:white; border-radius:16px; border:1px solid #DCE5E5; overflow:hidden; transition:all 0.3s ease; }
+.calendar-container {
+  background:white;
+  border-radius:16px;
+  border:1px solid #DCE5E5;
+  overflow:hidden;
+  transition:all 0.3s ease;
+}
 .calendar-container:hover { border-color:#5B8C8F; box-shadow:0 4px 12px rgba(91,140,143,0.1); }
 .calendar-container .rbc-toolbar { padding:16px; background:#F8FAFA; border-bottom:1px solid #DCE5E5; flex-wrap:wrap; gap:12px; }
 .calendar-container .rbc-toolbar button { color:#2C3E3F; border:1px solid #DCE5E5; background:white; border-radius:8px; padding:6px 14px; font-size:13px; font-weight:500; transition:all 0.2s ease; }
@@ -44,6 +53,11 @@ const globalCss = `
 .calendar-container .rbc-event:hover { background:#4A7679; transform:scale(1.02); box-shadow:0 2px 8px rgba(91,140,143,0.3); }
 .calendar-container .rbc-current-time-indicator { background-color:#F59E0B; }
 .selected-appointment-info { animation:slide-in 0.3s ease-out; }
+
+.reminders-badge { animation:slide-in 0.3s ease-out; }
+.reminder-preset-btn { transition:all 0.2s ease; }
+.reminder-preset-btn:hover { transform:translateY(-2px); }
+.reminder-preset-btn.active { box-shadow:0 4px 12px rgba(91,140,143,0.3); }
 
 @media(max-width:768px) {
   .add-appointment-title { font-size:24px !important; }
@@ -75,6 +89,16 @@ const T = {
     suggestedFromTemplate: 'السعر المقترح من القالب:',
     price: 'السعر', pricePlaceholder: '0.00',
     notes: 'ملاحظات', notesPlaceholder: 'أضف ملاحظات إضافية...',
+    customReminders: '🔔 التذكيرات المخصصة',
+    reminderHint: 'اختر الأوقات التي يريدها المريض للتذكير قبل الموعد',
+    remindersPresets: 'خيارات سريعة:',
+    reminderFewHours: '🔔 تذكيرات قليلة',
+    reminderBalanced: '📱 تذكيرات متوازنة',
+    reminderMany: '⏰ تذكيرات كثيرة',
+    reminderNone: '❌ بدون تذكيرات',
+    reminderCustom: 'أو أدخل مخصص:',
+    reminderHelper: 'أمثلة: 1,2,4,24 (بالساعات)',
+    reminderPreview: '📊 المريض سيستقبل تذكيرات في:',
     submit: 'حجز الموعد', submitQueue: 'حجز الدور',
     cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
     error: 'حدث خطأ غير متوقع', required: 'هذا الحقل مطلوب',
@@ -101,6 +125,16 @@ const T = {
     suggestedFromTemplate: 'Suggested price from template:',
     price: 'Price', pricePlaceholder: '0.00',
     notes: 'Notes', notesPlaceholder: 'Add additional notes...',
+    customReminders: '🔔 Custom Reminders',
+    reminderHint: 'Choose when the patient should receive reminder notifications',
+    remindersPresets: 'Quick options:',
+    reminderFewHours: '🔔 Few reminders',
+    reminderBalanced: '📱 Balanced reminders',
+    reminderMany: '⏰ Many reminders',
+    reminderNone: '❌ No reminders',
+    reminderCustom: 'Or enter custom:',
+    reminderHelper: 'Examples: 1,2,4,24 (hours)',
+    reminderPreview: '📊 Patient will receive reminders at:',
     submit: 'Book Appointment', submitQueue: 'Book Queue',
     cancel: 'Cancel', saving: 'Saving...',
     error: 'An unexpected error occurred', required: 'This field is required',
@@ -118,7 +152,7 @@ const T = {
   },
 }
 
-// ─── Loading Screen ──────────────────────────────────────────────────────────
+// ─── Loading Screen ────────────────────────────────────────────────────────
 const FormLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => (
   <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.95)', backdropFilter:'blur(8px)', zIndex:9999 }}>
     <div style={{ textAlign:'center', padding:'2rem', maxWidth:400, width:'100%' }}>
@@ -137,10 +171,9 @@ const FormLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => 
   </div>
 )
 
-// ─── Form Field ──────────────────────────────────────────────────────────────
+// ─── Form Field ─────────────────────────────────────────────────────────────
 const FormField = ({ label, required, children, error }: {
-  label: string; required?: boolean; children: React.ReactNode; error?: string
-}) => (
+  label: string; required?: boolean; children: React.ReactNode; error?: string }) => (
   <div style={{ marginBottom:20 }}>
     <label style={{ display:'block', fontSize:12, fontWeight:600, color:TEXT_MUTED, marginBottom:8, letterSpacing:'0.5px' }}>
       {label} {required && <span style={{ color:'#EF4444' }}>*</span>}
@@ -150,7 +183,7 @@ const FormField = ({ label, required, children, error }: {
   </div>
 )
 
-// ─── Format Date for display ─────────────────────────────────────────────────
+// ─── Format Date for display ────────────────────────────────────────────────
 const formatAppointmentDate = (dateString: string, isArabic: boolean): string => {
   if (!dateString) return ''
   const [datePart, timePart] = dateString.split('T')
@@ -175,10 +208,34 @@ const formatAppointmentDate = (dateString: string, isArabic: boolean): string =>
     : `${weekday}, ${monthName} ${day}, ${hourStr}:${minuteStr} ${ampm}`
 }
 
-// ─── Get local now as string ──────────────────────────────────────────────────
+// ─── Get local now as string ────────────────────────────────────────────────
 const getLocalNowString = (): string => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:00`
+}
+
+// ✅ معاينة التذكيرات
+const getReminderPreview = (customReminders: string, isAr: boolean): string => {
+  const reminders = customReminders
+    .split(',')
+    .filter((r) => r.trim())
+    .map((r) => parseInt(r.trim()))
+    .filter(h => !isNaN(h))
+    .sort((a, b) => b - a)
+
+  if (reminders.length === 0) {
+    return isAr ? '❌ بدون تذكيرات' : '❌ No reminders'
+  }
+
+  return (
+    reminders
+      .map((hours) => {
+        if (hours === 1) return isAr ? 'قبل ساعة' : '1 hour before'
+        if (hours === 24) return isAr ? 'قبل يوم' : '1 day before'
+        return isAr ? `قبل ${hours} ساعات` : `${hours} hours before`
+      })
+      .join(' • ') + ' ✅'
+  )
 }
 
 interface VisitTemplate {
@@ -187,16 +244,14 @@ interface VisitTemplate {
   nameEn: string | null
   firstVisitPrice: number | null
   followUpPrice: number | null
-  defaultSessionsCount: number   // ✅ جديد — >1 يعني قالب متعدد الجلسات (زي سحب عصب)
-  departmentId: string | null    // ✅ جديد — null يعني قالب عام لكل الأقسام
+  defaultSessionsCount: number
+  departmentId: string | null
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Main Component ─────────────────────────────────────────────────────────
 export default function AddAppointment() {
   const navigate = useNavigate()
   const location = useLocation()
-  // ✅ لو جينا من "إنهاء الزيارة" بموعد قادم مقترح — نعبّي المريض/الطبيب تلقائياً،
-  // والموظف يحدد الوقت بس من التقويم (التاريخ موضّح له بشريط تذكير)
   const prefill = (location.state as { prefillPatientId?: string; prefillDoctorId?: string; prefillDate?: string } | null) || {}
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
@@ -204,24 +259,20 @@ export default function AddAppointment() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [templates, setTemplates] = useState<VisitTemplate[]>([])
-  // ✅ استثناءات الطبيب المالية (من تبويب "الإعدادات المالية" بصفحة الطبيب)
   const [doctorFinancialSettings, setDoctorFinancialSettings] = useState<any[]>([])
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctorStatus, setDoctorStatus] = useState<{
     isBusy: boolean; queueCount: number; currentPatient?: string; nextAppointmentTime?: string
   } | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(false)
-
-  // ✅ تحقق إجازة طبيب الدور
   const [queueAbsence, setQueueAbsence] = useState<{ available: boolean; message?: string } | null>(null)
   const [checkingAbsence, setCheckingAbsence] = useState(false)
-
-  // ✅ التأمين
   const [insurance, setInsurance] = useState<any>(null)
-  // ✅ يسمح للموظف يلغي تطبيق التأمين أو يغيّر النسبة — لحالات زي استثناء
-  // الأسنان، أو رد فعلي من شركة التأمين يخالف النسبة الافتراضية بالنظام
   const [insuranceApplies, setInsuranceApplies] = useState(true)
   const [overrideRate, setOverrideRate] = useState('')
+
+  // ✅ التذكيرات المخصصة
+  const [customReminders, setCustomReminders] = useState('1,2,4,24')
 
   const [form, setForm] = useState({
     patientId: prefill.prefillPatientId || '', doctorId: prefill.prefillDoctorId || '', appointmentDate: '',
@@ -253,7 +304,6 @@ export default function AddAppointment() {
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }, [navigate])
 
-  // جلب حالة الطبيب
   useEffect(() => {
     if (!form.doctorId) { setDoctorStatus(null); return }
     setLoadingStatus(true)
@@ -263,12 +313,10 @@ export default function AddAppointment() {
       .finally(() => setLoadingStatus(false))
   }, [form.doctorId])
 
-  // إعادة تعيين التاريخ عند تغيير الطبيب
   useEffect(() => {
     if (form.doctorId) setForm(prev => ({ ...prev, appointmentDate: '', appointmentPrice: undefined }))
   }, [form.doctorId])
 
-  // ✅ جلب استثناءات الطبيب المالية (سعر خاص لكل قالب) عند اختيار طبيب
   useEffect(() => {
     if (!form.doctorId) { setDoctorFinancialSettings([]); return }
     api.get(`/doctors/${form.doctorId}/financial-settings`)
@@ -276,17 +324,11 @@ export default function AddAppointment() {
       .catch(() => setDoctorFinancialSettings([]))
   }, [form.doctorId])
 
-  // ✅ يعيد حساب السعر المقترح كل ما تغيّر الطبيب أو القالب — بنفس أولوية
-  // الباك إند بالضبط: استثناء خاص للطبيب بهذا القالب أولاً، وإلا سعر القالب العام
   useEffect(() => {
     if (!form.templateId) return
     const template = templates.find(tpl => tpl.id === form.templateId)
     if (!template) return
 
-    // ✅ نفس أولوية الباك إند بالضبط:
-    // 1) استثناء الطبيب لهذا القالب بالذات
-    // 2) الإعداد العام للطبيب (سعره الشخصي الافتراضي لأي قالب بدون استثناء)
-    // 3) سعر القالب العام
     const exception = doctorFinancialSettings.find((s: any) => s.templateId === form.templateId)
     const doctorGeneral = doctorFinancialSettings.find((s: any) => s.isGeneral)
     const suggested = exception?.firstVisitPrice ?? doctorGeneral?.firstVisitPrice ?? template.firstVisitPrice
@@ -295,14 +337,11 @@ export default function AddAppointment() {
       setForm(prev => ({
         ...prev,
         appointmentPrice: suggested,
-        // ✅ السعر يتحدث دايمًا مع تغيّر نوع الزيارة — بدل ما يبقى عالق بقيمة قديمة
-        // من قالب سابق (كان يتحدث بس أول مرة لما الحقل فاضي)
         price: String(suggested),
       }))
     }
   }, [form.doctorId, form.templateId, templates, doctorFinancialSettings])
 
-  // ✅ جلب بيانات التأمين عند اختيار المريض
   useEffect(() => {
     if (!form.patientId) { setInsurance(null); return }
     api.get(`/insurance/calculate?patientId=${form.patientId}&amount=${form.appointmentPrice || 0}`)
@@ -314,7 +353,6 @@ export default function AddAppointment() {
       .catch(() => setInsurance(null))
   }, [form.patientId])
 
-  // ✅ إعادة حساب التأمين عند تغيير السعر
   useEffect(() => {
     if (!form.patientId || !form.appointmentPrice) { return }
     api.get(`/insurance/calculate?patientId=${form.patientId}&amount=${form.appointmentPrice}`)
@@ -336,12 +374,10 @@ export default function AddAppointment() {
       ...prev,
       appointmentDate: dateTime,
       appointmentPrice: price,
-      price: price ? String(price) : prev.price  // ✅ ضع السعر في حقل التعديل
+      price: price ? String(price) : prev.price
     }))
   }
 
-  // ✅ عند اختيار قالب الزيارة — نعبّي اسمه بحقل type (للعرض/التقارير).
-  // اقتراح السعر نفسه يتكفّل فيه useEffect منفصل (يراعي استثناء الطبيب الخاص أولاً).
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(tpl => tpl.id === templateId)
     setForm(prev => ({
@@ -351,12 +387,10 @@ export default function AddAppointment() {
     }))
   }
 
-  // ✅ تحديد نوع عمل الطبيب المختار
   const selectedDoctor = doctors.find(d => d.id === form.doctorId)
   const isQueueOnly = selectedDoctor?.workType === 'queue'
   const isAppointmentsOnly = selectedDoctor?.workType === 'appointments'
 
-  // ✅ تحقق من إجازة طبيب الدور فور اختياره
   useEffect(() => {
     if (!isQueueOnly || !form.doctorId) { setQueueAbsence(null); return }
     setCheckingAbsence(true)
@@ -374,7 +408,6 @@ export default function AddAppointment() {
     const t = T[lang]
     if (!form.patientId) errors.patientId = t.required
 
-    // التحقق من التاريخ فقط إذا لم يكن دور
     if (!isQueueOnly) {
       if (!form.appointmentDate) {
         errors.appointmentDate = t.required
@@ -391,26 +424,17 @@ export default function AddAppointment() {
 
   const selectedTemplate = templates.find(tpl => tpl.id === form.templateId)
   const isMultiSession = (selectedTemplate?.defaultSessionsCount ?? 1) > 1
-
-  // ✅ نستخدم قسم الطبيب المختار (selectedDoctor معرّفة أعلاه) لفلترة القوالب المتاحة
   const selectedDoctorDeptId = (selectedDoctor as any)?.departmentId ?? null
-
-  // ✅ نعرض بس القوالب "العامة" (بدون قسم) أو القوالب المرتبطة بنفس قسم الطبيب المختار —
-  // لو ما فيه طبيب مختار بعد، نعرض كل القوالب (ما نقدر نفلتر بدون معرفة القسم)
   const availableTemplates = selectedDoctorDeptId
     ? templates.filter(tpl => tpl.departmentId === null || tpl.departmentId === selectedDoctorDeptId)
     : templates
 
-  // ✅ لو تغيّر الطبيب وصار القالب المختار مو متاح لقسمه، نفضّي الاختيار عشان
-  // ما يفضل قالب من قسم ثاني محجوز بالغلط
   useEffect(() => {
     if (form.templateId && !availableTemplates.some(tpl => tpl.id === form.templateId)) {
       setForm(prev => ({ ...prev, templateId: '' }))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.doctorId])
 
-  // ✅ التباعد الزمني بين الجلسات — يُستخدم لحساب تواريخ باقي الجلسات تلقائياً
   const [sessionIntervalValue, setSessionIntervalValue] = useState(1)
   const [sessionIntervalUnit, setSessionIntervalUnit] = useState<'day' | 'week' | 'month'>('week')
 
@@ -420,7 +444,6 @@ export default function AddAppointment() {
     setError(''); setLoading(true)
 
     try {
-      // ✅ إذا كان دور — استخدم الوقت الحالي
       const appointmentDate = isQueueOnly ? getLocalNowString() : form.appointmentDate
 
       const payload: Record<string, any> = {
@@ -428,14 +451,13 @@ export default function AddAppointment() {
         appointmentDate,
         status: 'scheduled',
         lang: lang,
+        customReminders: customReminders,  // ✅ إضافة التذكيرات
       }
 
       if (form.doctorId) payload.doctorId = form.doctorId
       if (form.type) payload.type = form.type
       if (form.templateId) payload.templateId = form.templateId
 
-      // ✅ السعر: يقرأ من حقل التعديل اليدوي أولاً، ثم من السعر المقترح من الجدول.
-      // يستخدم '' كفحص بدل قيمة falsy حتى لا يُفقد السعر عندما يكون 0 (زيارة مجانية مثلاً).
       const finalPrice = form.price !== '' ? parseFloat(form.price) : form.appointmentPrice
       if (finalPrice !== undefined && finalPrice !== null && !Number.isNaN(finalPrice)) {
         payload.price = finalPrice
@@ -443,15 +465,12 @@ export default function AddAppointment() {
 
       if (form.notes?.trim()) payload.notes = form.notes.trim()
 
-      // ✅ قالب متعدد الجلسات (زي سحب عصب) — نمر عبر نظام خطط العلاج، ونحجز كل الجلسات
-      // الباقية مرة وحدة، بتباعد زمني ثابت يحدده الموظف (يوم/أسبوع/شهر)
       if (isMultiSession) {
-        // 1) هل عند المريض خطة نشطة بنفس القالب أصلاً؟ (لو نعم، نكمّل عليها بدل ما ننشئ وحدة جديدة)
         let plan: any = null
         try {
           const plansRes = await api.get(`/treatmentplans/patient/${form.patientId}`)
           plan = (plansRes.data as any[]).find(p => p.templateId === form.templateId && p.status === 'active')
-        } catch { /* ما قدرنا نجيب الخطط الموجودة — نكمل ونحاول ننشئ وحدة جديدة */ }
+        } catch { }
 
         if (!plan) {
           const createRes = await api.post('/treatmentplans', {
@@ -462,7 +481,6 @@ export default function AddAppointment() {
           plan = createRes.data
         }
 
-        // 2) كل الجلسات الفاضية (مجدولة، بدون موعد مرتبط بعد)، مرتبة برقم الجلسة
         const unlinkedSessions = (plan.sessions ?? [])
           .filter((s: any) => s.status === 'scheduled' && !s.appointmentId)
           .sort((a: any, b: any) => a.sessionNumber - b.sessionNumber)
@@ -473,10 +491,9 @@ export default function AddAppointment() {
           return
         }
 
-        // ✅ نحسب عدد الأيام بين كل جلسة والثانية حسب اختيار الموظف
         const intervalDays = sessionIntervalUnit === 'day' ? sessionIntervalValue
           : sessionIntervalUnit === 'week' ? sessionIntervalValue * 7
-          : sessionIntervalValue * 30   // شهر تقريبي بالأيام — تقدر تُعدَّل يدوياً بعدين لو احتجت دقة تقويمية
+          : sessionIntervalValue * 30
 
         const baseDate = new Date(appointmentDate.replace(' ', 'T'))
         let bookedCount = 0
@@ -489,11 +506,9 @@ export default function AddAppointment() {
           const isoScheduledDate = sessionDate.toISOString()
 
           try {
-            // 3) نحجز موعد فعلي لهذي الجلسة بالذات
             const apptRes = await api.post('/appointments', { ...payload, appointmentDate: isoScheduledDate })
             const newAppointmentId = apptRes.data.id
 
-            // 4) نربط الجلسة بموعدها
             await api.put(`/treatmentplans/${plan.id}/sessions/${session.id}`, {
               status: 'scheduled',
               appointmentId: newAppointmentId,
@@ -501,8 +516,6 @@ export default function AddAppointment() {
             })
             bookedCount++
           } catch {
-            // ✅ فشل حجز هذي الجلسة بالذات (تعارض دوام مثلاً) — نكمل الباقي ونبلّغ بالنهاية،
-            // بدل ما نوقف كل العملية. الجلسة تفضل بدون موعد، تُحجز يدوياً لاحقاً من ملف المريض
             failedCount++
           }
         }
@@ -538,8 +551,6 @@ export default function AddAppointment() {
   const isAr = lang === 'ar'
   const isDoctorSelected = !!form.doctorId
   const isPatientSelected = !!form.patientId
-
-  // ✅ الإرسال معطّل إذا طبيب الدور في إجازة
   const isQueueBlocked = isQueueOnly && queueAbsence?.available === false
   const canSubmit = isPatientSelected
     && (isQueueOnly ? !isQueueBlocked : !!form.appointmentDate)
@@ -550,6 +561,7 @@ export default function AddAppointment() {
     fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif",
     color:TEXT_DARK, outline:'none', transition:'all 0.2s ease', cursor:'pointer',
   }
+
 
   if (loadingData) return <FormLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
 
@@ -573,7 +585,6 @@ export default function AddAppointment() {
           </h2>
         </div>
 
-        {/* ✅ تذكير بالتاريخ المقترح — لو جينا من "إنهاء الزيارة" بموعد مراجعة محدَّد */}
         {prefill.prefillDate && (
           <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 18 }}>📅</span>
@@ -613,7 +624,6 @@ export default function AddAppointment() {
               {doctors.length === 0 && (
                 <p style={{ fontSize:11, color:'#F59E0B', marginTop:4 }}>⚠️ {t.noActiveDoctors}</p>
               )}
-              {/* ✅ بادج نوع العمل */}
               {selectedDoctor && (
                 <div style={{ marginTop:6, display:'inline-flex', alignItems:'center', gap:6, padding:'3px 10px', borderRadius:100, fontSize:11, fontWeight:600,
                   background: isQueueOnly ? '#FFF8E1' : '#E8F5E9',
@@ -658,7 +668,6 @@ export default function AddAppointment() {
             {/* التاريخ والوقت */}
             <FormField label={t.date} required={!isQueueOnly} error={validationErrors.appointmentDate}>
               {!isDoctorSelected ? (
-                // لم يتم اختيار طبيب
                 <div className="disabled-message">
                   <div style={{ width:'56px', height:'56px', background:PRIMARY_SOFT, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px auto' }}>
                     <span style={{ fontSize:'28px' }}>📅</span>
@@ -667,21 +676,18 @@ export default function AddAppointment() {
                   <p style={{ fontSize:'12px', margin:0, color:TEXT_MUTED }}>{t.selectDoctorHint}</p>
                 </div>
               ) : isQueueOnly ? (
-                // ✅ طبيب دور — تحقق الإجازة أولاً
                 checkingAbsence ? (
                   <div style={{ background:'#F8FAFA', border:`1px dashed ${BORDER}`, borderRadius:16, padding:'24px', textAlign:'center' }}>
                     <div style={{ width:28, height:28, borderRadius:'50%', border:`3px solid ${PRIMARY_SOFT}`, borderTopColor:PRIMARY, animation:'spin 0.8s linear infinite', margin:'0 auto 10px' }} />
                     <p style={{ fontSize:13, color:TEXT_MUTED, margin:0 }}>{t.checkingAvailability}</p>
                   </div>
                 ) : isQueueBlocked ? (
-                  // ✅ الطبيب في إجازة — منع الحجز
                   <div style={{ background:'#FEF3C7', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
                     <span style={{ fontSize:40 }}>🚫</span>
                     <p style={{ fontSize:15, fontWeight:700, color:'#92400E', margin:'10px 0 6px' }}>{t.queueUnavailable}</p>
                     <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{queueAbsence?.message}</p>
                   </div>
                 ) : (
-                  // متاح — عرض زر حجز الدور العادي
                   <div style={{ background:'#FFF8E1', border:'2px solid #FCD34D', borderRadius:16, padding:'24px', textAlign:'center' }}>
                     <span style={{ fontSize:40 }}>🔢</span>
                     <p style={{ fontSize:15, fontWeight:700, color:'#F59E0B', margin:'10px 0 6px' }}>{t.queueBooking}</p>
@@ -692,16 +698,14 @@ export default function AddAppointment() {
                   </div>
                 )
               ) : (
-                // طبيب مواعيد — التقويم
                 <div className="calendar-container">
                   <AppointmentCalendar doctorId={form.doctorId} onSelectSlot={handleSlotSelect} />
                 </div>
               )}
 
-               
             </FormField>
 
-            {/* نوع الزيارة — من قوالب الزيارة الحقيقية */}
+            {/* نوع الزيارة */}
             <FormField label={t.type}>
               <SearchableSelect
                 isRtl={isAr}
@@ -722,7 +726,7 @@ export default function AddAppointment() {
               )}
             </FormField>
 
-            {/* ✅ التباعد الزمني بين الجلسات — يظهر بس لو القالب متعدد الجلسات */}
+            {/* ✅ التباعد الزمني بين الجلسات */}
             {isMultiSession && (
               <FormField label={isAr ? `التباعد بين الجلسات (${selectedTemplate?.defaultSessionsCount} جلسات)` : `Interval Between Sessions (${selectedTemplate?.defaultSessionsCount} sessions)`}>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -786,7 +790,7 @@ export default function AddAppointment() {
               </p>
             </FormField>
 
-            {/* ✅ بطاقة التأمين — تفاعلية: ممكن تلغي التطبيق أو تغيّر النسبة يدوياً */}
+            {/* ✅ التأمين — Interactive */}
             {insurance?.hasInsurance && (form.appointmentPrice || form.price) && (() => {
               const total = form.price !== '' ? parseFloat(form.price) : (form.appointmentPrice || 0)
               const rate = insuranceApplies ? (parseFloat(overrideRate) || 0) : 0
@@ -801,7 +805,6 @@ export default function AddAppointment() {
                         {isAr ? `تأمين نشط — ${insurance.companyName}` : `Active Insurance — ${insurance.companyName}`}
                       </span>
                     </div>
-                    {/* ✅ مفتاح تشغيل/إيقاف التأمين لهذا الموعد بالذات */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                       <span style={{ fontSize: 11, color: '#6B8A8C', fontWeight: 600 }}>
                         {insuranceApplies ? (isAr ? 'يشمله التأمين' : 'Covered') : (isAr ? 'مستثنى' : 'Excluded')}
@@ -813,7 +816,6 @@ export default function AddAppointment() {
 
                   {insuranceApplies ? (
                     <>
-                      {/* ✅ نسبة التغطية قابلة للتعديل يدوياً — لو الخدمة عندها نسبة مختلفة عن الافتراضي */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                         <span style={{ fontSize: 11.5, color: '#6B8A8C' }}>{isAr ? 'نسبة التغطية:' : 'Coverage rate:'}</span>
                         <input type="number" min={0} max={100} value={overrideRate} onChange={e => setOverrideRate(e.target.value)}
@@ -874,6 +876,10 @@ export default function AddAppointment() {
                 <span>ℹ️</span> {isAr?'المريض لا يملك تأميناً نشطاً':'Patient has no active insurance'}
               </div>
             )}
+
+            
+
+
 
             {/* ملاحظات */}
             <FormField label={t.notes}>

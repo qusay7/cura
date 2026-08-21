@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -139,6 +142,28 @@ export default function AppointmentDetail() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
+  // ✅ إظهار/إخفاء الحقول
+  const columnDefs: ColumnDef[] = [
+    { key: 'patient', label: t.patient, locked: true },
+    { key: 'doctor', label: t.doctor },
+    { key: 'date', label: t.dateTime },
+    { key: 'type', label: t.type },
+    { key: 'checkIn', label: t.checkIn },
+    { key: 'checkOut', label: t.checkOut },
+    { key: 'price', label: t.price },
+    { key: 'commission', label: t.commission },
+    { key: 'diagnosis', label: t.diagnosis },
+    { key: 'prescription', label: t.prescription },
+    { key: 'tests', label: t.tests },
+    { key: 'notes', label: t.notes },
+    { key: 'nextVisit', label: t.nextVisit },
+    { key: 'totalAmount', label: t.totalAmount },
+    { key: 'amountPaid', label: t.amountPaid },
+    { key: 'paymentMethod', label: t.paymentMethod },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('appointment-detail-fields', columnDefs)
+  const colVisible = (key: string) => visibleKeys.has(key)
+
   useEffect(() => {
     const cssId = 'cura-appt-detail-css'
     if (!document.getElementById(cssId)) {
@@ -210,35 +235,53 @@ export default function AppointmentDetail() {
     <div className="detail-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
+        {/* ✅ رأس الطباعة الموحّد */}
+        <PrintHeader reportTitle={`${t.title} — ${appointment.patientName || ''}`} lang={lang} />
+
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <button onClick={() => navigate('/appointments')}
             style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 16px', fontSize: 12.5, color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             {isAr ? '→' : '←'} {t.back}
           </button>
-          <StatusBadge status={appointment.status} lang={lang} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => window.print()}
+              style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 16px', fontSize: 12.5, color: TEXT_MUTED, cursor: 'pointer' }}>
+              🖨️ {isAr ? 'طباعة' : 'Print'}
+            </button>
+            <StatusBadge status={appointment.status} lang={lang} />
+          </div>
         </div>
 
-        <h2 style={{ fontFamily: "'DM Serif Display','Georgia',serif", fontSize: 24, fontWeight: 500, color: TEXT_DARK, marginBottom: 4 }}>
+        <h2 className="no-print" style={{ fontFamily: "'DM Serif Display','Georgia',serif", fontSize: 24, fontWeight: 500, color: TEXT_DARK, marginBottom: 4 }}>
           🩺 {t.title}
         </h2>
-        <p style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 22 }}>
+        <p className="no-print" style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 22 }}>
           {appointment.patientName || '—'} · {formatDateTime(appointment.appointmentDate)}
         </p>
 
+        <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+          <ExportBar
+            endpoint={`/appointments/${id}/export${[...visibleKeys].length ? `?fields=${[...visibleKeys].join(',')}` : ''}`}
+            lang={lang} fileName="appointment" showPrint={false} />
+          <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+        </div>
+
         {/* بيانات الموعد */}
         <Section title={`📅 ${t.dateTime}`}>
-          <Row label={t.patient} value={appointment.patientName || '—'} />
-          <Row label={t.doctor} value={appointment.doctorName || '—'} />
-          <Row label={t.dateTime} value={formatDateTime(appointment.appointmentDate)} />
-          <Row label={t.type} value={appointment.type || '—'} />
-          <Row label={t.checkIn} value={formatTime(appointment.checkInTime)} />
-          <Row label={t.checkOut} value={formatTime(appointment.checkOutTime)} />
+          {colVisible('patient') && <Row label={t.patient} value={appointment.patientName || '—'} />}
+          {colVisible('doctor') && <Row label={t.doctor} value={appointment.doctorName || '—'} />}
+          {colVisible('date') && <Row label={t.dateTime} value={formatDateTime(appointment.appointmentDate)} />}
+          {colVisible('type') && <Row label={t.type} value={appointment.type || '—'} />}
+          {colVisible('checkIn') && <Row label={t.checkIn} value={formatTime(appointment.checkInTime)} />}
+          {colVisible('checkOut') && <Row label={t.checkOut} value={formatTime(appointment.checkOutTime)} />}
+          {colVisible('price') && (
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 13 }}>
             <span style={{ color: TEXT_MUTED }}>{t.price}</span>
             <span style={{ color: PRIMARY, fontWeight: 700 }}>{appointment.price != null ? `${appointment.price} ${t.riyal}` : t.notRecorded}</span>
           </div>
-          {appointment.doctorCommissionAmount != null && (
+          )}
+          {colVisible('commission') && appointment.doctorCommissionAmount != null && (
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 13 }}>
               <span style={{ color: TEXT_MUTED }}>{t.commission}</span>
               <span style={{ color: SUCCESS, fontWeight: 700 }}>{appointment.doctorCommissionAmount} {t.riyal}</span>
@@ -250,16 +293,16 @@ export default function AppointmentDetail() {
         <Section title={t.visitNoteTitle}>
           {visitNote ? (
             <>
-              {visitNote.diagnosis && <Row label={t.diagnosis} value={visitNote.diagnosis} />}
-              {visitNote.prescription && <Row label={t.prescription} value={visitNote.prescription} />}
-              {visitNote.tests && <Row label={t.tests} value={visitNote.tests} />}
-              {visitNote.notes && (
+              {colVisible('diagnosis') && visitNote.diagnosis && <Row label={t.diagnosis} value={visitNote.diagnosis} />}
+              {colVisible('prescription') && visitNote.prescription && <Row label={t.prescription} value={visitNote.prescription} />}
+              {colVisible('tests') && visitNote.tests && <Row label={t.tests} value={visitNote.tests} />}
+              {colVisible('notes') && visitNote.notes && (
                 <div style={{ padding: '10px 0', fontSize: 13 }}>
                   <span style={{ color: TEXT_MUTED, display: 'block', marginBottom: 4 }}>{t.notes}</span>
                   <span style={{ color: TEXT_DARK }}>{visitNote.notes}</span>
                 </div>
               )}
-              {visitNote.nextVisitDate && <Row label={t.nextVisit} value={new Date(visitNote.nextVisitDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')} />}
+              {colVisible('nextVisit') && visitNote.nextVisitDate && <Row label={t.nextVisit} value={new Date(visitNote.nextVisitDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')} />}
             </>
           ) : (
             <p style={{ fontSize: 12.5, color: TEXT_MUTED, fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>{t.noVisitNote}</p>
@@ -270,15 +313,15 @@ export default function AppointmentDetail() {
         <Section title={t.paymentTitle}>
           {payment?.hasPayment ? (
             <>
-              <Row label={t.totalAmount} value={`${payment.totalAmount} ${t.riyal}`} />
-              <Row label={t.amountPaid} value={`${payment.amountPaid} ${t.riyal}`} />
+              {colVisible('totalAmount') && <Row label={t.totalAmount} value={`${payment.totalAmount} ${t.riyal}`} />}
+              {colVisible('amountPaid') && <Row label={t.amountPaid} value={`${payment.amountPaid} ${t.riyal}`} />}
               {(payment.insuranceAmount ?? 0) > 0 && (
                 <>
                   <Row label={t.insuranceAmount} value={`${payment.insuranceAmount} ${t.riyal}`} />
                   <Row label={t.insuranceBalance} value={`${payment.insuranceBalance} ${t.riyal}`} />
                 </>
               )}
-              <Row label={t.paymentMethod} value={methodLabel(payment.paymentMethod)} />
+              {colVisible('paymentMethod') && <Row label={t.paymentMethod} value={methodLabel(payment.paymentMethod)} />}
               <div style={{ marginTop: 10 }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 100,
@@ -296,7 +339,7 @@ export default function AppointmentDetail() {
         </Section>
 
         {/* إجراءات سريعة */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+        <div className="no-print" style={{ display: 'flex', gap: 10, marginTop: 8 }}>
           <button onClick={() => navigate(`/appointments/${id}/edit`)}
             style={{ flex: 1, background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             ✏️ {t.editAppointment}

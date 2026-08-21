@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
+import type { ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -35,6 +37,10 @@ const css = `
 .badge { padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; }
 .form-input, .form-select { width:100%; padding:9px 12px; border:1px solid ${BORDER}; border-radius:10px; font-size:13px; color:${TEXT_DARK}; outline:none; font-family:inherit; background:${CARD_BG}; }
 .form-input:focus, .form-select:focus { border-color:${PRIMARY}; box-shadow:0 0 0 3px ${PRIMARY}18; }
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; padding: 10px; }
+}
 `
 
 const T = {
@@ -57,6 +63,7 @@ const T = {
     loading:'جاري التحميل...', noData:'لا توجد بيانات',
     errSave:'حدث خطأ', successSave:'تم الحفظ بنجاح',
     riyal:'د.أ',
+    print: 'طباعة', exportPdf: 'تصدير PDF', exportExcel: 'تصدير Excel',
   },
   en: { font:"'Inter',sans-serif", dir:'ltr' as const,
     title:'Health Insurance', subtitle:'Manage insurance companies, policies and claims',
@@ -77,6 +84,7 @@ const T = {
     loading:'Loading...', noData:'No data available',
     errSave:'An error occurred', successSave:'Saved successfully',
     riyal:'JD',
+    print: 'Print', exportPdf: 'Export PDF', exportExcel: 'Export Excel',
   },
 }
 
@@ -98,7 +106,21 @@ export default function Insurance() {
   const [claims, setClaims]       = useState<any[]>([])
   const [stats, setStats]         = useState<any>(null)
   const [loading, setLoading]     = useState(true)
-  const [alert, setAlert]         = useState<{type:'ok'|'err',msg:string}|null>(null)
+  const [notification, setNotification] = useState<{type:'ok'|'err',msg:string}|null>(null)
+  const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+
+  // ✅ Column definitions للمطالبات
+  const columnDefs: ColumnDef[] = [
+    { key: 'claimNo', label: T[lang].claimNo, locked: true },
+    { key: 'patient', label: T[lang].patient },
+    { key: 'company', label: T[lang].company },
+    { key: 'total', label: T[lang].total },
+    { key: 'insAmount', label: T[lang].insAmount },
+    { key: 'patAmount', label: T[lang].patAmount },
+    { key: 'serviceDate', label: T[lang].serviceDate },
+    { key: 'status', label: T[lang].status, locked: true },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('insurance-claims-columns', columnDefs)
 
   // Company form
   const [showCF, setShowCF] = useState(false)
@@ -135,9 +157,9 @@ export default function Insurance() {
 
   useEffect(() => { if (tab===1) fetchClaims() }, [tab, claimStatus, claimPage])
 
-  const showAlert = (type:'ok'|'err', msg:string) => {
-    setAlert({type,msg}); setTimeout(()=>setAlert(null),3000)
-  }
+   const showAlert = (type:'ok'|'err', msg:string) => {
+   setNotification({type,msg}); setTimeout(()=>setNotification(null),3000)
+ }
 
   const fetchAll = async () => {
     try {
@@ -199,6 +221,47 @@ export default function Insurance() {
     } catch (err:any) { showAlert('err', err.response?.data || t.errSave) }
   }
 
+  // ✅ Export function
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    setDownloading(format)
+    try {
+      const rows = claims.map(c => ({
+        claimNo: c.claimNumber,
+        patient: c.patientName,
+        company: c.companyName,
+        total: fmt(c.totalAmount),
+        insAmount: fmt(c.insuranceAmount),
+        patAmount: fmt(c.patientAmount),
+        serviceDate: c.serviceDate,
+        status: t[c.status as keyof typeof t] || c.status,
+      }))
+
+      const response = await api.post(
+        `/export/${format}`,
+        {
+          title: t.claims,
+          columns: columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label),
+          rows: rows.map(r =>
+            columnDefs.filter(c => visibleKeys.has(c.key)).map(c => String(r[c.key as keyof typeof r] || '—'))
+          ),
+          isRtl: isAr,
+        },
+        { responseType: 'blob' }
+      )
+
+      const url = URL.createObjectURL(response.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `claims.${format === 'excel' ? 'xlsx' : 'pdf'}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert(isAr ? 'فشل التصدير' : 'Export failed')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'60vh',fontFamily:t.font}}>
       <div style={{width:36,height:36,borderRadius:'50%',border:`3px solid ${PRIMARY_SOFT}`,borderTopColor:PRIMARY,animation:'spin 0.8s linear infinite'}} />
@@ -210,11 +273,12 @@ export default function Insurance() {
       <div style={{maxWidth:1200,margin:'0 auto'}}>
 
         {/* Alert */}
-        {alert && (
-          <div style={{position:'fixed',top:20,right:20,zIndex:9999,padding:'12px 20px',borderRadius:12,background:alert.type==='ok'?SUCCESS_BG:DANGER_BG,border:`1px solid ${alert.type==='ok'?SUCCESS:DANGER}`,color:alert.type==='ok'?SUCCESS:DANGER,fontWeight:600,fontSize:13}}>
-            {alert.type==='ok'?'✅':'❌'} {alert.msg}
-          </div>
-        )}
+        {/* Alert */}
+{notification && (
+  <div style={{position:'fixed',top:20,right:20,zIndex:9999,padding:'12px 20px',borderRadius:12,background:notification.type==='ok'?SUCCESS_BG:DANGER_BG,border:`1px solid ${notification.type==='ok'?SUCCESS:DANGER}`,color:notification.type==='ok'?SUCCESS:DANGER,fontWeight:600,fontSize:13}}>
+    {notification.type==='ok'?'✅':'❌'} {notification.msg}
+  </div>
+)}
 
         {/* Header */}
         <div style={{marginBottom:24}}>
@@ -245,7 +309,7 @@ export default function Insurance() {
         )}
 
         {/* Tabs */}
-        <div style={{display:'flex',gap:8,marginBottom:20}}>
+        <div style={{display:'flex',gap:8,marginBottom:20}} className="no-print">
           {t.tabs.map((tb,i)=>(
             <button key={i} className={`tab-btn${tab===i?' active':''}`} onClick={()=>setTab(i)}>{tb}</button>
           ))}
@@ -254,8 +318,23 @@ export default function Insurance() {
         {/* ════ TAB 0 — Companies ════ */}
         {tab===0 && (
           <div style={{background:CARD_BG,border:`1px solid ${BORDER}`,borderRadius:18,padding:22}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}} className="no-print">
               <h3 style={{fontSize:16,fontWeight:700,color:TEXT_DARK,margin:0}}>🏢 {t.companies}</h3>
+              <div style={{display:'flex',gap:8}}>
+                  <button onClick={() => window.print()}
+                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+                    🖨️ {t.print}
+                  </button>
+                  <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+                    {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+                  </button>
+                  <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+                    {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+                  </button>
+                  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+                </div>
               <button onClick={()=>{setShowCF(true);setEditId(null);setCf({name:'',nameEn:'',phone:'',email:'',contact:'',coverage:80,isActive:true})}}
                 style={{padding:'9px 18px',background:PRIMARY,color:'#FFF',border:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer'}}>
                 + {t.addCompany}
@@ -328,7 +407,7 @@ export default function Insurance() {
                           {c.isActive?(isAr?'نشطة':'Active'):(isAr?'غير نشطة':'Inactive')}
                         </span>
                       </td>
-                      <td>
+                      <td className="no-print">
                         <div style={{display:'flex',gap:8}}>
                           <button onClick={()=>{setEditId(c.id);setCf({name:c.name,nameEn:c.nameEn||'',phone:c.phone||'',email:c.email||'',contact:c.contactName||'',coverage:c.coverageRate,isActive:c.isActive});setShowCF(true)}}
                             style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
@@ -354,42 +433,65 @@ export default function Insurance() {
         {/* ════ TAB 1 — Claims ════ */}
         {tab===1 && (
           <div style={{background:CARD_BG,border:`1px solid ${BORDER}`,borderRadius:18,padding:22}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}} className="no-print">
               <h3 style={{fontSize:16,fontWeight:700,color:TEXT_DARK,margin:0}}>📋 {t.claims}</h3>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <label style={{fontSize:12,color:TEXT_MUTED}}>{t.filter}:</label>
-                <select className="form-select" value={claimStatus} onChange={e=>{setClaimStatus(e.target.value);setClaimPage(1)}} style={{width:'auto',minWidth:130}}>
-                  <option value="">{t.all}</option>
-                  <option value="pending">{t.pending}</option>
-                  <option value="submitted">{t.submitted}</option>
-                  <option value="approved">{t.approved}</option>
-                  <option value="rejected">{t.rejected}</option>
-                  <option value="paid">{t.paid}</option>
-                </select>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+                <div>
+                  <label style={{fontSize:12,color:TEXT_MUTED,marginRight:8}}>{t.filter}:</label>
+                  <select className="form-select" value={claimStatus} onChange={e=>{setClaimStatus(e.target.value);setClaimPage(1)}} style={{width:'auto',minWidth:130}}>
+                    <option value="">{t.all}</option>
+                    <option value="pending">{t.pending}</option>
+                    <option value="submitted">{t.submitted}</option>
+                    <option value="approved">{t.approved}</option>
+                    <option value="rejected">{t.rejected}</option>
+                    <option value="paid">{t.paid}</option>
+                  </select>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={() => window.print()}
+                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+                    🖨️ {t.print}
+                  </button>
+                  <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+                    {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+                  </button>
+                  <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+                    {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+                  </button>
+                  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+                </div>
               </div>
             </div>
 
             <div style={{overflowX:'auto'}}>
               <table className="tbl">
                 <thead><tr>
-                  <th>{t.claimNo}</th><th>{t.patient}</th><th>{t.company}</th>
-                  <th>{t.total}</th><th>{t.insAmount}</th><th>{t.patAmount}</th>
-                  <th>{t.serviceDate}</th><th>{t.status}</th><th>{t.actions}</th>
+                  {columnDefs.filter(c => visibleKeys.has(c.key)).map(col => (
+                    <th key={col.key}>{col.label}</th>
+                  ))}
+                  <th className="no-print">{t.actions}</th>
                 </tr></thead>
                 <tbody>
                   {claims.map((c,i)=>{
                     const sc = statusColors[c.status] || {bg:PRIMARY_SOFT,color:PRIMARY}
+                    const cellsByKey: Record<string, React.ReactNode> = {
+                      claimNo: <span style={{fontFamily:'Inter,sans-serif',fontWeight:600,fontSize:12}}>{c.claimNumber}</span>,
+                      patient: <span style={{fontWeight:500}}>{c.patientName}</span>,
+                      company: <span style={{color:TEXT_MUTED}}>{c.companyName}</span>,
+                      total: <span style={{fontFamily:'Inter,sans-serif'}}>{fmt(c.totalAmount)} {t.riyal}</span>,
+                      insAmount: <span style={{color:SUCCESS,fontWeight:600,fontFamily:'Inter,sans-serif'}}>{fmt(c.insuranceAmount)} {t.riyal}</span>,
+                      patAmount: <span style={{color:WARNING,fontWeight:600,fontFamily:'Inter,sans-serif'}}>{fmt(c.patientAmount)} {t.riyal}</span>,
+                      serviceDate: <span style={{color:TEXT_MUTED,fontFamily:'Inter,sans-serif'}}>{c.serviceDate}</span>,
+                      status: <span className="badge" style={{background:sc.bg,color:sc.color}}>{t[c.status as keyof typeof t]||c.status}</span>,
+                    }
                     return (
                       <tr key={i}>
-                        <td style={{fontFamily:'Inter,sans-serif',fontWeight:600,fontSize:12}}>{c.claimNumber}</td>
-                        <td style={{fontWeight:500}}>{c.patientName}</td>
-                        <td style={{color:TEXT_MUTED}}>{c.companyName}</td>
-                        <td style={{fontFamily:'Inter,sans-serif'}}>{fmt(c.totalAmount)} {t.riyal}</td>
-                        <td style={{color:SUCCESS,fontWeight:600,fontFamily:'Inter,sans-serif'}}>{fmt(c.insuranceAmount)} {t.riyal}</td>
-                        <td style={{color:WARNING,fontWeight:600,fontFamily:'Inter,sans-serif'}}>{fmt(c.patientAmount)} {t.riyal}</td>
-                        <td style={{color:TEXT_MUTED,fontFamily:'Inter,sans-serif'}}>{c.serviceDate}</td>
-                        <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{t[c.status as keyof typeof t]||c.status}</span></td>
-                        <td>
+                        {columnDefs.filter(c2 => visibleKeys.has(c2.key)).map(col => (
+                          <td key={col.key}>{cellsByKey[col.key]}</td>
+                        ))}
+                        <td className="no-print">
                           <button onClick={()=>{setSelectedClaim(c);setNewStatus(c.status);setApprovalNo(c.approvalNumber||'');setRejReason(c.rejectionReason||'');setStatusNotes(c.notes||'');setShowUSM(true)}}
                             style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
                             🔄 {t.updateStatus}
@@ -399,7 +501,7 @@ export default function Insurance() {
                     )
                   })}
                   {claims.length===0 && (
-                    <tr><td colSpan={9} style={{textAlign:'center',color:TEXT_MUTED,padding:40}}>{t.noData}</td></tr>
+                    <tr><td colSpan={columnDefs.length + 1} style={{textAlign:'center',color:TEXT_MUTED,padding:40}}>{t.noData}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -407,7 +509,7 @@ export default function Insurance() {
 
             {/* Pagination */}
             {claimPages > 1 && (
-              <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:16}}>
+              <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:16}} className="no-print">
                 {Array.from({length:claimPages},(_,i)=>i+1).map(p=>(
                   <button key={p} onClick={()=>setClaimPage(p)}
                     style={{width:32,height:32,borderRadius:8,border:`1px solid ${p===claimPage?PRIMARY:BORDER}`,background:p===claimPage?PRIMARY:CARD_BG,color:p===claimPage?'#FFF':TEXT_DARK,fontSize:12,fontWeight:600,cursor:'pointer'}}>

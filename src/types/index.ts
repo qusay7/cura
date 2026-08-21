@@ -1,6 +1,7 @@
 export interface AuthResponse {
   token: string
   refreshToken: string
+  expiresIn?: number  
   fullName: string
   email: string
   role: string
@@ -8,6 +9,7 @@ export interface AuthResponse {
   clinicName: string | null
   expiresAt: string
   refreshTokenExpiresAt: string
+  permissions: string[]
 }
 
 export interface Patient {
@@ -62,6 +64,7 @@ export interface DashboardData {
   type: string
   totalPatients: number
   totalDoctors: number
+  totalStaff: number
   totalAppointments: number
   todayAppointments: number
   upcomingAppointments: number

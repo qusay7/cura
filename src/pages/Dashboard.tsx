@@ -127,6 +127,8 @@ const T = {
     noAppointmentsToday: 'لا توجد مواعيد اليوم',
     addPatient: 'إضافة مريض', addDoctor: 'إضافة طبيب',
     quickVisit: 'زيارة سريعة', bookAppointment: 'حجز موعد',
+     staff: 'فريق العمل',
+    addStaff: 'إضافة موظف',
   },
   en: {
     title: 'Dashboard', plan: 'Plan', loading: 'Loading...',
@@ -145,6 +147,8 @@ const T = {
     noAppointmentsToday: 'No appointments today',
     addPatient: 'Add Patient', addDoctor: 'Add Doctor',
     quickVisit: 'Quick Visit', bookAppointment: 'Book Appointment',
+     staff: 'Staff',
+    addStaff: 'Add Staff',
   },
 }
 
@@ -370,27 +374,47 @@ export default function Dashboard() {
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const isSuperAdmin = user.role === 'SuperAdmin'
 
-  useEffect(() => {
-    const styleId = 'cura-dash-css'
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style'); style.id = styleId; style.textContent = globalCss; document.head.appendChild(style)
-    }
-    const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
-    window.addEventListener('cura-lang-change', handleLangChange)
+useEffect(() => {
+  console.log('📊 Dashboard useEffect started')
+  
+  const styleId = 'cura-dash-css'
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = globalCss
+    document.head.appendChild(style)
+  }
 
-    if (isSuperAdmin) { setLoading(false); return () => window.removeEventListener('cura-lang-change', handleLangChange) }
+  const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
+  window.addEventListener('cura-lang-change', handleLangChange)
 
-    const startTime = Date.now()
-    Promise.all([
-      api.get('/dashboard'),
-      api.get('/appointments/today-by-doctor').then(r => setDoctorsToday(r.data)).catch(() => {}),
-    ])
-      .then(([r]) => setData(r.data))
-      .catch(() => navigate('/login'))
-      .finally(() => { const e = Date.now() - startTime; setTimeout(() => setLoading(false), Math.max(0, 1200 - e)) })
-
+  if (isSuperAdmin) {
+    console.log('✅ SuperAdmin detected')
+    setLoading(false)
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
-  }, [navigate, lang])
+  }
+
+  console.log('📊 Fetching dashboard data...')
+  const startTime = Date.now()
+  
+  Promise.all([
+    api.get('/dashboard'),
+    api.get('/appointments/today-by-doctor')
+      .then(r => setDoctorsToday(r.data))
+      .catch(() => {}),
+  ])
+    .then(([r]) => setData(r.data))
+    .catch((err) => {
+      console.error('❌ API error:', err)
+      navigate('/login', { replace: true })
+    })
+    .finally(() => {
+      const e = Date.now() - startTime
+      setTimeout(() => setLoading(false), Math.max(0, 1200 - e))
+    })
+
+  return () => window.removeEventListener('cura-lang-change', handleLangChange)
+}, [navigate, isSuperAdmin]) // ⚠️ حذفنا `lang` من الـ dependencies
 
   const t = T[lang]
   const isAr = lang === 'ar'
@@ -427,11 +451,12 @@ export default function Dashboard() {
           <StatCard icon="👥" value={data?.totalPatients || 0} label={t.patients}
             btnLabel={t.addPatient} showBtn={hasPermission('patients.create')}
             onClick={() => navigate('/patients')} onBtnClick={() => navigate('/patients/add')} />
-          {hasPermission('doctors.view') && (
-            <StatCard icon="⚕️" value={data?.totalDoctors || 0} label={t.doctors}
-              btnLabel={t.addDoctor} showBtn={hasPermission('doctors.create')}
-              onClick={() => navigate('/doctors')} onBtnClick={() => navigate('/doctors/add')} />
-          )}
+         
+          {hasPermission('staff.view') && (
+            <StatCard icon="👔" value={data?.totalDoctors || 0} label={t.staff}  // ✅ استخدم totalDoctors بدل totalStaff مؤقتاً
+  btnLabel={t.addStaff} showBtn={true}
+  onClick={() => navigate('/staff')} onBtnClick={() => navigate('/staff')} />
+           )}
           <StatCard icon="📅" value={data?.todayAppointments || 0} label={t.todayAppts}
             btnLabel={t.quickVisit} showBtn={hasPermission('appointments.create')}
             onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/quick-visit')} />

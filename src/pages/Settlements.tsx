@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
+import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -15,6 +16,12 @@ const globalCss = `
 .settle-tab.active { background:#5B8C8F; color:#FFF; box-shadow:0 4px 12px rgba(91,140,143,0.25); }
 .settle-tab:not(.active):hover { background:#E8F0F0; color:#5B8C8F; }
 @media(max-width:768px){ .settle-tabs{ width:100%; } .settle-tab{ flex:1; } }
+
+/* ✅ رأس الطباعة — مخفي بالشاشة العادية، يظهر بس وقت الطباعة (زر 🖨️ طباعة) */
+.print-only-header { display: none; }
+@media print {
+  .print-only-header { display: flex !important; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #DCE5E5; }
+}
 `
 
 const PRIMARY = '#5B8C8F'
@@ -98,6 +105,7 @@ interface InsuranceCompany { id: string; name: string }
 export default function Settlements() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [tab, setTab] = useState<'dues' | 'doctor' | 'insurance' | 'history'>('dues')
+  const [clinic, setClinic] = useState<{ name: string; logo: string | null } | null>(null)
 
   const t = T[lang]
   const isAr = lang === 'ar'
@@ -109,14 +117,38 @@ export default function Settlements() {
     }
     const onLang = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', onLang)
+
+    // ✅ نجيب اسم العيادة وشعارها — يُستخدمان برأس الطباعة بس (ما نعرضهم بالشاشة العادية)
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (user.clinicId) {
+        api.get(`/clinics/${user.clinicId}`)
+          .then(res => setClinic({ name: res.data.name, logo: res.data.logo || null }))
+          .catch(() => {})
+      }
+    } catch { /* تجاهل */ }
+
     return () => window.removeEventListener('cura-lang-change', onLang)
   }, [])
+
+  const apiOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '')
 
   return (
     <div className="settle-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
-        <div style={{ marginBottom: 24 }}>
+        {/* ✅ رأس الطباعة — يظهر بس عند الطباعة (زر 🖨️ طباعة) */}
+        {clinic && (
+          <div className="print-only-header">
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>{clinic.name}</p>
+              <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.title}</p>
+            </div>
+            {clinic.logo && <img src={`${apiOrigin}${clinic.logo}`} alt="logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />}
+          </div>
+        )}
+
+        <div className="no-print" style={{ marginBottom: 24 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 100, padding: '4px 16px', fontSize: 11, fontWeight: 600, color: PRIMARY, marginBottom: 12 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, animation: 'soft-pulse 2s infinite' }} />
             {isAr ? 'التقارير المالية' : 'Financial Reports'}
@@ -127,17 +159,21 @@ export default function Settlements() {
           <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6 }}>{t.subtitle}</p>
         </div>
 
-        <div className="settle-tabs">
-          <button className={`settle-tab${tab === 'dues' ? ' active' : ''}`} onClick={() => setTab('dues')}>💳 {t.tabDues}</button>
-          <button className={`settle-tab${tab === 'doctor' ? ' active' : ''}`} onClick={() => setTab('doctor')}>👨‍⚕️ {t.tabDoctor}</button>
-          <button className={`settle-tab${tab === 'insurance' ? ' active' : ''}`} onClick={() => setTab('insurance')}>🏥 {t.tabInsurance}</button>
-          <button className={`settle-tab${tab === 'history' ? ' active' : ''}`} onClick={() => setTab('history')}>📜 {t.tabHistory}</button>
-        </div>
+             <div className="settle-tabs"> 
+          <button className={`settle-tab${tab === 'dues' ? ' active' : ''}`} onClick={() => setTab('dues')} > 💳 {t.tabDues} </button> 
+          <button className={`settle-tab${tab === 'doctor' ? ' active' : ''}`} onClick={() => setTab('doctor')} > 👨‍⚕️ {t.tabDoctor} </button> 
+          <button className={`settle-tab${tab === 'insurance' ? ' active' : ''}`} onClick={() => setTab('insurance')} > 🏥 {t.tabInsurance} </button> 
+          <button className={`settle-tab${tab === 'history' ? ' active' : ''}`} onClick={() => setTab('history')} > 📜 {t.tabHistory} </button> 
+          </div>
 
-        {tab === 'dues' && <PatientDuesTab t={t} isAr={isAr} />}
-        {tab === 'doctor' && <PartySettlementTab t={t} isAr={isAr} lang={lang} mode="doctor" />}
-        {tab === 'insurance' && <InsuranceHubTab t={t} isAr={isAr} lang={lang} />}
-        {tab === 'history' && <HistoryTab t={t} isAr={isAr} />}
+
+            {tab === 'dues' && ( <PatientDuesTab t={t} isAr={isAr} /> )} 
+            {tab === 'doctor' && ( <PartySettlementTab t={t} isAr={isAr} lang={lang} mode="doctor" /> )} 
+            {tab === 'insurance' && ( <InsuranceHubTab t={t} isAr={isAr} lang={lang} /> )} 
+            {tab === 'history' && ( <HistoryTab t={t} isAr={isAr} /> )}
+
+
+         
       </div>
     </div>
   )
@@ -151,6 +187,17 @@ function PatientDuesTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
   const [data, setData] = useState<{ totalDue: number; count: number; items: any[] } | null>(null)
   const [nameFilter, setNameFilter] = useState('')
   const [payItem, setPayItem] = useState<any>(null)
+
+  // ✅ إظهار/إخفاء الأعمدة — محفوظة بالمتصفح، تفضل زي ما ضبطتها
+  const columnDefs = [
+    { key: 'patient', label: t.patient, locked: true },
+    { key: 'total', label: t.total },
+    { key: 'paid', label: t.paid },
+    { key: 'balance', label: t.balance },
+    { key: 'date', label: t.date },
+    { key: 'action', label: t.payAction, locked: true },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('patient-dues', columnDefs)
 
   const fetchDues = () => {
     setLoading(true)
@@ -168,6 +215,25 @@ function PatientDuesTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
 
   if (loading) return <LoadingBox t={t} />
 
+  // ✅ نبني كل صف كـ"قاموس" حسب مفتاح العمود، ونفلتر بالنهاية على الأعمدة الظاهرة بس
+  const visibleColumnDefs = columnDefs.filter(c => visibleKeys.has(c.key))
+  const buildRow = (d: any) => {
+    const cellsByKey: Record<string, React.ReactNode> = {
+      patient: d.patientName,
+      total: `${d.total?.toFixed(2)}`,
+      paid: `${d.paid?.toFixed(2)}`,
+      balance: <span style={{ color: DANGER, fontWeight: 700 }}>{d.balance?.toFixed(2)}</span>,
+      date: new Date(d.date).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
+      action: (
+        <button onClick={() => setPayItem(d)}
+          style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+          💳 {t.payAction}
+        </button>
+      ),
+    }
+    return visibleColumnDefs.map(c => cellsByKey[c.key])
+  }
+
   return (
     <div>
       <SummaryCards items={[
@@ -181,21 +247,14 @@ function PatientDuesTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
           style={{ width: '100%', maxWidth: 320, padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG }} />
       </div>
 
-      <ExportBar t={t} />
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
+        <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+      </div>
+      <ExportBar t={t} lang={isAr ? 'ar' : 'en'} endpoint="/settlements/patients-dues/export" />
       <DataTable
         empty={t.noData}
-        columns={[t.patient, t.total, t.paid, t.balance, t.date, '']}
-        rows={filteredItems.map(d => [
-          d.patientName,
-          `${d.total?.toFixed(2)}`,
-          `${d.paid?.toFixed(2)}`,
-          <span style={{ color: DANGER, fontWeight: 700 }}>{d.balance?.toFixed(2)}</span>,
-          new Date(d.date).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-          <button onClick={() => setPayItem(d)}
-            style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
-            💳 {t.payAction}
-          </button>,
-        ])}
+        columns={visibleColumnDefs.map(c => c.label)}
+        rows={filteredItems.map(buildRow)}
       />
 
       {payItem && (
@@ -324,6 +383,24 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
   const [notes, setNotes] = useState('')
   const [recalculating, setRecalculating] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // ✅ إظهار/إخفاء الأعمدة — checkbox و"المستحق" أعمدة أساسية ما تختفي
+  const columnDefs = mode === 'doctor'
+    ? [
+        { key: 'check', label: isAr ? 'تحديد' : 'Select', locked: true },
+        { key: 'date', label: t.date },
+        { key: 'patient', label: t.patient },
+        { key: 'type', label: t.visitType },
+        { key: 'commission', label: t.commission, locked: true },
+      ]
+    : [
+        { key: 'check', label: isAr ? 'تحديد' : 'Select', locked: true },
+        { key: 'date', label: t.date },
+        { key: 'claimNumber', label: t.claimNumber },
+        { key: 'patient', label: t.patient },
+        { key: 'amount', label: t.insuranceAmount, locked: true },
+      ]
+  const { visibleKeys, toggle } = useColumnVisibility(`party-settlement-${mode}`, columnDefs)
   const [amountPaidNow, setAmountPaidNow] = useState('')
 
   useEffect(() => {
@@ -477,30 +554,34 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
 
           {pending.count > 0 && (
             <>
-              <ExportBar t={t} />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
+                <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+              </div>
+              <ExportBar t={t} lang={lang} endpoint={`/settlements/doctor/${partyId}/pending/export?from=${periodStart}&to=${periodEnd}`} />
               <DataTable
                 empty={t.noPending}
-                columns={mode === 'doctor'
-                  ? ['', t.date, t.patient, t.visitType, t.commission]
-                  : ['', t.date, t.claimNumber, t.patient, t.insuranceAmount]}
+                columns={columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label)}
                 rows={pending.items.map(item => {
                   const checkbox = (
                     <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                       style={{ width: 15, height: 15, accentColor: PRIMARY, cursor: 'pointer' }} />
                   )
-                  return mode === 'doctor'
-                    ? [
-                        checkbox,
-                        new Date(item.appointmentDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-                        item.patientName, item.type || '—',
-                        <span style={{ fontWeight: 700, color: SUCCESS }}>{item.doctorCommissionAmount?.toFixed(2)}</span>,
-                      ]
-                    : [
-                        checkbox,
-                        new Date(item.serviceDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-                        item.claimNumber, item.patientName,
-                        <span style={{ fontWeight: 700, color: SUCCESS }}>{item.insuranceAmount?.toFixed(2)}</span>,
-                      ]
+                  const cellsByKey: Record<string, React.ReactNode> = mode === 'doctor'
+                    ? {
+                        check: checkbox,
+                        date: new Date(item.appointmentDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
+                        patient: item.patientName,
+                        type: item.type || '—',
+                        commission: <span style={{ fontWeight: 700, color: SUCCESS }}>{item.doctorCommissionAmount?.toFixed(2)}</span>,
+                      }
+                    : {
+                        check: checkbox,
+                        date: new Date(item.serviceDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
+                        claimNumber: item.claimNumber,
+                        patient: item.patientName,
+                        amount: <span style={{ fontWeight: 700, color: SUCCESS }}>{item.insuranceAmount?.toFixed(2)}</span>,
+                      }
+                  return columnDefs.filter(c => visibleKeys.has(c.key)).map(c => cellsByKey[c.key])
                 })}
               />
 
@@ -572,6 +653,17 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
   const [notes, setNotes] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [amountPaidNow, setAmountPaidNow] = useState('')
+
+  // ✅ إظهار/إخفاء الأعمدة — تختلف شوي حسب الحالة المعروضة (تحديد بحالة الموافقة، إجراء بحالة الإرسال)
+  const columnDefs = [
+    ...(status === 'approved' ? [{ key: 'check', label: isAr ? 'تحديد' : 'Select', locked: true }] : []),
+    { key: 'date', label: t.date },
+    { key: 'claimNumber', label: t.claimNumber },
+    { key: 'patient', label: t.patient },
+    { key: 'amount', label: t.insuranceAmount, locked: true },
+    ...(status === 'submitted' ? [{ key: 'action', label: t.updateStatus, locked: true }] : []),
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility(`insurance-hub-${status}`, columnDefs)
 
   // نافذة تحديث حالة مطالبة فردية (تظهر بس بحالة "مُرسلة")
   const [statusModalClaim, setStatusModalClaim] = useState<any>(null)
@@ -752,33 +844,31 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
 
               {data.count > 0 && (
                 <>
-                  <ExportBar t={t} />
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
+                    <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+                  </div>
+                  <ExportBar t={t} lang={lang} endpoint={`/settlements/insurance/${companyId}/claims/export?status=${status}&from=${periodStart}&to=${periodEnd}`} />
                   <DataTable
                     empty={t.noClaimsForStatus}
-                    columns={status === 'submitted'
-                      ? [t.date, t.claimNumber, t.patient, t.insuranceAmount, '']
-                      : status === 'approved'
-                      ? ['', t.date, t.claimNumber, t.patient, t.insuranceAmount]
-                      : [t.date, t.claimNumber, t.patient, t.insuranceAmount]}
+                    columns={columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label)}
                     rows={data.items.map((c: any) => {
-                      const baseCols: React.ReactNode[] = status === 'approved' ? [
-                        <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelect(c.id)}
-                          style={{ width: 15, height: 15, accentColor: PRIMARY, cursor: 'pointer' }} />,
-                      ] : []
-                      baseCols.push(
-                        new Date(c.serviceDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-                        c.claimNumber, c.patientName,
-                        <span style={{ fontWeight: 700, color: SUCCESS }}>{c.insuranceAmount?.toFixed(2)}</span>,
-                      )
-                      if (status === 'submitted') {
-                        baseCols.push(
+                      const cellsByKey: Record<string, React.ReactNode> = {
+                        check: (
+                          <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelect(c.id)}
+                            style={{ width: 15, height: 15, accentColor: PRIMARY, cursor: 'pointer' }} />
+                        ),
+                        date: new Date(c.serviceDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
+                        claimNumber: c.claimNumber,
+                        patient: c.patientName,
+                        amount: <span style={{ fontWeight: 700, color: SUCCESS }}>{c.insuranceAmount?.toFixed(2)}</span>,
+                        action: (
                           <button onClick={() => openStatusModal(c)}
                             style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
                             {t.updateStatus}
                           </button>
-                        )
+                        ),
                       }
-                      return baseCols
+                      return columnDefs.filter(c2 => visibleKeys.has(c2.key)).map(c2 => cellsByKey[c2.key])
                     })}
                   />
 
@@ -886,6 +976,16 @@ function HistoryTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
   const [items, setItems] = useState<any[]>([])
   const [filter, setFilter] = useState<'' | 'doctor' | 'insurance'>('')
 
+  const columnDefs = [
+    { key: 'type', label: t.type },
+    { key: 'party', label: isAr ? 'الطرف' : 'Party' },
+    { key: 'period', label: t.period },
+    { key: 'amount', label: t.amount, locked: true },
+    { key: 'method', label: t.method },
+    { key: 'date', label: t.date },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('settlement-history', columnDefs)
+
   useEffect(() => {
     setLoading(true)
     api.get(`/settlements${filter ? `?type=${filter}` : ''}`)
@@ -911,18 +1011,24 @@ function HistoryTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
 
       {loading ? <LoadingBox t={t} /> : (
         <>
-          <ExportBar t={t} />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
+            <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+          </div>
+          <ExportBar t={t} lang={isAr ? 'ar' : 'en'} endpoint={`/settlements/export${filter ? `?type=${filter}` : ''}`} />
           <DataTable
             empty={t.noData}
-            columns={[t.type, isAr ? 'الطرف' : 'Party', t.period, t.amount, t.method, t.date]}
-            rows={items.map(s => [
-              s.type === 'doctor' ? `👨‍⚕️ ${t.doctorType}` : `🏥 ${t.insuranceType}`,
-              s.doctorName || s.insuranceCompanyName || '—',
-              `${new Date(s.periodStart).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')} — ${new Date(s.periodEnd).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}`,
-              <span style={{ fontWeight: 700, color: SUCCESS }}>{s.totalAmount?.toFixed(2)}</span>,
-              s.paymentMethod === 'cash' ? t.cash : s.paymentMethod === 'bank_transfer' ? t.bankTransfer : s.paymentMethod === 'check' ? t.check : (s.paymentMethod || '—'),
-              new Date(s.createdAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-            ])}
+            columns={columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label)}
+            rows={items.map(s => {
+              const cellsByKey: Record<string, React.ReactNode> = {
+                type: s.type === 'doctor' ? `👨‍⚕️ ${t.doctorType}` : `🏥 ${t.insuranceType}`,
+                party: s.doctorName || s.insuranceCompanyName || '—',
+                period: `${new Date(s.periodStart).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')} — ${new Date(s.periodEnd).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}`,
+                amount: <span style={{ fontWeight: 700, color: SUCCESS }}>{s.totalAmount?.toFixed(2)}</span>,
+                method: s.paymentMethod === 'cash' ? t.cash : s.paymentMethod === 'bank_transfer' ? t.bankTransfer : s.paymentMethod === 'check' ? t.check : (s.paymentMethod || '—'),
+                date: new Date(s.createdAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
+              }
+              return columnDefs.filter(c => visibleKeys.has(c.key)).map(c => cellsByKey[c.key])
+            })}
           />
         </>
       )}
@@ -964,20 +1070,40 @@ function SummaryCards({ items }: { items: { label: string; value: string; color:
   )
 }
 
-function ExportBar({ t }: { t: typeof T['ar'] }) {
+function ExportBar({ t, endpoint, lang }: { t: typeof T['ar']; endpoint: string; lang: 'ar' | 'en' }) {
+  const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+
+  const download = async (format: 'pdf' | 'excel') => {
+    setDownloading(format)
+    try {
+      const sep = endpoint.includes('?') ? '&' : '?'
+      const res = await api.get(`${endpoint}${sep}format=${format}&lang=${lang}`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report.${format === 'excel' ? 'xlsx' : 'pdf'}`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert(lang === 'ar' ? 'تعذّر التصدير' : 'Export failed')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
       <button onClick={() => window.print()}
         style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
         🖨️ {t.print}
       </button>
-      <button disabled title="Coming soon"
-        style={{ background: '#F1F4F4', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: '#B0BEC0', cursor: 'not-allowed' }}>
-        📄 {t.exportPdf}
+      <button onClick={() => download('pdf')} disabled={downloading !== null}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+        {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
       </button>
-      <button disabled title="Coming soon"
-        style={{ background: '#F1F4F4', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: '#B0BEC0', cursor: 'not-allowed' }}>
-        📊 {t.exportExcel}
+      <button onClick={() => download('excel')} disabled={downloading !== null}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+        {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
       </button>
     </div>
   )

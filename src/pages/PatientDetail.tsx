@@ -5,6 +5,9 @@ import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
 import { PatientInsuranceTab } from '../components/PatientInsuranceTab'
 import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -63,6 +66,9 @@ const T = {
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات', yearsOld: 'سنة',
     // Tabs
     tabInfo: '📋 البيانات', tabInsurance: '🏥 التأمين', tabAttachments: '📎 المرفقات',
+    print: 'طباعة',
+    exportPdf: 'تصدير PDF',
+    exportExcel: 'تصدير Excel',
   },
   en: {
     back: 'Back', edit: 'Edit', delete: 'Delete',
@@ -81,6 +87,9 @@ const T = {
     loadingSub: 'Please wait while we load patient information', yearsOld: 'years',
     // Tabs
     tabInfo: '📋 Info', tabInsurance: '🏥 Insurance', tabAttachments: '📎 Attachments',
+     print: 'Print',
+    exportPdf: 'Export PDF',
+    exportExcel: 'Export Excel',
   },
 }
 
@@ -207,6 +216,29 @@ export default function PatientDetail() {
   const t    = T[lang]
   const isAr = lang === 'ar'
 
+  // ✅ إظهار/إخفاء الحقول (تُعامَل كـ"أعمدة" لسجل واحد)
+  const columnDefs: ColumnDef[] = [
+    { key: 'number', label: isAr ? 'رقم المريض' : 'Patient #' },
+    { key: 'name', label: isAr ? 'الاسم الكامل' : 'Full Name', locked: true },
+    { key: 'phone', label: isAr ? 'الهاتف' : 'Phone' },
+    { key: 'phone2', label: isAr ? 'هاتف إضافي' : 'Phone 2' },
+    { key: 'dob', label: isAr ? 'تاريخ الميلاد' : 'Date of Birth' },
+    { key: 'gender', label: isAr ? 'الجنس' : 'Gender' },
+    { key: 'nationalId', label: isAr ? 'الرقم الوطني' : 'National ID' },
+    { key: 'bloodType', label: isAr ? 'فصيلة الدم' : 'Blood Type' },
+    { key: 'address', label: isAr ? 'العنوان' : 'Address' },
+    { key: 'email', label: isAr ? 'البريد الإلكتروني' : 'Email' },
+    { key: 'emergencyContact', label: isAr ? 'جهة اتصال الطوارئ' : 'Emergency Contact' },
+    { key: 'emergencyPhone', label: isAr ? 'هاتف الطوارئ' : 'Emergency Phone' },
+    { key: 'allergies', label: isAr ? 'الحساسية' : 'Allergies' },
+    { key: 'chronicDiseases', label: isAr ? 'الأمراض المزمنة' : 'Chronic Diseases' },
+    { key: 'occupation', label: isAr ? 'المهنة' : 'Occupation' },
+    { key: 'maritalStatus', label: isAr ? 'الحالة الاجتماعية' : 'Marital Status' },
+    { key: 'createdAt', label: isAr ? 'تاريخ التسجيل' : 'Registered On' },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('patient-detail-fields', columnDefs)
+  const colVisible = (key: string) => visibleKeys.has(key)
+
   const formatGender = (gender:string|null) => gender==='male'?t.male:gender==='female'?t.female:gender
   const formatDate   = (dateStr:string|null) => {
     if (!dateStr) return null
@@ -230,8 +262,11 @@ export default function PatientDetail() {
     <div className="patient-detail-shell" style={{ direction:isAr?'rtl':'ltr', background:'#F8FAFA', minHeight:'100vh', padding:'24px' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
 
+        {/* ✅ رأس الطباعة الموحّد */}
+        <PrintHeader reportTitle={`${t.tabInfo.replace('📋 ', '')} — ${patient.fullName}`} lang={lang} />
+
         {/* Header */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:16, marginBottom:24 }}>
+        <div className="no-print" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:16, marginBottom:24 }}>
           <div style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
             <button onClick={()=>navigate('/patients')}
               style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'none', color:TEXT_MUTED, fontSize:13, cursor:'pointer' }}
@@ -251,7 +286,46 @@ export default function PatientDetail() {
               </div>
             </div>
           </div>
-          <div className="action-buttons" style={{ display:'flex', gap:10 }}>
+          <div className="action-buttons no-print" style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+  <button onClick={()=>window.print()}
+    style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 20px', fontSize:13, fontWeight:500, color:TEXT_MUTED, cursor:'pointer' }}>
+    🖨️ {t.print}
+  </button>
+  
+  <button onClick={() => {
+    const fields = [...visibleKeys].join(',')
+    api.post(`/patients/${patient.id}/export/pdf${fields ? `?fields=${fields}` : ''}`, {}, { responseType: 'blob' })
+      .then(r => {
+        const url = URL.createObjectURL(r.data)
+        const a = document.createElement('a')
+        a.href = url; a.download = `patient-${patient.patientNumber}.pdf`; a.click()
+        URL.revokeObjectURL(url)
+      })
+      .catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 20px', fontSize:13, fontWeight:500, color:TEXT_DARK, cursor:'pointer' }}>
+    📄 {t.exportPdf}
+  </button>
+  
+  <button onClick={() => {
+    const fields = [...visibleKeys].join(',')
+    api.post(`/patients/${patient.id}/export/excel${fields ? `?fields=${fields}` : ''}`, {}, { responseType: 'blob' })
+      .then(r => {
+        const url = URL.createObjectURL(r.data)
+        const a = document.createElement('a')
+        a.href = url; a.download = `patient-${patient.patientNumber}.xlsx`; a.click()
+        URL.revokeObjectURL(url)
+      })
+      .catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+  }}
+    style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 20px', fontSize:13, fontWeight:500, color:TEXT_DARK, cursor:'pointer' }}>
+    📊 {t.exportExcel}
+  </button>
+
+  {/* ✅ زر الأعمدة */}
+  <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+
+  <div style={{ width: 1, background: BORDER }} />
             {hasPermission('patients.edit') && (
               <button onClick={()=>navigate(`/patients/${id}/edit`)}
                 style={{ background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, padding:'8px 20px', fontSize:13, fontWeight:500, cursor:'pointer' }}
@@ -271,7 +345,7 @@ export default function PatientDetail() {
         </div>
 
         {/* ✅ Tabs */}
-        <div style={{ display:'flex', gap:8, marginBottom:24 }}>
+        <div className="no-print" style={{ display:'flex', gap:8, marginBottom:24 }}>
           <button className={`ptab-btn${activeTab==='info'?' active':''}`} onClick={()=>setActiveTab('info')}>
             {t.tabInfo}
           </button>
@@ -286,26 +360,28 @@ export default function PatientDetail() {
         {/* ✅ Tab: Info */}
         {activeTab==='info' && (
           <>
+           
             <div className="info-grid" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:24 }}>
               <InfoSection title={t.basicInfo}>
-                <InfoRow label={t.fullName}      value={patient.fullName}                    isAr={isAr} />
-                <InfoRow label={t.phone}         value={patient.phone}                       isAr={isAr} />
-                <InfoRow label={t.phone2}        value={patient.phone2}                      isAr={isAr} />
-                <InfoRow label={t.gender}        value={formatGender(patient.gender)}        isAr={isAr} />
-                <InfoRow label={t.dateOfBirth}   value={formatDate(patient.dateOfBirth)}     isAr={isAr} />
+                {colVisible('number') && <InfoRow label={isAr?'رقم المريض':'Patient #'} value={`#${patient.patientNumber}`} isAr={isAr} />}
+                {colVisible('name') && <InfoRow label={t.fullName}      value={patient.fullName}                    isAr={isAr} />}
+                {colVisible('phone') && <InfoRow label={t.phone}         value={patient.phone}                       isAr={isAr} />}
+                {colVisible('phone2') && <InfoRow label={t.phone2}        value={patient.phone2}                      isAr={isAr} />}
+                {colVisible('gender') && <InfoRow label={t.gender}        value={formatGender(patient.gender)}        isAr={isAr} />}
+                {colVisible('dob') && <InfoRow label={t.dateOfBirth}   value={formatDate(patient.dateOfBirth)}     isAr={isAr} />}
                 <InfoRow label={t.age}           value={age!==null?`${age} ${t.yearsOld}`:null} isAr={isAr} />
-                <InfoRow label={t.nationalId}    value={patient.nationalId}                  isAr={isAr} />
-                <InfoRow label={t.bloodType}     value={patient.bloodType}                   isAr={isAr} />
-                <InfoRow label={t.maritalStatus} value={patient.maritalStatus}               isAr={isAr} />
-                <InfoRow label={t.occupation}    value={patient.occupation}                  isAr={isAr} />
+                {colVisible('nationalId') && <InfoRow label={t.nationalId}    value={patient.nationalId}                  isAr={isAr} />}
+                {colVisible('bloodType') && <InfoRow label={t.bloodType}     value={patient.bloodType}                   isAr={isAr} />}
+                {colVisible('maritalStatus') && <InfoRow label={t.maritalStatus} value={patient.maritalStatus}               isAr={isAr} />}
+                {colVisible('occupation') && <InfoRow label={t.occupation}    value={patient.occupation}                  isAr={isAr} />}
               </InfoSection>
               <InfoSection title={t.additionalInfo}>
-                <InfoRow label={t.address}          value={patient.address}          isAr={isAr} />
-                <InfoRow label={t.email}            value={patient.email}            isAr={isAr} />
-                <InfoRow label={t.emergencyContact} value={patient.emergencyContact} isAr={isAr} />
-                <InfoRow label={t.emergencyPhone}   value={patient.emergencyPhone}   isAr={isAr} />
-                <InfoRow label={t.allergies}        value={patient.allergies}        isAr={isAr} />
-                <InfoRow label={t.chronicDiseases}  value={patient.chronicDiseases}  isAr={isAr} />
+                {colVisible('address') && <InfoRow label={t.address}          value={patient.address}          isAr={isAr} />}
+                {colVisible('email') && <InfoRow label={t.email}            value={patient.email}            isAr={isAr} />}
+                {colVisible('emergencyContact') && <InfoRow label={t.emergencyContact} value={patient.emergencyContact} isAr={isAr} />}
+                {colVisible('emergencyPhone') && <InfoRow label={t.emergencyPhone}   value={patient.emergencyPhone}   isAr={isAr} />}
+                {colVisible('allergies') && <InfoRow label={t.allergies}        value={patient.allergies}        isAr={isAr} />}
+                {colVisible('chronicDiseases') && <InfoRow label={t.chronicDiseases}  value={patient.chronicDiseases}  isAr={isAr} />}
               </InfoSection>
             </div>
 
@@ -317,6 +393,7 @@ export default function PatientDetail() {
               </div>
             )}
 
+            {colVisible('createdAt') && (
             <div style={{ marginTop:24 }}>
               <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:16, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
                 <div>
@@ -329,6 +406,7 @@ export default function PatientDetail() {
                 </div>
               </div>
             </div>
+            )}
           </>
         )}
 

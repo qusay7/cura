@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
+import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
+import type { ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -19,6 +21,10 @@ const globalCss = `
 @media(max-width:768px) {
   .templates-grid { grid-template-columns: 1fr !important; }
   .form-grid { grid-template-columns: 1fr !important; }
+}
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; padding: 10px; }
 }
 `
 
@@ -49,6 +55,7 @@ const T = {
     saved: 'تم الحفظ بنجاح', errGeneric: 'حدث خطأ', nameRequired: 'الاسم مطلوب',
     generalBadge: 'عام لكل الأقسام', sessionsBadge: 'جلسة',
     noPriceSet: 'السعر غير محدد بعد',
+    print: 'طباعة', exportPdf: 'تصدير PDF', exportExcel: 'تصدير Excel',
   },
   en: {
     title: 'Visit Templates', subtitle: 'Default prices for visit types — used automatically when booking and computing doctor commissions',
@@ -66,6 +73,7 @@ const T = {
     saved: 'Saved successfully', errGeneric: 'An error occurred', nameRequired: 'Name is required',
     generalBadge: 'General — all departments', sessionsBadge: 'session(s)',
     noPriceSet: 'Price not set yet',
+    print: 'Print', exportPdf: 'Export PDF', exportExcel: 'Export Excel',
   },
 }
 
@@ -102,6 +110,19 @@ export default function TreatmentTemplates() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+
+  // ✅ Column definitions
+  const columnDefs: ColumnDef[] = [
+    { key: 'name', label: T[lang].name, locked: true },
+    { key: 'department', label: T[lang].department },
+    { key: 'firstVisitPrice', label: T[lang].firstVisitPrice },
+    { key: 'followUpPrice', label: T[lang].followUpPrice },
+    { key: 'sessionsCount', label: T[lang].sessionsCount },
+    { key: 'pricePerSession', label: T[lang].pricePerSession },
+    { key: 'totalPrice', label: T[lang].totalPrice },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('treatment-templates-columns', columnDefs)
 
   const t = T[lang]
   const isAr = lang === 'ar'
@@ -202,6 +223,46 @@ export default function TreatmentTemplates() {
     }
   }
 
+  // ✅ Export function
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    setDownloading(format)
+    try {
+      const rows = templates.map(tpl => ({
+        name: tpl.name,
+        department: tpl.departmentName || t.generalBadge,
+        firstVisitPrice: tpl.firstVisitPrice || '—',
+        followUpPrice: tpl.followUpPrice || '—',
+        sessionsCount: tpl.defaultSessionsCount,
+        pricePerSession: tpl.defaultPricePerSession || '—',
+        totalPrice: tpl.defaultTotalPrice || '—',
+      }))
+
+      const response = await api.post(
+        `/export/${format}`,
+        {
+          title: t.title,
+          columns: columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label),
+          rows: rows.map(r =>
+            columnDefs.filter(c => visibleKeys.has(c.key)).map(c => String(r[c.key as keyof typeof r] || '—'))
+          ),
+          isRtl: isAr,
+        },
+        { responseType: 'blob' }
+      )
+
+      const url = URL.createObjectURL(response.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `templates.${format === 'excel' ? 'xlsx' : 'pdf'}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert(isAr ? 'فشل التصدير' : 'Export failed')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
   return (
     <div className="templates-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '24px' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -218,8 +279,27 @@ export default function TreatmentTemplates() {
           <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 6, maxWidth: 560 }}>{t.subtitle}</p>
         </div>
 
+        {/* ✅ Print, Export, Columns buttons */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }} className="no-print">
+          <button onClick={() => window.print()}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+            🖨️ {t.print}
+          </button>
+          <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+            {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+          </button>
+          <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+            {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+          </button>
+          <div style={{ marginLeft: 'auto' }}>
+            <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+          </div>
+        </div>
+
         {/* Action */}
-        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end' }} className="no-print">
           <button onClick={openAdd}
             style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             {t.addTemplate}

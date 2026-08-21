@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
+import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
+import type { ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -37,6 +39,10 @@ const globalCss = `
 @media(max-width: 768px) {
   .dept-grid { grid-template-columns: 1fr !important; }
 }
+@media print {
+  .no-print { display: none !important; }
+  body { margin: 0; padding: 10px; }
+}
 `
 
 const T = {
@@ -52,6 +58,9 @@ const T = {
     edit: 'تعديل',
     delete: 'حذف',
     deleteConfirm: 'هل أنت متأكد من حذف هذا القسم؟',
+    print: 'طباعة',
+    exportPdf: 'تصدير PDF',
+    exportExcel: 'تصدير Excel',
     types: {
       0: 'عام',
       1: 'طوارئ',
@@ -77,6 +86,9 @@ const T = {
     edit: 'Edit',
     delete: 'Delete',
     deleteConfirm: 'Are you sure you want to delete this department?',
+    print: 'Print',
+    exportPdf: 'Export PDF',
+    exportExcel: 'Export Excel',
     types: {
       0: 'General',
       1: 'Emergency',
@@ -102,7 +114,6 @@ interface Department {
   doctorsCount?: number
 }
 
-// ─── Modal إضافة/تعديل قسم ───────────────────────────────────────────────
 const DepartmentModal = ({
   isOpen, onClose, onSave, initial, lang
 }: {
@@ -169,7 +180,6 @@ const DepartmentModal = ({
             : (isAr ? '➕ إضافة قسم' : '➕ Add Department')}
         </h3>
 
-        {/* اسم القسم */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>
             {isAr ? 'اسم القسم *' : 'Department Name *'}
@@ -186,7 +196,6 @@ const DepartmentModal = ({
           />
         </div>
 
-        {/* نوع القسم */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>
             {isAr ? 'نوع القسم *' : 'Department Type *'}
@@ -258,7 +267,6 @@ const DepartmentModal = ({
   )
 }
 
-// ─── Department Card ─────────────────────────────────────────────────────
 const DeptCard = ({
   dept, lang, onEdit, onDelete, onToggle
 }: {
@@ -278,13 +286,11 @@ const DeptCard = ({
       background: CARD_BG, border: `1px solid ${BORDER}`,
       borderRadius: 20, padding: 20, position: 'relative', overflow: 'hidden',
     }}>
-      {/* Top border */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: 3,
         background: `linear-gradient(90deg, ${PRIMARY}, #8BAFB1)`,
       }} />
 
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
@@ -315,11 +321,10 @@ const DeptCard = ({
           color: dept.isActive ? SUCCESS : WARNING,
         }}>
           <span style={{ width: 5, height: 5, borderRadius: '50%', background: dept.isActive ? SUCCESS : WARNING }} />
-          {dept.isActive ? t.active : t.inactive}
+          {dept.isActive ? T[lang].active : T[lang].inactive}
         </span>
       </div>
 
-      {/* Doctors count */}
       {dept.doctorsCount !== undefined && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -333,7 +338,6 @@ const DeptCard = ({
         </div>
       )}
 
-      {/* Actions */}
       {hasPermission('departments.manage') && (
         <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
           <button
@@ -365,7 +369,7 @@ const DeptCard = ({
               cursor: 'pointer', transition: 'all 0.2s ease',
             }}
           >
-            {dept.isActive ? (isAr ? '⏸ تعطيل' : '⏸ Disable') : (isAr ? '▶ تفعيل' : '▶ Enable')}
+            {dept.isActive ? (T[lang].active === 'نشط' ? '⏸ تعطيل' : '⏸ Disable') : (T[lang].active === 'نشط' ? '▶ تفعيل' : '▶ Enable')}
           </button>
           <button
             onClick={onDelete}
@@ -383,7 +387,6 @@ const DeptCard = ({
   )
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────
 export default function Departments() {
   const navigate = useNavigate()
   const [departments, setDepartments] = useState<Department[]>([])
@@ -392,6 +395,16 @@ export default function Departments() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [modalOpen, setModalOpen] = useState(false)
   const [editingDept, setEditingDept] = useState<Department | null>(null)
+  const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+
+  // ✅ Column definitions للطباعة والتصدير
+  const columnDefs: ColumnDef[] = [
+    { key: 'name', label: T[lang].title, locked: true },
+    { key: 'type', label: T[lang].types[0] },
+    { key: 'doctors', label: T[lang].doctors },
+    { key: 'status', label: T[lang].active },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('departments-columns', columnDefs)
 
   useEffect(() => {
     const styleId = 'cura-departments-css'
@@ -429,12 +442,13 @@ export default function Departments() {
   }
 
   const handleDelete = async (id: string) => {
+    const t = T[lang]
     if (!confirm(t.deleteConfirm)) return
     try {
       await api.delete(`/departments/${id}`)
       setDepartments(prev => prev.filter(d => d.id !== id))
     } catch {
-      alert(isAr ? 'حدث خطأ أثناء الحذف' : 'Error deleting department')
+      alert(lang === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting department')
     }
   }
 
@@ -445,7 +459,44 @@ export default function Departments() {
         d.id === id ? { ...d, isActive: !d.isActive } : d
       ))
     } catch {
-      alert(isAr ? 'حدث خطأ' : 'An error occurred')
+      alert(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
+    }
+  }
+
+  // ✅ تصدير
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    setDownloading(format)
+    try {
+      const rows = filtered.map(d => ({
+        name: d.name,
+     type: (T[lang].types as any)[d.type] || '—',
+        doctors: d.doctorsCount || 0,
+        status: d.isActive ? T[lang].active : T[lang].inactive,
+      }))
+
+      const response = await api.post(
+        `/export/${format}`,
+        {
+          title: T[lang].title,
+          columns: columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label),
+          rows: rows.map(r =>
+            columnDefs.filter(c => visibleKeys.has(c.key)).map(c => String(r[c.key as keyof typeof r] || '—'))
+          ),
+          isRtl: lang === 'ar',
+        },
+        { responseType: 'blob' }
+      )
+
+      const url = URL.createObjectURL(response.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `departments.${format === 'excel' ? 'xlsx' : 'pdf'}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert(lang === 'ar' ? 'فشل التصدير' : 'Export failed')
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -474,7 +525,6 @@ export default function Departments() {
     }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
-        {/* Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 24,
@@ -517,7 +567,25 @@ export default function Departments() {
           )}
         </div>
 
-        {/* Search */}
+        {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }} className="no-print">
+          <button onClick={() => window.print()}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+            🖨️ {t.print}
+          </button>
+          <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+            {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+          </button>
+          <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+            {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+          </button>
+          <div style={{ marginLeft: 'auto' }}>
+            <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+          </div>
+        </div>
+
         <div style={{ marginBottom: 24, position: 'relative', maxWidth: 400 }}>
           <input
             type="text"
@@ -537,7 +605,6 @@ export default function Departments() {
           }}>🔍</span>
         </div>
 
-        {/* Grid */}
         {filtered.length === 0 ? (
           <div style={{
             background: CARD_BG, border: `1px solid ${BORDER}`,
@@ -578,7 +645,6 @@ export default function Departments() {
         )}
       </div>
 
-      {/* Modal */}
       <DepartmentModal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setEditingDept(null) }}

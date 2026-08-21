@@ -1,15 +1,32 @@
 <!doctype html>
-<html lang="ar">  <!-- ✅ أو en حسب الافتراضي -->
+<html lang="ar">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- ✅ عدّل هذا -->
-    <title>CURA — نظام إدارة العيادات</title>
-    <meta name="description" content="نظام إدارة العيادات الذكي — المواعيد والمرضى والأطباء في مكان واحد" />
+    <!-- 🔐 Content Security Policy -->
+<meta
+  http-equiv="Content-Security-Policy"
+  content="
+    default-src 'self';
+    script-src 'self' 'wasm-unsafe-eval';
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+    img-src 'self' data: https:;
+    font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:;
+    connect-src 'self' http://localhost:5192 https://cdn.jsdelivr.net;
+    base-uri 'self';
+    form-action 'self';
+"
+/>
 
+    <!-- 🔐 أمان إضافي -->
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    
     <!-- PWA -->
     <meta name="theme-color" content="#5B8C8F" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -17,9 +34,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="CURA" />
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-
-    <!-- ✅ أضف manifest -->
     <link rel="manifest" href="/manifest.webmanifest" />
+
+    <title>CURA — نظام إدارة العيادات</title>
+    <meta name="description" content="نظام إدارة العيادات الذكي — المواعيد والمرضى والأطباء في مكان واحد" />
   </head>
   <body>
     <div id="root"></div>

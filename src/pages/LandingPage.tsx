@@ -296,7 +296,8 @@ const T = {
     },
     footer:{
       tagline:'منصة إدارة عيادات مصمّمة للعالم العربي',
-      rights:'© 2025 Cura. جميع الحقوق محفوظة.',
+      info:'هاتف  +962 7961 39705 | بريد إلكتروني: infocura100@gmail.com',
+      rights:'© 2026 Cura. جميع الحقوق محفوظة.',
       links:['المميزات','الأسعار','سياسة الخصوصية','شروط الاستخدام'],
     },
   },
@@ -361,7 +362,8 @@ const T = {
     },
     footer:{
       tagline:'Clinic management built for the Arab world',
-      rights:'© 2025 Cura. All rights reserved.',
+      info:'Phone  +962 7961 39705 | Email: infocura100@gmail.com',
+      rights:'© 2026 Cura. All rights reserved.',
       links:['Features','Pricing','Privacy Policy','Terms of Service'],
     },
   },
@@ -868,6 +870,7 @@ export default function LandingPage() {
                 <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:20, color:'#FFF' }}>Cura</span>
               </div>
               <p style={{ fontSize:12, color:'rgba(255,255,255,0.4)', maxWidth:240, lineHeight:1.6 }}>{t.footer.tagline}</p>
+              <p style={{ fontSize:12, color:'rgba(255,255,255,0.4)', maxWidth:240, lineHeight:1.6 }}>{t.footer.info}</p>
             </div>
 
             {/* Links */}

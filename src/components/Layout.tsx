@@ -297,6 +297,43 @@ const layoutCss = `
 @media (min-width: 769px) {
   .sidebar-mobile, .sidebar-overlay { display: none !important; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   ✅ الطباعة — تخفي كل شي إلا المحتوى الفعلي (بدون قائمة جانبية،
+   شريط علوي، أزرار...) — تشتغل تلقائياً بكل صفحة بالنظام، بدون
+   أي تعديل إضافي لأي صفحة لحالها
+   ══════════════════════════════════════════════════════════ */
+@media print {
+  .sidebar, .sidebar-mobile, .sidebar-overlay, .top-bar,
+  .logout-btn, .logout-top-btn, .notification-bell, .notification-dropdown,
+  .no-print, button {
+    display: none !important;
+  }
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .layout-shell {
+    display: block !important;
+  }
+  body, .layout-shell, .main-content {
+    background: #FFFFFF !important;
+  }
+  * {
+    box-shadow: none !important;
+  }
+}
+
+/* ✅ رأس طباعة موحّد (شعار العيادة + الاسم) — يُستخدم عبر مكوّن <PrintHeader/>
+   بأي صفحة، مخفي بالشاشة العادية، يظهر بس وقت الطباعة */
+.print-only-header { display: none; }
+@media print {
+  .print-only-header {
+    display: flex !important; align-items: center; justify-content: space-between;
+    gap: 14px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #DCE5E5;
+  }
+}
 `
 
 const PRIMARY = '#5B8C8F'
@@ -326,29 +363,183 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
   const [, setLang] = useState(lang)
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
+const allMenuItems = [
+  // =========================
+  // الرئيسية
+  // =========================
+  {
+    path: '/dashboard',
+    labelAr: 'الرئيسية',
+    labelEn: 'Home',
+    icon: 'ti-layout-dashboard',
+    permission: null,
+    superAdminOnly: false,
+  },
 
-  const allMenuItems = [
-    { path: '/dashboard',           labelAr: 'الرئيسية',                labelEn: 'Home',               icon: 'ti-layout-dashboard',     permission: null,                            superAdminOnly: false },
-    { path: '/patients',            labelAr: 'المرضى'  ,                labelEn: 'Patients',           icon: 'ti-users',                permission: 'patients.view',                 superAdminOnly: false },
-    { path: '/doctors',             labelAr: 'الأطباء'  ,                labelEn: 'Doctors',            icon: 'ti-stethoscope',          permission: 'doctors.view',                  superAdminOnly: false },
-    { path: '/appointments',        labelAr: 'المواعيد',                labelEn: 'Appointments',       icon: 'ti-calendar',             permission: 'appointments.view',             superAdminOnly: false },
-    { path: '/schedules',           labelAr: 'جداول الدوام',            labelEn: 'Schedules',          icon: 'ti-calendar-time',        permission: 'schedules.view',                superAdminOnly: false },
-    { path: '/departments',         labelAr: 'الأقسام',                   labelEn: 'Departments',        icon: 'ti-building-hospital',   permission: 'departments.manage',             superAdminOnly: false },
-    { path: '/treatment-templates', labelAr: 'قوالب الزيارة',           labelEn: 'Visit Templates',    icon: 'ti-clipboard-list',       permission: 'treatmenttemplates.manage',     superAdminOnly: false },
-    { path: '/insurance',           labelAr: 'التأمين الصحي',           labelEn: 'Health Insurance',   icon: 'ti-heart-handshake',      permission: 'insurance.view',                superAdminOnly: false }, 
-     /*{ path: '/queue',              labelAr: 'قائمة الانتظار',         labelEn: 'Queue',              icon: 'ti-list',                 permission: 'appointments.view',             superAdminOnly: false },*/
-    { path: '/reports',             labelAr: 'التقارير',                labelEn: 'Reports',            icon: 'ti-chart-bar',            permission: 'reports.view',                   superAdminOnly: false },
-    { path: '/users',               labelAr: 'المستخدمون',              labelEn: 'Users',              icon: 'ti-users-group',          permission: 'users.view',                     superAdminOnly: false },
-    { path: '/permissions',         labelAr: 'الصلاحيات',                labelEn: 'Permissions',        icon: 'ti-shield-lock',          permission: 'settings.view',                  superAdminOnly: false },
-    { path: '/settings',            labelAr: 'الإعدادات',                labelEn: 'Settings',           icon: 'ti-settings',             permission: 'settings.view',                  superAdminOnly: false },
-    { path: '/superadmin/clinics',  labelAr: 'العيادات',                labelEn: 'Clinics',            icon: 'ti-building-hospital',    permission: null,                             superAdminOnly: true  },
-    { path: '/superadmin/plans',    labelAr: 'الخطط',                   labelEn: 'Plans',              icon: 'ti-diamond',              permission: null,                             superAdminOnly: true  },
-    { path:'/payments',             labelAr:'المدفوعات',                labelEn:'Payments',            icon:'ti-cash',                  permission: 'payments.view',                  superAdminOnly: false},
-    { path:'/staff',                labelAr:' فريق العمل',              labelEn:'Staff',               icon:'ti-users' ,                permission: 'staff.view',                     superAdminOnly: false},
-    { path: '/settlements',         labelAr: 'التسويات المالية',        labelEn: 'Settlements',       icon: 'ti-cash-banknote',        permission: 'settlements.manage',             superAdminOnly: false },
-    { path: '/daily',               labelAr: 'جدول اليوم'      ,        labelEn: "Today's Schedule",   icon: 'ti-calendar-event',      permission: null,                              superAdminOnly: false },
-  ]
+  // =========================
+  // إدارة المرضى والمواعيد
+  // =========================
+  {
+    path: '/patients',
+    labelAr: 'المرضى',
+    labelEn: 'Patients',
+    icon: 'ti-users',
+    permission: 'patients.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/appointments',
+    labelAr: 'المواعيد',
+    labelEn: 'Appointments',
+    icon: 'ti-calendar',
+    permission: 'appointments.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/daily',
+    labelAr: 'جدول اليوم',
+    labelEn: "Today's Schedule",
+    icon: 'ti-calendar-event',
+    permission: 'daily.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/doctors',
+    labelAr: 'الأطباء',
+    labelEn: 'Doctors',
+    icon: 'ti-stethoscope',
+    permission: 'doctors.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/staff',
+    labelAr: 'فريق العمل',
+    labelEn: 'Staff',
+    icon: 'ti-users',
+    permission: 'staff.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/schedules',
+    labelAr: 'جداول الدوام',
+    labelEn: 'Schedules',
+    icon: 'ti-calendar-time',
+    permission: 'schedules.view',
+    superAdminOnly: false,
+  },
 
+  // =========================
+  // إدارة العيادة
+  // =========================
+  {
+    path: '/departments',
+    labelAr: 'الأقسام',
+    labelEn: 'Departments',
+    icon: 'ti-building-hospital',
+    permission: 'departments.manage',
+    superAdminOnly: false,
+  },
+  {
+    path: '/treatment-templates',
+    labelAr: 'قوالب الزيارة',
+    labelEn: 'Visit Templates',
+    icon: 'ti-clipboard-list',
+    permission: 'treatmenttemplates.manage',
+    superAdminOnly: false,
+  },
+  {
+    path: '/insurance',
+    labelAr: 'التأمين الصحي',
+    labelEn: 'Health Insurance',
+    icon: 'ti-heart-handshake',
+    permission: 'insurance.view',
+    superAdminOnly: false,
+  },
+
+  // =========================
+  // المالية
+  // =========================
+  {
+    path: '/payments',
+    labelAr: 'المدفوعات',
+    labelEn: 'Payments',
+    icon: 'ti-cash',
+    permission: 'payments.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/settlements',
+    labelAr: 'التسويات المالية',
+    labelEn: 'Settlements',
+    icon: 'ti-cash-banknote',
+    permission: 'settlements.manage',
+    superAdminOnly: false,
+  },
+
+  // =========================
+  // التقارير
+  // =========================
+  {
+    path: '/reports',
+    labelAr: 'التقارير',
+    labelEn: 'Reports',
+    icon: 'ti-chart-bar',
+    permission: 'reports.view',
+    superAdminOnly: false,
+  },
+
+  // =========================
+  // إدارة المستخدمين والصلاحيات
+  // =========================
+  {
+    path: '/users',
+    labelAr: 'المستخدمون',
+    labelEn: 'Users',
+    icon: 'ti-users-group',
+    permission: 'users.view',
+    superAdminOnly: false,
+  },
+  {
+    path: '/permissions',
+    labelAr: 'الصلاحيات',
+    labelEn: 'Permissions',
+    icon: 'ti-shield-lock',
+    permission: 'settings.view',
+    superAdminOnly: false,
+  },
+
+  // =========================
+  // إعدادات النظام
+  // =========================
+  {
+    path: '/settings',
+    labelAr: 'الإعدادات',
+    labelEn: 'Settings',
+    icon: 'ti-settings',
+    permission: 'settings.view',
+    superAdminOnly: false,
+  },
+
+  // =========================
+  // Super Admin
+  // =========================
+  {
+    path: '/superadmin/clinics',
+    labelAr: 'العيادات',
+    labelEn: 'Clinics',
+    icon: 'ti-building-hospital',
+    permission: null,
+    superAdminOnly: true,
+  },
+  {
+    path: '/superadmin/plans',
+    labelAr: 'الخطط',
+    labelEn: 'Plans',
+    icon: 'ti-diamond',
+    permission: null,
+    superAdminOnly: true,
+  },
+]
   const menuItems = allMenuItems.filter(item => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
@@ -411,8 +602,13 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
         {/* Logout */}
         <button className="logout-btn" onClick={async () => {
           const refreshToken = localStorage.getItem('refreshToken')
+          // ✅ نحتفظ برابط العيادة قبل ما نمسح localStorage
+          const clinicSubdomain = localStorage.getItem('clinicSubdomain')
           try { const { default: api } = await import('../api/axios'); await api.post('/auth/logout', { refreshToken }) }
-          finally { localStorage.clear(); window.location.href = '/login' }
+          finally {
+            localStorage.clear()
+            window.location.href = clinicSubdomain ? `/login/${clinicSubdomain}` : '/login'
+          }
         }}>
           <i className="ti ti-logout" style={{ fontSize: 14 }} />
           {isAr ? 'تسجيل الخروج' : 'Sign Out'}
@@ -551,7 +747,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem('refreshToken')
-    try { await api.post('/auth/logout', { refreshToken }) } finally { localStorage.clear(); navigate('/login') }
+    // ✅ نحتفظ برابط العيادة قبل ما نمسح localStorage، عشان نرجع لصفحة دخول نفس العيادة
+    const clinicSubdomain = localStorage.getItem('clinicSubdomain')
+    try { await api.post('/auth/logout', { refreshToken }) }
+    finally {
+      localStorage.clear()
+      navigate(clinicSubdomain ? `/login/${clinicSubdomain}` : '/login')
+    }
   }
 
   return (

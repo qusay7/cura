@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+
+// ✅ غيّر getImageUrl مع debugging:
+const getImageUrl = (path?: string | null) => {
+  if (!path) return ''
+
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
+
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+
+  return `${window.location.origin}${normalizedPath}`
+}
  
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -500,6 +513,10 @@ export default function Settings() {
     ownerEmail: '',
     taxNumber: '',
   })
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Account Form
   const [accountForm, setAccountForm] = useState({
@@ -538,6 +555,7 @@ export default function Settings() {
       if (user.clinicId) {
         const clinicRes = await api.get(`/clinics/${user.clinicId}`)
         const c = clinicRes.data
+        setLogoUrl(c.logo || null)
         setClinicForm({
           name: c.name ?? '',
           phone: c.phone ?? '',
@@ -566,6 +584,35 @@ export default function Settings() {
     setClinicForm({ ...clinicForm, [e.target.name]: e.target.value })
   }
 
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  const handleLogoUpload = async () => {
+    if (!logoFile || !user.clinicId) return
+    setUploadingLogo(true); setError(''); setSuccess('')
+    try {
+      const formData = new FormData()
+      formData.append('file', logoFile)
+      const res = await api.post(`/clinics/${user.clinicId}/logo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setLogoUrl(res.data.logo)
+      setLogoFile(null)
+      setLogoPreview(null)
+      setSuccess(T[lang].saveSuccess)
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.response?.data || T[lang].error)
+      setTimeout(() => setError(''), 3000)
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
   const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAccountForm({ ...accountForm, [e.target.name]: e.target.value })
   }
@@ -577,6 +624,20 @@ export default function Settings() {
     setSaving(true)
     try {
       await api.put(`/clinics/${user.clinicId}`, clinicForm)
+
+      // ✅ لو فيه صورة شعار مختارة بانتظار الرفع، نرفعها هنا كمان — عشان "حفظ" وحد
+      // يكفي لكل شي، بدل ما يحتاج المستخدم يتذكر يضغط زر "رفع الشعار" منفصل
+      if (logoFile && user.clinicId) {
+        const formData = new FormData()
+        formData.append('file', logoFile)
+        const logoRes = await api.post(`/clinics/${user.clinicId}/logo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        setLogoUrl(logoRes.data.logo)
+        setLogoFile(null)
+        setLogoPreview(null)
+      }
+
       setSuccess(T[lang].saveSuccess)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
@@ -697,6 +758,47 @@ export default function Settings() {
         {/* Clinic Tab */}
         {activeTab === 'clinic' && (
           <form onSubmit={handleSaveClinic}>
+            <div className="form-card">
+              <h3 className="form-title">🖼️ {isAr ? 'شعار العيادة' : 'Clinic Logo'}</h3>
+              <p style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: -8, marginBottom: 18 }}>
+                {isAr ? 'يظهر بصفحة تسجيل الدخول وبالمستندات المطبوعة (فواتير، تقارير)' : 'Shown on the login page and printed documents (invoices, reports)'}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+                <div style={{ width: 96, height: 96, borderRadius: 16, border: `1px solid ${BORDER}`, background: '#F8FAFA', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {logoPreview || logoUrl ? (
+<img 
+  src={logoPreview || getImageUrl(logoUrl)} 
+  alt="logo"
+  onError={(e) => {
+    console.error('Image failed to load:', (e.target as HTMLImageElement).src)
+  }}
+  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+/>                 ) : (
+                    <span style={{ fontSize: 32, opacity: 0.3 }}>🏥</span>
+                  )}
+                </div>
+                <div>
+                  <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={handleLogoSelect} id="logo-input" style={{ display: 'none' }} />
+                  <label htmlFor="logo-input" style={{ display: 'inline-block', cursor: 'pointer', marginBottom: 8, background: '#E8F0F0', color: '#5B8C8F', border: 'none', borderRadius: 12, padding: '9px 18px', fontSize: 13, fontWeight: 600 }}>
+                    {isAr ? 'اختر صورة' : 'Choose Image'}
+                  </label>
+                  {logoFile && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <button type="button" onClick={handleLogoUpload} disabled={uploadingLogo} className="btn-primary" style={{ padding: '8px 16px', fontSize: 12.5 }}>
+                        {uploadingLogo ? T[lang].saving : (isAr ? 'رفع الشعار' : 'Upload Logo')}
+                      </button>
+                      <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null) }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, fontSize: 12, cursor: 'pointer' }}>
+                        {isAr ? 'إلغاء' : 'Cancel'}
+                      </button>
+                    </div>
+                  )}
+                  <p style={{ fontSize: 10.5, color: TEXT_MUTED, marginTop: 6 }}>
+                    {isAr ? 'PNG, JPG, WEBP, SVG — حتى 5 ميجا' : 'PNG, JPG, WEBP, SVG — up to 5 MB'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="form-card">
               <h3 className="form-title">🏥 {t.clinicInfo}</h3>
               <div className="form-grid">

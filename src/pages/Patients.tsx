@@ -4,6 +4,9 @@ import api from '../api/axios'
 import type { Patient } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
+import PrintHeader from '../components/PrintHeader'
+import ExportBar from '../components/ExportBar'
+import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -385,6 +388,18 @@ export default function Patients() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
+  // ✅ إظهار/إخفاء الأعمدة
+  const columnDefs: ColumnDef[] = [
+    { key: 'number', label: t.patientNumber },
+    { key: 'name', label: t.name, locked: true },
+    { key: 'phone', label: t.phone },
+    { key: 'gender', label: t.gender },
+    { key: 'age', label: t.age },
+    { key: 'createdAt', label: t.createdAt },
+    { key: 'actions', label: t.actions, locked: true },
+  ]
+  const { visibleKeys, toggle } = useColumnVisibility('patients-table', columnDefs)
+
   if (loading) {
     return (
       <PatientsLoadingScreen 
@@ -415,8 +430,11 @@ export default function Patients() {
     >
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
+        {/* ✅ رأس الطباعة الموحّد */}
+        <PrintHeader reportTitle={t.title} lang={lang} />
+
         {/* ── Header ── */}
-        <div className="patients-header" style={{
+        <div className="patients-header no-print" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -502,7 +520,7 @@ export default function Patients() {
         </div>
 
         {/* ── Search Bar ── */}
-        <div style={{ marginBottom: 20 }}>
+        <div className="no-print" style={{ marginBottom: 20 }}>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -556,6 +574,10 @@ export default function Patients() {
         </div>
 
         {/* ── Patients Table ── */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }} className="no-print">
+          <ExportBar endpoint="/patients/export" lang={lang} fileName="patients" />
+          <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
+        </div>
         <div className="patients-table-container" style={{
           background: CARD_BG,
           border: `1px solid ${BORDER}`,
@@ -574,33 +596,17 @@ export default function Patients() {
                   borderBottom: `1px solid ${BORDER}`,
                   background: PRIMARY_SOFT,
                 }}>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.patientNumber}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.name}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.phone}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.gender}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.age}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.createdAt}
-                  </th>
-                  <th style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
-                    {t.actions}
-                  </th>
+                  {columnDefs.filter(c => visibleKeys.has(c.key)).map(c => (
+                    <th key={c.key} style={{ padding: '14px 16px', textAlign: isAr ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: TEXT_MUTED }}>
+                      {c.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{
+                    <td colSpan={columnDefs.filter(c => visibleKeys.has(c.key)).length} style={{
                       padding: '48px 24px',
                       textAlign: 'center',
                     }}>
@@ -631,89 +637,64 @@ export default function Patients() {
                     </td>
                   </tr>
                 ) : (
-                  filteredPatients.map((patient) => (
-                    <tr 
-                      key={patient.id} 
-                      className="patient-row"
-                      style={{
-                        borderBottom: `1px solid ${BORDER}`,
-                        transition: 'background 0.2s ease',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = PRIMARY_SOFT
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent'
-                      }}
-                      onClick={() => navigate(`/patients/${patient.id}`)}
-                    >
-                      <td style={{ padding: '14px 16px' }}>
+                  filteredPatients.map((patient) => {
+                    const cellsByKey: Record<string, React.ReactNode> = {
+                      number: (
                         <span style={{
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          fontWeight: 500,
-                          color: PRIMARY,
-                          background: `${PRIMARY}10`,
-                          padding: '2px 6px',
-                          borderRadius: 6,
+                          fontFamily: 'monospace', fontSize: 13, fontWeight: 500, color: PRIMARY,
+                          background: `${PRIMARY}10`, padding: '2px 6px', borderRadius: 6,
                         }}>
                           #{patient.patientNumber}
                         </span>
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: TEXT_DARK,
-                        }}>
+                      ),
+                      name: (
+                        <span style={{ fontSize: 14, fontWeight: 500, color: TEXT_DARK }}>
                           {patient.fullName}
                         </span>
-                      </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
-                        {patient.phone || '—'}
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <GenderBadge gender={patient.gender} lang={lang} />
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <AgeBadge dateOfBirth={patient.dateOfBirth} lang={lang} />
-                      </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: TEXT_MUTED }}>
-                        {formatDate(patient.createdAt)}
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
+                      ),
+                      phone: patient.phone || '—',
+                      gender: <GenderBadge gender={patient.gender} lang={lang} />,
+                      age: <AgeBadge dateOfBirth={patient.dateOfBirth} lang={lang} />,
+                      createdAt: formatDate(patient.createdAt),
+                      actions: (
                         <button
+                          className="no-print"
                           onClick={(e) => {
                             e.stopPropagation()
                             navigate(`/patients/${patient.id}`)
                           }}
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            color: PRIMARY,
-                            fontSize: 12,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '4px 8px',
-                            borderRadius: 8,
-                            transition: 'all 0.2s ease',
+                            background: 'none', border: 'none', color: PRIMARY, fontSize: 12,
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '4px 8px', borderRadius: 8, transition: 'all 0.2s ease',
                           }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = PRIMARY_SOFT
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent'
-                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = PRIMARY_SOFT }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                         >
                           <span>👁️</span>
                           {t.view}
                         </button>
-                      </td>
-                    </tr>
-                  ))
+                      ),
+                    }
+                    return (
+                      <tr
+                        key={patient.id}
+                        className="patient-row"
+                        style={{
+                          borderBottom: `1px solid ${BORDER}`,
+                          transition: 'background 0.2s ease',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = PRIMARY_SOFT }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                        onClick={() => navigate(`/patients/${patient.id}`)}
+                      >
+                        {columnDefs.filter(c => visibleKeys.has(c.key)).map(c => (
+                          <td key={c.key} style={{ padding: '14px 16px' }}>{cellsByKey[c.key]}</td>
+                        ))}
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
