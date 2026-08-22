@@ -6,10 +6,6 @@ import {
   BarChart3, Building2, Globe, Lock, Cloud, Wrench, Menu, X, Loader2,
 } from 'lucide-react'
 
-// ── API ─────────────────────────────────────────────────────────────────────
-// ⚠️ عدّل هذا لو متغير البيئة عندك باسم مختلف (مثلاً VITE_BACKEND_URL).
-// لو تركته فاضي، الطلب يروح لنفس أصل الفرونت إند (مفيد لو عندك Proxy بـ vite.config.ts).
- 
 interface ApiPlan {
   id: string
   name: string
@@ -284,7 +280,7 @@ const T = {
       sub:'خطط مرنة تنمو مع عيادتك — جميعها تشمل الدعم الفني المجاني ومدير حساب مخصص',
       monthly:'شهري', yearly:'سنوي', save:'وفّر مقابل الاشتراك السنوي',
       currency:'د.أ',
-      ctaDefault:'ابدأ الآن', ctaFeatured:'ابدأ مجاناً 14 يوماً',
+      ctaDefault:'تواصل معنا', ctaFeatured:'اطلب تجربة مجانية',
       loading:'جاري تحميل الخطط...',
       error:'تعذّر تحميل الخطط حالياً، يرجى المحاولة لاحقاً',
       empty:'لا توجد خطط متاحة حالياً',
@@ -292,7 +288,7 @@ const T = {
     cta:{
       title:'جاهز لتحويل تجربة مرضاك؟',
       sub:'انضم إلى أكثر من 500 عيادة تثق في Cura يومياً',
-      btn:'ابدأ تجربتك المجانية — 14 يوماً بلا التزام',
+      btn:'تواصل معنا لبدء تجربتك المجانية',
     },
     footer:{
       tagline:'منصة إدارة عيادات مصمّمة للعالم العربي',
@@ -350,7 +346,7 @@ const T = {
       sub:'Flexible plans that scale with your clinic — all include free technical support and onboarding',
       monthly:'Monthly', yearly:'Yearly', save:'Save with annual billing',
       currency:'JD',
-      ctaDefault:'Get started', ctaFeatured:'Start 14-day free trial',
+      ctaDefault:'Contact us', ctaFeatured:'Request free trial',
       loading:'Loading plans...',
       error:'Could not load plans right now, please try again later',
       empty:'No plans available right now',
@@ -358,7 +354,7 @@ const T = {
     cta:{
       title:'Ready to transform your patient experience?',
       sub:'Join 500+ clinics that rely on Cura every day',
-      btn:'Start your free 14-day trial — no commitment',
+      btn:'Contact us to start your free trial',
     },
     footer:{
       tagline:'Clinic management built for the Arab world',
@@ -391,7 +387,7 @@ export default function LandingPage() {
   }, [])
 
   // ── Fetch real plans from the API instead of hardcoded pricing ──
- useEffect(() => {
+  useEffect(() => {
     let cancelled = false
     async function loadPlans() {
       setPlansLoading(true)
@@ -418,9 +414,23 @@ export default function LandingPage() {
 
   const t    = T[lang]
   const isAr = lang === 'ar'
+
   const scrollTo = (id: string) => {
     setMobileOpen(false)
     document.getElementById(id)?.scrollIntoView({ behavior:'smooth' })
+  }
+
+  // ── إنشاء العيادة يتم عبر التواصل المباشر، لا بتسجيل ذاتي ──
+  const WHATSAPP = 'https://wa.me/962796139705'
+
+  const contactSales = () => {
+    setMobileOpen(false)
+    window.open(
+      `${WHATSAPP}?text=${encodeURIComponent(
+        isAr ? 'مرحباً، أرغب بتجربة نظام Cura لعيادتي' : 'Hello, I would like to try Cura for my clinic'
+      )}`,
+      '_blank'
+    )
   }
 
   const LangBtn = () => (
@@ -464,7 +474,7 @@ export default function LandingPage() {
               <LangBtn />
               <div style={{ width:1, height:20, background:C.border }} />
               <span className="nav-item" onClick={() => navigate('/login')}>{t.nav.login}</span>
-              <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding:'9px 22px', fontSize:13, borderRadius:10 }}>{t.nav.cta}</button>
+              <button className="btn-primary" onClick={contactSales} style={{ padding:'9px 22px', fontSize:13, borderRadius:10 }}>{t.nav.cta}</button>
             </div>
 
             {/* Mobile controls */}
@@ -515,7 +525,8 @@ export default function LandingPage() {
                   borderBottom:`1px solid ${C.border}` }}>
                 {t.nav.login}
               </button>
-              <button className="btn-primary" onClick={() => { setMobileOpen(false); navigate('/login') }}
+
+              <button className="btn-primary" onClick={contactSales}
                 style={{ marginTop:12, justifyContent:'center' }}>
                 {t.nav.cta}
               </button>
@@ -558,7 +569,7 @@ export default function LandingPage() {
               </p>
 
               <div className="fu d3" style={{ display:'flex', gap:14, flexWrap:'wrap', marginBottom:48 }}>
-                <button className="btn-primary" onClick={() => navigate('/login')} style={{ fontSize:15, padding:'13px 28px' }}>{t.hero.cta1}</button>
+                <button className="btn-primary" onClick={contactSales} style={{ fontSize:15, padding:'13px 28px' }}>{t.hero.cta1}</button>
                 <button className="btn-ghost"   onClick={() => scrollTo('features')} style={{ fontSize:15, padding:'13px 26px' }}>{t.hero.cta2}</button>
               </div>
 
@@ -806,7 +817,7 @@ export default function LandingPage() {
                       ))}
                     </ul>
 
-                    <button onClick={() => navigate('/login')}
+                    <button onClick={contactSales}
                       style={{
                         width:'100%', padding:'14px', borderRadius:12,
                         border: plan.isFeatured ? 'none' : `1.5px solid ${C.border}`,
@@ -851,7 +862,7 @@ export default function LandingPage() {
             {t.cta.title}
           </h2>
           <p style={{ fontSize:17, color:'rgba(255,255,255,0.75)', marginBottom:40, lineHeight:1.7 }}>{t.cta.sub}</p>
-          <button className="btn-white" onClick={() => navigate('/login')} style={{ fontSize:15, padding:'15px 36px' }}>
+          <button className="btn-white" onClick={contactSales} style={{ fontSize:15, padding:'15px 36px' }}>
             {t.cta.btn}
           </button>
         </div>

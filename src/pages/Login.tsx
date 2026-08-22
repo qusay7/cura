@@ -543,7 +543,7 @@ if (data.role?.toLowerCase() === 'doctor') {
                 </button>
 
                 {/* Point 2: a clear, dedicated SuperAdmin entry point instead of a hidden typing trick */}
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:18, fontSize:12 }}>
+               {/* <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:18, fontSize:12 }}>
                   <span style={{ color:TM }}>{t.adminLinkText}</span>
                   <button
                     type="button"
@@ -554,7 +554,7 @@ if (data.role?.toLowerCase() === 'doctor') {
                     {t.adminLinkCta}
                   </button>
                 </div>
-
+*/}
                 {/* Divider */}
                 <div style={{ display:'flex', alignItems:'center', gap:12, margin:'16px 0' }}>
                   <div style={{ flex:1, height:1, background:BR }} />

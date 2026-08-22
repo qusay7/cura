@@ -42,6 +42,7 @@ const globalCss = `
 .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 500; }
 .status-active { background: rgba(74,118,121,0.15); color: #4A7679; }
 .status-inactive { background: rgba(196,167,125,0.15); color: #C4A77D; }
+.status-expired { background: rgba(192,57,43,0.12); color: #C0392B; }
 .btn-primary { background: #5B8C8F; color: white; border: none; border-radius: 14px; padding: 10px 24px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; }
 .btn-primary:hover { background: #4A7679; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(91,140,143,0.2); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
@@ -65,7 +66,7 @@ const globalCss = `
   .form-grid { grid-template-columns: 1fr; }
   .form-container { padding: 20px; }
   .table-container { overflow-x: auto; }
-  .clinics-table { min-width: 600px; }
+  .clinics-table { min-width: 900px; }
 }
 `
 
@@ -76,6 +77,8 @@ const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
 const WARNING = '#C4A77D'
+const DANGER = '#C0392B'
+const SUCCESS = '#4A7679'
 
 interface Clinic {
   id: string
@@ -98,6 +101,20 @@ interface Plan {
   maxUsers: number
   isActive: boolean
 }
+
+interface SubscriptionRow {
+  id: string
+  clinicId: string
+  planName: string
+  billingCycle: string
+  pricePaid: number
+  startDate: string
+  endDate: string
+  isActive: boolean
+}
+
+const daysLeft = (endDate: string) =>
+  Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000)
 
 const getFieldLabels = (lang: 'ar' | 'en') => {
   const isAr = lang === 'ar'
@@ -131,6 +148,7 @@ export default function SuperAdminClinics() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [clinics, setClinics] = useState<Clinic[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
+  const [subs, setSubs] = useState<Record<string, SubscriptionRow>>({})
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
@@ -165,6 +183,7 @@ export default function SuperAdminClinics() {
   useEffect(() => {
     fetchClinics()
     fetchPlans()
+    fetchSubscriptions()
   }, [])
 
   const fetchClinics = async () => {
@@ -185,7 +204,21 @@ export default function SuperAdminClinics() {
     } catch {}
   }
 
-const handleSubmit = async (e: React.FormEvent) => {
+  // ✅ يجلب كل الاشتراكات ويحتفظ بالأحدث لكل عيادة
+  // (GetAll يرجّع الاشتراكات القديمة والملغاة أيضاً)
+  const fetchSubscriptions = async () => {
+    try {
+      const res = await api.get<SubscriptionRow[]>('/subscriptions')
+      const map: Record<string, SubscriptionRow> = {}
+      for (const s of res.data) {
+        const cur = map[s.clinicId]
+        if (!cur || new Date(s.endDate) > new Date(cur.endDate)) map[s.clinicId] = s
+      }
+      setSubs(map)
+    } catch {}
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -205,10 +238,10 @@ const handleSubmit = async (e: React.FormEvent) => {
     setSaving(true)
     try {
       // 1 — إنشاء العيادة
-        const clinicRes = await api.post('/clinics', form)
-        const clinic = clinicRes.data
-        console.log('Clinic created:', clinic)
-        console.log('Clinic ID:', clinic.id)
+      const clinicRes = await api.post('/clinics', form)
+      const clinic = clinicRes.data
+      console.log('Clinic created:', clinic)
+      console.log('Clinic ID:', clinic.id)
 
       // 2 — إنشاء ClinicAdmin
       await api.post('/users', {
@@ -239,10 +272,9 @@ const handleSubmit = async (e: React.FormEvent) => {
       await api.post(`/roles/seed-defaults/${clinic.id}`)
 
       // ✅ 5 — إنشاء الأقسام الافتراضية
- 
-console.log('Calling departments seed for:', clinic.id)
-const deptRes = await api.post(`/departments/seed-defaults/${clinic.id}`)
-console.log('Departments result:', deptRes.data)
+      console.log('Calling departments seed for:', clinic.id)
+      const deptRes = await api.post(`/departments/seed-defaults/${clinic.id}`)
+      console.log('Departments result:', deptRes.data)
 
       // ✅ 6 — إنشاء قوالب الزيارة الافتراضية (كشف/مراجعة/استشارة/متابعة)
       console.log('Calling templates seed for:', clinic.id)
@@ -259,6 +291,7 @@ console.log('Departments result:', deptRes.data)
       setSelectedPlan('')
       setBillingCycle('monthly')
       fetchClinics()
+      fetchSubscriptions()
       setTimeout(() => setSuccess(''), 12000)
     } catch (err: any) {
       setError(err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
@@ -267,7 +300,7 @@ console.log('Departments result:', deptRes.data)
       setSaving(false)
     }
   }
-  
+
   const handleToggle = async (id: string) => {
     try {
       await api.patch(`/clinics/${id}/toggle`)
@@ -334,6 +367,7 @@ console.log('Departments result:', deptRes.data)
         : `✅ Subscription renewed for "${renewClinic.name}" — valid until ${new Date(res.data.endDate).toLocaleDateString('en-US')}`)
       setTimeout(() => setSuccess(''), 8000)
       setRenewClinic(null)
+      fetchSubscriptions()
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تجديد الاشتراك' : 'Failed to renew subscription'))
     } finally {
@@ -344,35 +378,41 @@ console.log('Departments result:', deptRes.data)
   const fields = getFieldLabels(lang)
 
   const t = {
-    title:       lang === 'ar' ? 'إدارة العيادات'     : 'Clinics Management',
-    addClinic:   lang === 'ar' ? 'إضافة عيادة'        : 'Add Clinic',
-    newClinic:   lang === 'ar' ? 'عيادة جديدة'        : 'New Clinic',
-    save:        lang === 'ar' ? 'حفظ العيادة'        : 'Save Clinic',
-    cancel:      lang === 'ar' ? 'إلغاء'              : 'Cancel',
-    saving:      lang === 'ar' ? 'جاري الحفظ...'     : 'Saving...',
-    details:     lang === 'ar' ? 'تفاصيل'             : 'Details',
-    activate:    lang === 'ar' ? 'تفعيل'              : 'Activate',
-    deactivate:  lang === 'ar' ? 'إيقاف'              : 'Deactivate',
-    active:      lang === 'ar' ? 'نشطة'               : 'Active',
-    inactive:    lang === 'ar' ? 'موقوفة'             : 'Inactive',
-    clinicName:  lang === 'ar' ? 'العيادة'            : 'Clinic',
-    subdomain:   lang === 'ar' ? 'النطاق الفرعي'      : 'Subdomain',
-    owner:       lang === 'ar' ? 'المالك'             : 'Owner',
-    phone:       lang === 'ar' ? 'الهاتف'             : 'Phone',
-    status:      lang === 'ar' ? 'الحالة'             : 'Status',
-    actions:     lang === 'ar' ? 'إجراءات'            : 'Actions',
-    noClinics:   lang === 'ar' ? 'لا توجد عيادات مسجلة' : 'No clinics registered',
-    loading:     lang === 'ar' ? 'جاري التحميل...'   : 'Loading...',
-    planSection: lang === 'ar' ? 'خطة الاشتراك *'    : 'Subscription Plan *',
-    monthly:     lang === 'ar' ? 'شهري'              : 'Monthly',
-    yearly:      lang === 'ar' ? 'سنوي'              : 'Yearly',
-    noPlans:     lang === 'ar' ? 'لا توجد خطط متاحة — أنشئ خطة أولاً' : 'No plans available — create a plan first',
-    selected:    lang === 'ar' ? 'محدد'              : 'Selected',
-    doctors:     lang === 'ar' ? 'أطباء'             : 'doctors',
-    patients:    lang === 'ar' ? 'مرضى'              : 'patients',
-    sar:         lang === 'ar' ? 'ر.س'              : 'SAR',
-    mo:          lang === 'ar' ? 'شهر'              : 'mo',
-    yr:          lang === 'ar' ? 'سنة'              : 'yr',
+    title:        lang === 'ar' ? 'إدارة العيادات'     : 'Clinics Management',
+    addClinic:    lang === 'ar' ? 'إضافة عيادة'        : 'Add Clinic',
+    newClinic:    lang === 'ar' ? 'عيادة جديدة'        : 'New Clinic',
+    save:         lang === 'ar' ? 'حفظ العيادة'        : 'Save Clinic',
+    cancel:       lang === 'ar' ? 'إلغاء'              : 'Cancel',
+    saving:       lang === 'ar' ? 'جاري الحفظ...'     : 'Saving...',
+    details:      lang === 'ar' ? 'تفاصيل'             : 'Details',
+    activate:     lang === 'ar' ? 'تفعيل'              : 'Activate',
+    deactivate:   lang === 'ar' ? 'إيقاف'              : 'Deactivate',
+    active:       lang === 'ar' ? 'نشطة'               : 'Active',
+    inactive:     lang === 'ar' ? 'موقوفة'             : 'Inactive',
+    clinicName:   lang === 'ar' ? 'العيادة'            : 'Clinic',
+    subdomain:    lang === 'ar' ? 'النطاق الفرعي'      : 'Subdomain',
+    owner:        lang === 'ar' ? 'المالك'             : 'Owner',
+    phone:        lang === 'ar' ? 'الهاتف'             : 'Phone',
+    status:       lang === 'ar' ? 'الحالة'             : 'Status',
+    actions:      lang === 'ar' ? 'إجراءات'            : 'Actions',
+    noClinics:    lang === 'ar' ? 'لا توجد عيادات مسجلة' : 'No clinics registered',
+    loading:      lang === 'ar' ? 'جاري التحميل...'   : 'Loading...',
+    planSection:  lang === 'ar' ? 'خطة الاشتراك *'    : 'Subscription Plan *',
+    monthly:      lang === 'ar' ? 'شهري'              : 'Monthly',
+    yearly:       lang === 'ar' ? 'سنوي'              : 'Yearly',
+    noPlans:      lang === 'ar' ? 'لا توجد خطط متاحة — أنشئ خطة أولاً' : 'No plans available — create a plan first',
+    selected:     lang === 'ar' ? 'محدد'              : 'Selected',
+    doctors:      lang === 'ar' ? 'أطباء'             : 'doctors',
+    patients:     lang === 'ar' ? 'مرضى'              : 'patients',
+    sar:          lang === 'ar' ? 'ر.س'              : 'SAR',
+    mo:           lang === 'ar' ? 'شهر'              : 'mo',
+    yr:           lang === 'ar' ? 'سنة'              : 'yr',
+    subscription: lang === 'ar' ? 'الاشتراك'          : 'Subscription',
+    expiry:       lang === 'ar' ? 'تاريخ الانتهاء'    : 'Expiry Date',
+    noSub:        lang === 'ar' ? 'لا يوجد اشتراك'    : 'No subscription',
+    expired:      lang === 'ar' ? 'منتهي'             : 'Expired',
+    cancelled:    lang === 'ar' ? 'ملغي'              : 'Cancelled',
+    dayLeft:      lang === 'ar' ? 'يوم متبقٍ'         : 'days left',
   }
 
   const isAr = lang === 'ar'
@@ -577,6 +617,8 @@ console.log('Departments result:', deptRes.data)
                 <th>{t.subdomain}</th>
                 <th>{t.owner}</th>
                 <th>{t.phone}</th>
+                <th>{t.subscription}</th>
+                <th>{t.expiry}</th>
                 <th>{t.status}</th>
                 <th>{t.actions}</th>
               </tr>
@@ -584,54 +626,93 @@ console.log('Departments result:', deptRes.data)
             <tbody>
               {clinics.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={8}>
                     <div className="empty-state">
                       <div className="empty-icon">🏥</div>
                       <p style={{ fontSize: 14, color: TEXT_MUTED }}>{t.noClinics}</p>
                     </div>
                   </td>
                 </tr>
-              ) : clinics.map(clinic => (
-                <tr key={clinic.id} className="clinic-row">
-                  <td>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{clinic.name}</p>
-                    <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>
-                      {new Date(clinic.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
-                    </p>
-                  </td>
-                  <td style={{ fontSize: 13, color: TEXT_MUTED }}>{clinic.subdomain}</td>
-                  <td style={{ fontSize: 13, color: TEXT_MUTED }}>{clinic.ownerName || '—'}</td>
-                  <td style={{ fontSize: 13, color: TEXT_MUTED }}>{clinic.phone || '—'}</td>
-                  <td>
-                    <span className={`status-badge ${clinic.isActive ? 'status-active' : 'status-inactive'}`}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
-                      {clinic.isActive ? t.active : t.inactive}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button onClick={() => navigate(`/superadmin/clinics/${clinic.id}`)} className="btn-details">
-                        ✏️ {t.details}
-                      </button>
-                      <button
-                        onClick={() => handleResyncRoles(clinic.id, clinic.name)}
-                        className="btn-details"
-                        title={isAr
-                          ? 'أعد ربط أدوار هذه العيادة بقائمة الصلاحيات الحالية — مفيد لو أُنشئت العيادة قبل تهيئة الصلاحيات'
-                          : 'Re-link this clinic\'s roles to the current permissions list — useful if the clinic was created before permissions were initialized'}
-                      >
-                        🔄 {isAr ? 'تحديث الصلاحيات' : 'Resync Permissions'}
-                      </button>
-                      <button onClick={() => openRenewModal(clinic)} className="btn-details" style={{ color: '#16A34A', borderColor: '#16A34A40' }}>
-                        💳 {isAr ? 'تجديد الاشتراك' : 'Renew Subscription'}
-                      </button>
-                      <button onClick={() => handleToggle(clinic.id)} className={`btn-toggle ${clinic.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}>
-                        {clinic.isActive ? `🔴 ${t.deactivate}` : `🟢 ${t.activate}`}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              ) : clinics.map(clinic => {
+                const sub = subs[clinic.id]
+                const d = sub ? daysLeft(sub.endDate) : 0
+                const isExpired = sub ? (!sub.isActive || d <= 0) : false
+                const isWarn = sub ? (!isExpired && d <= 14) : false
+                const subColor = isExpired ? DANGER : isWarn ? WARNING : SUCCESS
+
+                return (
+                  <tr key={clinic.id} className="clinic-row">
+                    <td>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{clinic.name}</p>
+                      <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>
+                        {new Date(clinic.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                      </p>
+                    </td>
+                    <td style={{ fontSize: 13, color: TEXT_MUTED }}>{clinic.subdomain}</td>
+                    <td style={{ fontSize: 13, color: TEXT_MUTED }}>{clinic.ownerName || '—'}</td>
+                    <td style={{ fontSize: 13, color: TEXT_MUTED }}>{clinic.phone || '—'}</td>
+
+                    {/* ✅ الاشتراك */}
+                    <td>
+                      {sub ? (
+                        <>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT_DARK }}>{sub.planName}</p>
+                          <p style={{ margin: '2px 0 0', fontSize: 11, color: TEXT_MUTED }}>
+                            {sub.billingCycle === 'yearly' ? t.yearly : t.monthly} · {sub.pricePaid} {t.sar}
+                          </p>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 13, color: TEXT_MUTED }}>—</span>
+                      )}
+                    </td>
+
+                    {/* ✅ تاريخ الانتهاء */}
+                    <td>
+                      {sub ? (
+                        <>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: subColor, direction: 'ltr', textAlign: isAr ? 'right' : 'left' }}>
+                            {new Date(sub.endDate).toLocaleDateString('en-GB')}
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: 11, color: subColor }}>
+                            {!sub.isActive ? t.cancelled : d <= 0 ? t.expired : `${d} ${t.dayLeft}`}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="status-badge status-inactive">{t.noSub}</span>
+                      )}
+                    </td>
+
+                    <td>
+                      <span className={`status-badge ${clinic.isActive ? 'status-active' : 'status-inactive'}`}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
+                        {clinic.isActive ? t.active : t.inactive}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button onClick={() => navigate(`/superadmin/clinics/${clinic.id}`)} className="btn-details">
+                          ✏️ {t.details}
+                        </button>
+                        <button
+                          onClick={() => handleResyncRoles(clinic.id, clinic.name)}
+                          className="btn-details"
+                          title={isAr
+                            ? 'أعد ربط أدوار هذه العيادة بقائمة الصلاحيات الحالية — مفيد لو أُنشئت العيادة قبل تهيئة الصلاحيات'
+                            : 'Re-link this clinic\'s roles to the current permissions list — useful if the clinic was created before permissions were initialized'}
+                        >
+                          🔄 {isAr ? 'تحديث الصلاحيات' : 'Resync Permissions'}
+                        </button>
+                        <button onClick={() => openRenewModal(clinic)} className="btn-details" style={{ color: '#16A34A', borderColor: '#16A34A40' }}>
+                          💳 {isAr ? 'تجديد الاشتراك' : 'Renew Subscription'}
+                        </button>
+                        <button onClick={() => handleToggle(clinic.id)} className={`btn-toggle ${clinic.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}>
+                          {clinic.isActive ? `🔴 ${t.deactivate}` : `🟢 ${t.activate}`}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

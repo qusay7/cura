@@ -225,6 +225,21 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
+        // ✅ انتهاء الاشتراك — تنبيه وتسجيل خروج
+    if (
+      error.response?.status === 402 &&
+      (error.response?.data as any)?.code === 'SUBSCRIPTION_EXPIRED'
+    ) {
+      const msg = (error.response?.data as any)?.message
+        || 'انتهى اشتراك العيادة. يرجى التجديد للمتابعة.'
+      alert(msg)
+      clearAuthTokens()
+      localStorage.removeItem('user')
+      localStorage.removeItem('permissions')
+      window.location.href = '/login'
+      return Promise.reject(error)
+    }
+
     // ✅ معالجة 401 (انتهت الصلاحية)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
@@ -260,13 +275,11 @@ api.interceptors.response.use(
 
       try {
         // 🔄 طلب التجديد
-     const refreshResponse = await api.post(
-  '/auth/refresh',
-  { refreshToken },
-  {
-    withCredentials: true,
-  }
-)
+        const refreshResponse = await api.post(
+          '/auth/refresh',
+          { refreshToken },
+          { withCredentials: true }
+        )
 
         const { token, refreshToken: newRefreshToken, expiresIn } = refreshResponse.data
 
