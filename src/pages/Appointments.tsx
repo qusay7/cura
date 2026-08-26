@@ -186,7 +186,6 @@ const CustomDateInput = ({ value, onClick, placeholder }: { value?: string; onCl
 )
 
 // ─── Filter Bar ──────────────────────────────────────────────────────────────
-// ─── Filter Bar ──────────────────────────────────────────────────────────────
 const FilterBar = ({
   currentFilter, onFilterChange, statusFilter, onStatusFilterChange,
   searchPatient, onSearchPatientChange, searchDoctor, onSearchDoctorChange,
@@ -499,8 +498,10 @@ const FilterBar = ({
 }
 
 // ─── Payment Modal (موحّد لـ checkout و payLater) ────────────────────────────
-interface InvoiceItem { desc: string; price: string; insuranceRate: string; covered: boolean }
-const emptyItem = (): InvoiceItem => ({ desc: '', price: '', insuranceRate: '', covered: true })
+// ✅ كل بند بالفاتورة = نوع زيارة مختار من قوالب العلاج (TreatmentPlanTemplates)،
+// وعند الحفظ يُخزَّن كل بند بسطر مستقل لنفس الموعد
+interface InvoiceItem { templateId: string; desc: string; price: string; insuranceRate: string; covered: boolean }
+const emptyItem = (): InvoiceItem => ({ templateId: '', desc: '', price: '', insuranceRate: '', covered: true })
 const itemInsuranceAmount = (it: InvoiceItem) =>
   it.covered ? Math.round((parseFloat(it.price) || 0) * (parseFloat(it.insuranceRate) || 0) / 100 * 1000) / 1000 : 0
 
@@ -527,17 +528,21 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   // ننشئ وحدة جديدة، لأن AppointmentId فريد بجدول الدفعات وأي محاولة إنشاء ثانية بترمي خطأ
   const [existingPayment, setExistingPayment] = useState<any>(null)
 
-  // ✅ "نوع الزيارة الفعلي" — بوضع الخروج بس. يخلي الطبيب/الموظف يصحح النوع
-  // لو اتضح وقت الفحص إنه مختلف عن المحجوز أصلاً (يؤثر على التقارير وحساب حصة الطبيب)
-  const [visitTemplates, setVisitTemplates] = useState<{ id: string; name: string; nameEn: string | null }[]>([])
-  const [actualTemplateId, setActualTemplateId] = useState('')
+  // ✅ قوالب العلاج — مصدر أنواع الزيارات المتاحة كبنود للفاتورة
+  const [visitTemplates, setVisitTemplates] = useState<{ id: string; name: string; nameEn: string | null; firstVisitPrice: number | null; followUpPrice: number | null }[]>([])
+  // ✅ قائمة المواعيد ما بترجّع templateId — نجيبه من سجل الموعد نفسه
+  const [apptTemplateId, setApptTemplateId] = useState('')
 
   useEffect(() => {
-    if (mode !== 'checkout') return
-    setActualTemplateId((appointment as any)?.templateId || '')
     api.get('/treatmentplans/templates')
       .then(res => setVisitTemplates(res.data))
       .catch(() => setVisitTemplates([]))
+
+    api.get(`/appointments/${appointmentId}`)
+      .then(res => setApptTemplateId(res.data?.templateId || ''))
+      .catch(() => {})
+
+    if (mode !== 'checkout') return
 
     // ✅ نجيب ملاحظة الزيارة اللي أدخلها الطبيب وقت الدخول (شاشة "زيارة الطبيب") — تشخيص/
     // وصفة/موعد قادم — عشان ما يحتاج الموظف يعيد كتابتها وقت الخروج
@@ -577,12 +582,12 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
         setExistingPayment(existing)
         setPatientHasInsurance((existing.insuranceAmount ?? 0) > 0)
         const rate = existing.totalAmount > 0 ? String(Math.round((existing.insuranceAmount / existing.totalAmount) * 100)) : ''
-        setItems([{
-          desc: appointment?.type || '',
+        setItems(prev => prev.map((it, idx) => idx === 0 ? {
+          ...it,
           price: String(existing.totalAmount ?? price),
           insuranceRate: rate,
           covered: (existing.insuranceAmount ?? 0) > 0,
-        }])
+        } : it))
         setForm(prev => ({ ...prev, amountPaidNow: existing.amountPaid != null ? String(existing.amountPaid) : '' }))
         setLoadingInsurance(false)
         return
@@ -605,7 +610,12 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
         setPatientHasInsurance(hasIns)
         // ✅ نبدأ بافتراض "مشمول" لو المريض عنده تأمين نشط — والموظف يقدر يلغيه بضغطة
         // لو رد التأمين الفعلي يقول إن هذا البند بالذات مستثنى (زي الأسنان غالباً)
-        setItems([{ desc: appointment?.type || '', price: price ? String(price) : '', insuranceRate: rate, covered: hasIns }])
+        setItems(prev => prev.map((it, idx) => idx === 0 ? {
+          ...it,
+          price: price ? String(price) : '',
+          insuranceRate: rate,
+          covered: hasIns,
+        } : it))
         setLoadingInsurance(false)
       }
     }
@@ -613,6 +623,20 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointmentId])
+
+  // ✅ البند الأول افتراضياً = نوع الزيارة الفعلي للموعد، بعد ما توصل القوالب
+  useEffect(() => {
+    if (!visitTemplates.length) return
+    const typeName = (appointment?.type || '').trim().toLowerCase()
+    const tpl = visitTemplates.find(x => x.id === apptTemplateId)
+      || visitTemplates.find(x => x.name.trim().toLowerCase() === typeName
+        || (x.nameEn || '').trim().toLowerCase() === typeName)
+    if (!tpl) return
+    setItems(prev => prev.map((it, idx) => idx === 0
+      ? { ...it, templateId: tpl.id, desc: isAr ? tpl.name : (tpl.nameEn || tpl.name) }
+      : it))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visitTemplates, apptTemplateId])
 
   const totals = (() => {
     const totalAmount = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0)
@@ -626,6 +650,19 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
 
   const updateItem = (i: number, field: keyof InvoiceItem, value: string | boolean) =>
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it))
+  // ✅ اختيار نوع الزيارة للبند — الاسم والسعر يتعبّوا تلقائياً من القالب
+  const pickTemplate = (i: number, templateId: string) => {
+    const tpl = visitTemplates.find(x => x.id === templateId)
+    const tplPrice = tpl ? (tpl.firstVisitPrice ?? tpl.followUpPrice) : null
+    setItems(prev => prev.map((it, idx) => idx === i
+      ? {
+          ...it,
+          templateId,
+          desc: tpl ? (isAr ? tpl.name : (tpl.nameEn || tpl.name)) : '',
+          price: tplPrice != null ? String(tplPrice) : it.price,
+        }
+      : it))
+  }
   const toggleCovered = (i: number) =>
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, covered: !it.covered } : it))
   const addItemRow = () => setItems(prev => [...prev, { ...emptyItem(), covered: patientHasInsurance }])
@@ -634,14 +671,19 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   const submit = async (skip: boolean) => {
     setSaving(true); setError('')
     try {
-      // ✅ لو الموظف/الطبيب صحّح "نوع الزيارة الفعلي"، نحدّثه أولاً — قبل الـ Checkout —
-      // عشان حساب حصة الطبيب والتقارير يعتمدوا على النوع الصحيح، مو المحجوز أصلاً
-      if (mode === 'checkout' && actualTemplateId && actualTemplateId !== (appointment as any)?.templateId) {
-        const chosenTemplate = visitTemplates.find(tpl => tpl.id === actualTemplateId)
-        await api.patch(`/appointments/${appointmentId}/update-type`, {
-          templateId: actualTemplateId,
-          type: chosenTemplate ? (isAr ? chosenTemplate.name : (chosenTemplate.nameEn || chosenTemplate.name)) : undefined,
-        })
+      // ✅ نحفظ أنواع الزيارة الفعلية — سطر لكل بند فاتورة على نفس الموعد
+      if (mode === 'checkout') {
+        const typeItems = items.filter(it => it.templateId)
+        if (typeItems.length > 0) {
+          await api.post(`/appointments/${appointmentId}/visit-types`, {
+            items: typeItems.map(it => ({
+              templateId: it.templateId,
+              price: parseFloat(it.price) || 0,
+              insuranceRate: it.covered ? (parseFloat(it.insuranceRate) || 0) : 0,
+              insuranceAmount: itemInsuranceAmount(it),
+            })),
+          })
+        }
       }
 
       let checkOutTime: string | undefined
@@ -764,27 +806,6 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
           </div>
         )}
 
-        {/* ✅ نوع الزيارة الفعلي — يظهر بس بوضع الخروج، يسمح بتصحيح النوع لو اختلف عن المحجوز */}
-        {mode === 'checkout' && visitTemplates.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>
-              🔄 {isAr ? 'نوع الزيارة الفعلي' : 'Actual Visit Type'}
-            </label>
-            <SearchableSelect
-              isRtl={isAr}
-              value={actualTemplateId}
-              onChange={setActualTemplateId}
-              placeholder={isAr ? 'اختر نوع الزيارة...' : 'Select visit type...'}
-              options={visitTemplates.map(tpl => ({ value: tpl.id, label: isAr ? tpl.name : (tpl.nameEn || tpl.name) }))}
-            />
-            {actualTemplateId && actualTemplateId !== (appointment as any)?.templateId && (
-              <p style={{ fontSize: 10.5, color: '#B8892A', margin: '5px 0 0' }}>
-                ⚠️ {isAr ? 'مختلف عن نوع الحجز الأصلي — سيُحدَّث سجل الموعد بالنوع الصحيح' : 'Different from the original booking — the appointment record will be corrected'}
-              </p>
-            )}
-          </div>
-        )}
-
         {/* حقول ملاحظة الزيارة — بوضع الخروج بس */}
         {mode === 'checkout' && (
           <>
@@ -843,7 +864,14 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
                 return (
                 <div key={i} style={{ marginBottom: 10 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px 55px 68px auto', gap: 6, alignItems: 'center' }}>
-                    <input value={item.desc} onChange={e => updateItem(i, 'desc', e.target.value)} placeholder={t.itemDesc} style={inputStyle} />
+                    {/* ✅ البند = نوع زيارة يُختار من قوالب العلاج، بدل إدخال نص حر */}
+                    <SearchableSelect
+                      isRtl={isAr}
+                      value={item.templateId}
+                      onChange={v => pickTemplate(i, v)}
+                      placeholder={t.itemDesc}
+                      options={visitTemplates.map(tpl => ({ value: tpl.id, label: isAr ? tpl.name : (tpl.nameEn || tpl.name) }))}
+                    />
                     <input type="number" value={item.price} onChange={e => updateItem(i, 'price', e.target.value)} placeholder={t.itemPrice} style={inputStyle} />
                     {/* ✅ نسبة تغطية التأمين (%) — نفس أسلوب شاشة الحجز، بدل إدخال مبلغ خام */}
                     <input type="number" min={0} max={100} value={item.covered ? item.insuranceRate : ''} disabled={!item.covered}

@@ -242,6 +242,28 @@ const layoutCss = `
   flex-shrink: 0;
 }
 
+.nav-group-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 3px;
+  transition: all 0.2s ease;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2C3E3F;
+  font-family: inherit;
+}
+.nav-group-btn:hover { background: #F1F5F5; }
+.nav-group-chevron { margin-inline-start: auto; font-size: 10px; color: #8BAFB1; transition: transform 0.2s ease; }
+.nav-group-chevron.open { transform: rotate(180deg); }
+.nav-group-items { padding-inline-start: 10px; }
+
 /* Lang Toggle */
 .lang-toggle { display:flex; gap:4px; background:#E8EDEE; border-radius:100px; padding:3px; }
 .lang-btn { border:none; border-radius:100px; padding:5px 13px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s; background:transparent; color:#8BAFB1; }
@@ -363,191 +385,79 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
   const [, setLang] = useState(lang)
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
-const allMenuItems = [
-  // =========================
-  // الرئيسية
-  // =========================
-  {
-    path: '/dashboard',
-    labelAr: 'الرئيسية',
-    labelEn: 'Home',
-    icon: 'ti-layout-dashboard',
-    permission: null,
-    superAdminOnly: false,
-  },
+  const menuGroups = [
+    {
+      key: 'home', labelAr: 'الرئيسية', labelEn: 'Home', icon: 'ti-layout-dashboard',
+      items: [
+        { path: '/dashboard', labelAr: 'الرئيسية', labelEn: 'Home', icon: 'ti-layout-dashboard', permission: null, superAdminOnly: false },
+      ],
+    },
+    {
+      key: 'clinical', labelAr: 'المرضى والمواعيد', labelEn: 'Patients & Appointments', icon: 'ti-calendar',
+      items: [
+        { path: '/patients', labelAr: 'المرضى', labelEn: 'Patients', icon: 'ti-users', permission: 'patients.view', superAdminOnly: false },
+        { path: '/appointments', labelAr: 'المواعيد', labelEn: 'Appointments', icon: 'ti-calendar', permission: 'appointments.view', superAdminOnly: false },
+        { path: '/daily', labelAr: 'جدول اليوم', labelEn: "Today's Schedule", icon: 'ti-calendar-event', permission: 'daily.view', superAdminOnly: false },
+        { path: '/doctors', labelAr: 'الأطباء', labelEn: 'Doctors', icon: 'ti-stethoscope', permission: 'doctors.view', superAdminOnly: false },
+        { path: '/staff', labelAr: 'فريق العمل', labelEn: 'Staff', icon: 'ti-users', permission: 'staff.view', superAdminOnly: false },
+        { path: '/schedules', labelAr: 'جداول الدوام', labelEn: 'Schedules', icon: 'ti-calendar-time', permission: 'schedules.view', superAdminOnly: false },
+      ],
+    },
+    {
+      key: 'clinic', labelAr: 'إدارة العيادة', labelEn: 'Clinic Management', icon: 'ti-building-hospital',
+      items: [
+        { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage', superAdminOnly: false },
+        { path: '/treatment-templates', labelAr: 'قوالب الزيارة', labelEn: 'Visit Templates', icon: 'ti-clipboard-list', permission: 'treatmenttemplates.manage', superAdminOnly: false },
+        { path: '/insurance', labelAr: 'التأمين الصحي', labelEn: 'Health Insurance', icon: 'ti-heart-handshake', permission: 'insurance.view', superAdminOnly: false },
+      ],
+    },
+    {
+      key: 'finance', labelAr: 'المالية', labelEn: 'Finance', icon: 'ti-cash',
+      items: [
+        { path: '/invoices', labelAr: 'الفواتير', labelEn: 'Invoices', icon: 'ti-file-invoice', permission: 'payments.view', superAdminOnly: false },
+        { path: '/payments', labelAr: 'المدفوعات', labelEn: 'Payments', icon: 'ti-cash', permission: 'payments.view', superAdminOnly: false },
+        { path: '/settlements', labelAr: 'التسويات المالية', labelEn: 'Settlements', icon: 'ti-cash-banknote', permission: 'settlements.manage', superAdminOnly: false },
+        { path: '/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: 'ti-chart-bar', permission: 'reports.view', superAdminOnly: false },
+      ],
+    },
+    {
+      key: 'system', labelAr: 'النظام', labelEn: 'System', icon: 'ti-settings',
+      items: [
+        { path: '/users', labelAr: 'المستخدمون', labelEn: 'Users', icon: 'ti-users-group', permission: 'users.view', superAdminOnly: false },
+        { path: '/permissions', labelAr: 'الصلاحيات', labelEn: 'Permissions', icon: 'ti-shield-lock', permission: 'settings.view', superAdminOnly: false },
+        { path: '/settings', labelAr: 'الإعدادات', labelEn: 'Settings', icon: 'ti-settings', permission: 'settings.view', superAdminOnly: false },
+      ],
+    },
+    {
+      key: 'superadmin', labelAr: 'إدارة النظام', labelEn: 'Super Admin', icon: 'ti-diamond',
+      items: [
+        { path: '/superadmin/clinics', labelAr: 'العيادات', labelEn: 'Clinics', icon: 'ti-building-hospital', permission: null, superAdminOnly: true },
+        { path: '/superadmin/plans', labelAr: 'الخطط', labelEn: 'Plans', icon: 'ti-diamond', permission: null, superAdminOnly: true },
+      ],
+    },
+  ]
 
-  // =========================
-  // إدارة المرضى والمواعيد
-  // =========================
-  {
-    path: '/patients',
-    labelAr: 'المرضى',
-    labelEn: 'Patients',
-    icon: 'ti-users',
-    permission: 'patients.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/appointments',
-    labelAr: 'المواعيد',
-    labelEn: 'Appointments',
-    icon: 'ti-calendar',
-    permission: 'appointments.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/daily',
-    labelAr: 'جدول اليوم',
-    labelEn: "Today's Schedule",
-    icon: 'ti-calendar-event',
-    permission: 'daily.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/doctors',
-    labelAr: 'الأطباء',
-    labelEn: 'Doctors',
-    icon: 'ti-stethoscope',
-    permission: 'doctors.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/staff',
-    labelAr: 'فريق العمل',
-    labelEn: 'Staff',
-    icon: 'ti-users',
-    permission: 'staff.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/schedules',
-    labelAr: 'جداول الدوام',
-    labelEn: 'Schedules',
-    icon: 'ti-calendar-time',
-    permission: 'schedules.view',
-    superAdminOnly: false,
-  },
-
-  // =========================
-  // إدارة العيادة
-  // =========================
-  {
-    path: '/departments',
-    labelAr: 'الأقسام',
-    labelEn: 'Departments',
-    icon: 'ti-building-hospital',
-    permission: 'departments.manage',
-    superAdminOnly: false,
-  },
-  {
-    path: '/treatment-templates',
-    labelAr: 'قوالب الزيارة',
-    labelEn: 'Visit Templates',
-    icon: 'ti-clipboard-list',
-    permission: 'treatmenttemplates.manage',
-    superAdminOnly: false,
-  },
-  {
-    path: '/insurance',
-    labelAr: 'التأمين الصحي',
-    labelEn: 'Health Insurance',
-    icon: 'ti-heart-handshake',
-    permission: 'insurance.view',
-    superAdminOnly: false,
-  },
-
-  // =========================
-  // المالية
-  // =========================
-  {
-    path: '/payments',
-    labelAr: 'المدفوعات',
-    labelEn: 'Payments',
-    icon: 'ti-cash',
-    permission: 'payments.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/settlements',
-    labelAr: 'التسويات المالية',
-    labelEn: 'Settlements',
-    icon: 'ti-cash-banknote',
-    permission: 'settlements.manage',
-    superAdminOnly: false,
-  },
-
-  // =========================
-  // التقارير
-  // =========================
-  {
-    path: '/reports',
-    labelAr: 'التقارير',
-    labelEn: 'Reports',
-    icon: 'ti-chart-bar',
-    permission: 'reports.view',
-    superAdminOnly: false,
-  },
-
-  // =========================
-  // إدارة المستخدمين والصلاحيات
-  // =========================
-  {
-    path: '/users',
-    labelAr: 'المستخدمون',
-    labelEn: 'Users',
-    icon: 'ti-users-group',
-    permission: 'users.view',
-    superAdminOnly: false,
-  },
-  {
-    path: '/permissions',
-    labelAr: 'الصلاحيات',
-    labelEn: 'Permissions',
-    icon: 'ti-shield-lock',
-    permission: 'settings.view',
-    superAdminOnly: false,
-  },
-
-  // =========================
-  // إعدادات النظام
-  // =========================
-  {
-    path: '/settings',
-    labelAr: 'الإعدادات',
-    labelEn: 'Settings',
-    icon: 'ti-settings',
-    permission: 'settings.view',
-    superAdminOnly: false,
-  },
-
-  // =========================
-  // Super Admin
-  // =========================
-  {
-    path: '/superadmin/clinics',
-    labelAr: 'العيادات',
-    labelEn: 'Clinics',
-    icon: 'ti-building-hospital',
-    permission: null,
-    superAdminOnly: true,
-  },
-  {
-    path: '/superadmin/plans',
-    labelAr: 'الخطط',
-    labelEn: 'Plans',
-    icon: 'ti-diamond',
-    permission: null,
-    superAdminOnly: true,
-  },
-]
-  const menuItems = allMenuItems.filter(item => {
+  const canSee = (item: { path: string; permission: string | null; superAdminOnly: boolean }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
     return item.permission === null || hasPermission(item.permission)
+  }
+
+  const visibleGroups = menuGroups
+    .map(g => ({ ...g, items: g.items.filter(canSee) }))
+    .filter(g => g.items.length > 0)
+
+  // ✅ المجموعة اللي فيها الصفحة الحالية تكون مفتوحة تلقائياً
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const active = menuGroups.find(g => g.items.some(i => i.path === location.pathname))
+    return active ? { [active.key]: true } : {}
   })
+  const toggleGroup = (key: string) => setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }))
 
   const handleNavigation = (path: string) => { navigate(path); onNavigate?.() }
+ 
 
+ 
   const handleLangChange = (l: 'ar' | 'en') => {
     localStorage.setItem(LANG_KEY, l); setLang(l)
     window.dispatchEvent(new CustomEvent('cura-lang-change', { detail: l }))
@@ -565,17 +475,35 @@ const allMenuItems = [
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        {menuItems.map(item => (
-          <button key={item.path}
-            className={`nav-btn${location.pathname === item.path ? ' active' : ''}`}
-            onClick={() => handleNavigation(item.path)}
-            style={{ textAlign: isAr ? 'right' : 'left', justifyContent: isAr ? 'flex-end' : 'flex-start' }}>
-            <i className={`ti ${item.icon}`} style={{ fontSize: 17, flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isAr ? item.labelAr : item.labelEn}</span>
-            <span className="nav-indicator" />
-          </button>
-        ))}
+         <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        {visibleGroups.map(group => {
+          const isOpen = !!openGroups[group.key]
+          const hasActive = group.items.some(i => i.path === location.pathname)
+          return (
+            <div key={group.key} style={{ marginBottom: 2 }}>
+              <button className="nav-group-btn" onClick={() => toggleGroup(group.key)}
+                style={{ textAlign: isAr ? 'right' : 'left', color: hasActive ? PRIMARY : TEXT_DARK }}>
+                <i className={`ti ${group.icon}`} style={{ fontSize: 17, flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isAr ? group.labelAr : group.labelEn}</span>
+                <span className={`nav-group-chevron${isOpen ? ' open' : ''}`}>▼</span>
+              </button>
+              {isOpen && (
+                <div className="nav-group-items">
+                  {group.items.map(item => (
+                    <button key={item.path}
+                      className={`nav-btn${location.pathname === item.path ? ' active' : ''}`}
+                      onClick={() => handleNavigation(item.path)}
+                      style={{ textAlign: isAr ? 'right' : 'left', justifyContent: isAr ? 'flex-end' : 'flex-start' }}>
+                      <i className={`ti ${item.icon}`} style={{ fontSize: 16, flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isAr ? item.labelAr : item.labelEn}</span>
+                      <span className="nav-indicator" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </nav>
 
       {/* Footer */}

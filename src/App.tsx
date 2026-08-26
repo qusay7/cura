@@ -35,7 +35,7 @@ import Staff from './pages/Staff'
 import Settlements from './pages/Settlements'
 import DoctorDaily from './pages/DoctorDaily'
 import VisitWorkspace from './pages/VisitWorkspace'
-
+import Invoices from './pages/Invoices'
 function App() {
   return (
     <>
@@ -192,6 +192,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/invoices" element={
+          <ProtectedRoute permission="payments.view">
+            <Layout><Invoices /></Layout>
+          </ProtectedRoute>
+        } />
+        
         {/* ── قائمة الانتظار ── */}
         <Route path="/queue" element={
           <ProtectedRoute>
