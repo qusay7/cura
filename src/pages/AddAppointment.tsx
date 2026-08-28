@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
@@ -252,8 +252,8 @@ interface VisitTemplate {
 export default function AddAppointment() {
   const navigate = useNavigate()
   const location = useLocation()
-  const prefill = (location.state as { prefillPatientId?: string; prefillDoctorId?: string; prefillDate?: string } | null) || {}
-  const [loading, setLoading] = useState(false)
+  const prefill = (location.state as { prefillPatientId?: string; prefillDoctorId?: string; prefillDate?: string; prefillDateTime?: string } | null) || {}
+   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState('')
   const [patients, setPatients] = useState<Patient[]>([])
@@ -275,8 +275,9 @@ export default function AddAppointment() {
   const [customReminders, setCustomReminders] = useState('1,2,4,24')
 
   const [form, setForm] = useState({
-    patientId: prefill.prefillPatientId || '', doctorId: prefill.prefillDoctorId || '', appointmentDate: '',
-    appointmentPrice: undefined as number | undefined,
+    patientId: prefill.prefillPatientId || '', doctorId: prefill.prefillDoctorId || '',
+    appointmentDate: prefill.prefillDateTime || '',
+        appointmentPrice: undefined as number | undefined,
     type: '', templateId: '', price: '', notes: '',
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -313,7 +314,9 @@ export default function AddAppointment() {
       .finally(() => setLoadingStatus(false))
   }, [form.doctorId])
 
+    const firstDoctorRun = useRef(true)
   useEffect(() => {
+    if (firstDoctorRun.current) { firstDoctorRun.current = false; return }
     if (form.doctorId) setForm(prev => ({ ...prev, appointmentDate: '', appointmentPrice: undefined }))
   }, [form.doctorId])
 

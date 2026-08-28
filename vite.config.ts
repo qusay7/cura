@@ -109,11 +109,18 @@ export default defineConfig({
   },
 
   // Production preview
+   // Production preview
   preview: {
     host: '0.0.0.0',
     port: 4173,
     strictPort: true,
-
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5192',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     allowedHosts: [
       'localhost',
       '127.0.0.1',

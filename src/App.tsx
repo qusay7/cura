@@ -36,6 +36,7 @@ import Settlements from './pages/Settlements'
 import DoctorDaily from './pages/DoctorDaily'
 import VisitWorkspace from './pages/VisitWorkspace'
 import Invoices from './pages/Invoices'
+import DoctorCalendar from './pages/DoctorCalendar'
 function App() {
   return (
     <>
@@ -121,10 +122,17 @@ function App() {
 
         {/* ── الجداول ── */}
         <Route path="/schedules" element={
-          <ProtectedRoute permission="schedules.view">
+          <ProtectedRoute permission="schedules.clinic.view">
             <Layout><Schedules /></Layout>
           </ProtectedRoute>
         } />
+
+        {/* ── تقويم الطبيب ── */}
+<Route path="/doctor-calendar" element={
+  <ProtectedRoute permission="appointments.view">
+    <Layout><DoctorCalendar /></Layout>
+  </ProtectedRoute>
+} />
 
         {/* ── الزيارة السريعة ── */}
         <Route path="/quick-visit" element={

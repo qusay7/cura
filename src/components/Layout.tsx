@@ -400,7 +400,8 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
         { path: '/daily', labelAr: 'جدول اليوم', labelEn: "Today's Schedule", icon: 'ti-calendar-event', permission: 'daily.view', superAdminOnly: false },
         { path: '/doctors', labelAr: 'الأطباء', labelEn: 'Doctors', icon: 'ti-stethoscope', permission: 'doctors.view', superAdminOnly: false },
         { path: '/staff', labelAr: 'فريق العمل', labelEn: 'Staff', icon: 'ti-users', permission: 'staff.view', superAdminOnly: false },
-        { path: '/schedules', labelAr: 'جداول الدوام', labelEn: 'Schedules', icon: 'ti-calendar-time', permission: 'schedules.view', superAdminOnly: false },
+        { path: '/schedules', labelAr: 'جداول الدوام', labelEn: 'Schedules', icon: 'ti-calendar-time', permission: 'schedules.clinic.view', superAdminOnly: false },
+        { path: '/doctor-calendar', labelAr: 'تقويم الطبيب', labelEn: 'Doctor Calendar', icon: 'ti-calendar-week', permission: 'appointments.view', superAdminOnly: false },
       ],
     },
     {
