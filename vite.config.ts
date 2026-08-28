@@ -53,10 +53,12 @@ export default defineConfig({
           },
         ],
       },
-
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
