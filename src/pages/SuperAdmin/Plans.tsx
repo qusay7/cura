@@ -627,11 +627,11 @@ export default function SuperAdminPlans() {
           await api.post('/plans', plan)
         }
       }
-      setSuccess('تم إنشاء الخطط الافتراضية ✅')
+      setSuccess(lang === 'ar' ? 'تم إنشاء الخطط الافتراضية ✅' : 'Default plans created ✅')
       fetchPlans()
       setTimeout(() => setSuccess(''), 3000)
     } catch {
-      setError('حدث خطأ أثناء إنشاء الخطط')
+      setError(lang === 'ar' ? 'حدث خطأ أثناء إنشاء الخطط' : 'Error creating default plans')
     } finally {
       setSeeding(false)
     }
@@ -676,10 +676,10 @@ export default function SuperAdminPlans() {
 
       if (editingPlan) {
         await api.put(`/plans/${editingPlan.id}`, payload)
-        setSuccess('تم تعديل الخطة ✅')
+        setSuccess(lang === 'ar' ? 'تم تعديل الخطة ✅' : 'Plan updated ✅')
       } else {
         await api.post('/plans', payload)
-        setSuccess('تم إضافة الخطة ✅')
+        setSuccess(lang === 'ar' ? 'تم إضافة الخطة ✅' : 'Plan added ✅')
       }
 
       setShowForm(false)
@@ -688,7 +688,7 @@ export default function SuperAdminPlans() {
       fetchPlans()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || 'حدث خطأ')
+      setError(err.response?.data?.message || err.response?.data || (lang === 'ar' ? 'حدث خطأ' : 'An error occurred'))
     } finally {
       setSaving(false)
     }
@@ -701,19 +701,20 @@ export default function SuperAdminPlans() {
         p.id === id ? { ...p, isActive: !p.isActive } : p
       ))
     } catch {
-      alert('حدث خطأ')
+      alert(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
     }
   }
 
+  const unlimitedPlaceholder = lang === 'ar' ? '-1 = غير محدود' : '-1 = Unlimited'
   const fields = [
-    { key: 'name', label: 'اسم الخطة', placeholder: 'Basic', type: 'text', required: true },
-    { key: 'description', label: 'الوصف', placeholder: 'للعيادات الصغيرة', type: 'text', required: false },
-    { key: 'monthlyPrice', label: 'السعر الشهري', placeholder: '20', type: 'number', required: true },
-    { key: 'yearlyPrice', label: 'السعر السنوي', placeholder: '199', type: 'number', required: true },
-    { key: 'maxUsers', label: 'عدد المستخدمين', placeholder: '-1 = غير محدود', type: 'number', required: true },
-    { key: 'maxDoctors', label: 'عدد الأطباء', placeholder: '-1 = غير محدود', type: 'number', required: true },
-    { key: 'maxPatients', label: 'عدد المرضى', placeholder: '-1 = غير محدود', type: 'number', required: true },
-    { key: 'maxDailyMessages', label: 'الرسائل اليومية', placeholder: '-1 = غير محدود', type: 'number', required: true },
+    { key: 'name', label: lang === 'ar' ? 'اسم الخطة' : 'Plan Name', placeholder: 'Basic', type: 'text', required: true },
+    { key: 'description', label: lang === 'ar' ? 'الوصف' : 'Description', placeholder: lang === 'ar' ? 'للعيادات الصغيرة' : 'For small clinics', type: 'text', required: false },
+    { key: 'monthlyPrice', label: lang === 'ar' ? 'السعر الشهري' : 'Monthly Price', placeholder: '20', type: 'number', required: true },
+    { key: 'yearlyPrice', label: lang === 'ar' ? 'السعر السنوي' : 'Yearly Price', placeholder: '199', type: 'number', required: true },
+    { key: 'maxUsers', label: lang === 'ar' ? 'عدد المستخدمين' : 'Max Users', placeholder: unlimitedPlaceholder, type: 'number', required: true },
+    { key: 'maxDoctors', label: lang === 'ar' ? 'عدد الأطباء' : 'Max Doctors', placeholder: unlimitedPlaceholder, type: 'number', required: true },
+    { key: 'maxPatients', label: lang === 'ar' ? 'عدد المرضى' : 'Max Patients', placeholder: unlimitedPlaceholder, type: 'number', required: true },
+    { key: 'maxDailyMessages', label: lang === 'ar' ? 'الرسائل اليومية' : 'Daily Messages', placeholder: unlimitedPlaceholder, type: 'number', required: true },
   ]
 
   const t = {
