@@ -4,16 +4,11 @@ import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 import type { ColumnDef } from '../components/ColumnToggle'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const SUCCESS = '#4A7679'
 const WARNING = '#C4A77D'
 
@@ -21,10 +16,6 @@ const globalCss = `
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
 }
 .departments-shell { animation: fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .dept-card {

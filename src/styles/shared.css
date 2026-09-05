@@ -1,0 +1,34 @@
+/* Shared keyframes — these were duplicated byte-for-byte (modulo whitespace)
+   across ~20+ page files, each injecting its own <style> tag with the same
+   animation. Defined once globally here; pages that had a genuinely
+   different variant of a same-named animation kept their local definition,
+   which still wins since it's injected after this global stylesheet. */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

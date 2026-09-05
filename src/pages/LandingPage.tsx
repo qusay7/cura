@@ -54,7 +54,6 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
 @keyframes blink    { 0%,100% { opacity:1; } 50% { opacity:0.1; } }
 @keyframes shimmer  { 0% { transform:translateX(-100%); } 100% { transform:translateX(100%); } }
 @keyframes countUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-@keyframes spin     { to { transform:rotate(360deg); } }
 @keyframes gradMove { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
 @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 

@@ -2,31 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { ECGAnimation } from '../../components/ECGAnimation'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 // ─── Global CSS with Comfortable Colors ──────────────────────────────────────
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
-}
 
 .plans-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
 
@@ -516,11 +498,6 @@ const globalCss = `
 }
 `
 
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
 const SUCCESS = '#4A7679'
 const WARNING = '#C4A77D'
 
@@ -533,6 +510,7 @@ interface Plan {
   maxUsers: number
   maxDoctors: number
   maxPatients: number
+  maxDailyMessages: number   // ← جديد
   isActive: boolean
   isFeatured: boolean
   features: string[]
@@ -548,6 +526,7 @@ const defaultPlans = [
     maxUsers: 3,
     maxDoctors: 2,
     maxPatients: 300,
+    maxDailyMessages: 20,
     isActive: true,
     isFeatured: false,
     featuresText: 'جدولة المواعيد\nملاحظات الزيارة\nتقارير أساسية',
@@ -560,6 +539,7 @@ const defaultPlans = [
     maxUsers: 10,
     maxDoctors: 5,
     maxPatients: 1000,
+    maxDailyMessages: 50,
     isActive: true,
     isFeatured: true,
     featuresText: 'جميع مميزات الخطة الأساسية\nفواتير إلكترونية\nأقسام متعددة\nدعم ذو أولوية',
@@ -572,6 +552,7 @@ const defaultPlans = [
     maxUsers: -1,
     maxDoctors: -1,
     maxPatients: -1,
+    maxDailyMessages: 100,
     isActive: true,
     isFeatured: false,
     featuresText: 'جميع مميزات الخطة المتقدمة\nمستخدمون وأطباء غير محدودين\nمدير حساب مخصص\nتدريب مجاني للفريق',
@@ -599,11 +580,11 @@ export default function SuperAdminPlans() {
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
-
-  const emptyForm = {
+// emptyForm
+   const emptyForm = {
     name: '', description: '',
     monthlyPrice: '', yearlyPrice: '',
-    maxUsers: '', maxDoctors: '', maxPatients: '',
+    maxUsers: '', maxDoctors: '', maxPatients: '', maxDailyMessages: '',
     featuresText: '', isFeatured: false,
   }
   const [form, setForm] = useState(emptyForm)
@@ -666,6 +647,7 @@ export default function SuperAdminPlans() {
       maxUsers: String(plan.maxUsers),
       maxDoctors: String(plan.maxDoctors),
       maxPatients: String(plan.maxPatients),
+      maxDailyMessages: String(plan.maxDailyMessages),  // ← جديد
       // Rejoin the features array back into one-per-line text for editing
       featuresText: (plan.features || []).join('\n'),
       isFeatured: plan.isFeatured,
@@ -686,6 +668,7 @@ export default function SuperAdminPlans() {
         maxUsers: parseInt(form.maxUsers),
         maxDoctors: parseInt(form.maxDoctors),
         maxPatients: parseInt(form.maxPatients),
+        maxDailyMessages: parseInt(form.maxDailyMessages),
         featuresText: form.featuresText,
         isFeatured: form.isFeatured,
         isActive: true,
@@ -730,6 +713,7 @@ export default function SuperAdminPlans() {
     { key: 'maxUsers', label: 'عدد المستخدمين', placeholder: '-1 = غير محدود', type: 'number', required: true },
     { key: 'maxDoctors', label: 'عدد الأطباء', placeholder: '-1 = غير محدود', type: 'number', required: true },
     { key: 'maxPatients', label: 'عدد المرضى', placeholder: '-1 = غير محدود', type: 'number', required: true },
+    { key: 'maxDailyMessages', label: 'الرسائل اليومية', placeholder: '-1 = غير محدود', type: 'number', required: true },
   ]
 
   const t = {
@@ -751,6 +735,7 @@ export default function SuperAdminPlans() {
     users: lang === 'ar' ? 'المستخدمون' : 'Users',
     doctors: lang === 'ar' ? 'الأطباء' : 'Doctors',
     patients: lang === 'ar' ? 'المرضى' : 'Patients',
+    messages: lang === 'ar' ? 'الرسائل اليومية' : 'Daily Messages',
     unlimited: lang === 'ar' ? 'غير محدود' : 'Unlimited',
     noPlans: lang === 'ar' ? 'لا توجد خطط — اضغط "إنشاء الخطط الافتراضية" للبدء' : 'No plans — click "Create Default Plans" to start',
     loading: lang === 'ar' ? 'جاري التحميل...' : 'Loading...',
@@ -978,6 +963,14 @@ export default function SuperAdminPlans() {
                         ) : plan.maxPatients}
                       </span>
                     </div>
+                    <div className="limit-item">
+  <span className="limit-label">💬 {t.messages}</span>
+  <span className="limit-value">
+    {plan.maxDailyMessages === -1 ? (
+      <span className="limit-unlimited">∞ {t.unlimited}</span>
+    ) : plan.maxDailyMessages}
+  </span>
+</div>
                   </div>
 
                   {/* Features preview — mirrors exactly what the public pricing page shows */}

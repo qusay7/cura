@@ -2,16 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
+import { PRIMARY_SOFT } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
-@keyframes fade-up { from{opacity:0;transform:translateY(20px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);} }
-@keyframes soft-pulse { 0%,100%{opacity:0.6;}50%{opacity:1;} }
-@keyframes spin { to{transform:rotate(360deg);} }
-@keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);} }
-@keyframes slide-in { from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);} }
 .add-patient-shell { animation:fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .add-patient-shell * { box-sizing:border-box; }
 .form-input:focus,.form-select:focus,.form-textarea:focus { border-color:#5B8C8F !important; box-shadow:0 0 0 3px rgba(91,140,143,0.1) !important; }
@@ -29,7 +25,6 @@ input[type=number]{-moz-appearance:textfield;}
 
 const PRIMARY      = '#5B8C8F'
 const PRIMARY_DARK = '#4A7679'
-const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK    = '#2C3E3F'
 const TEXT_MUTED   = '#6B8A8C'
 const BORDER       = '#DCE5E5'

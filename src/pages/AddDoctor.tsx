@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
-@keyframes fade-up { from { opacity:0; transform:translateY(20px) scale(0.98);} to { opacity:1; transform:translateY(0) scale(1);} }
-@keyframes soft-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
-@keyframes spin { to { transform:rotate(360deg);} }
-@keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
 .add-doctor-shell { animation: fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .add-doctor-shell * { box-sizing:border-box; }
 .form-input:focus, .form-select:focus, .form-textarea:focus {
@@ -23,12 +20,6 @@ const globalCss = `
 }
 `
 
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
 

@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
 @keyframes fade-up { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0);} }
-@keyframes soft-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
-@keyframes spin { to { transform:rotate(360deg); } }
 .settle-shell { animation: fade-up 0.35s ease both; }
 .settle-tabs { display:flex; gap:6px; background:#FFF; padding:5px; border-radius:16px; border:1px solid #DCE5E5; width:fit-content; margin-bottom:24px; flex-wrap:wrap; }
 .settle-tab { padding:9px 20px; border-radius:12px; font-size:13px; font-weight:600; cursor:pointer; border:none; background:transparent; color:#6B8A8C; transition:all 0.2s ease; }
@@ -24,12 +23,6 @@ const globalCss = `
 }
 `
 
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const SUCCESS = '#22C55E'
 const SUCCESS_BG = '#E8F5E9'
 const WARNING = '#B8892A'
@@ -166,12 +159,10 @@ export default function Settlements() {
           <button className={`settle-tab${tab === 'history' ? ' active' : ''}`} onClick={() => setTab('history')} > 📜 {t.tabHistory} </button> 
           </div>
 
-
             {tab === 'dues' && ( <PatientDuesTab t={t} isAr={isAr} /> )} 
             {tab === 'doctor' && ( <PartySettlementTab t={t} isAr={isAr} lang={lang} mode="doctor" /> )} 
             {tab === 'insurance' && ( <InsuranceHubTab t={t} isAr={isAr} lang={lang} /> )} 
             {tab === 'history' && ( <HistoryTab t={t} isAr={isAr} /> )}
-
 
          
       </div>

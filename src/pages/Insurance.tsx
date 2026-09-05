@@ -22,7 +22,6 @@ const AMBER       = '#C4A77D'
 
 const css = `
 @keyframes fade-up { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
-@keyframes spin { to{transform:rotate(360deg);} }
 .ins-shell { animation:fade-up 0.4s ease both; }
 .ins-shell * { box-sizing:border-box; }
 .tab-btn { padding:8px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; }

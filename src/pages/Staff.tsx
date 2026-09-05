@@ -5,10 +5,10 @@ import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+import { PRIMARY_SOFT } from '../styles/theme'
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK    = '#2C3E3F'
 const TEXT_MUTED   = '#6B8A8C'
 const BORDER       = '#DCE5E5'
@@ -21,7 +21,6 @@ const WARNING      = '#F59E0B'
 
 const css = `
 @keyframes fade-up{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-@keyframes spin{to{transform:rotate(360deg);}}
 .staff-shell{animation:fade-up 0.4s ease both;}
 .staff-shell *{box-sizing:border-box;}
 .staff-card{transition:all 0.2s;cursor:pointer;}

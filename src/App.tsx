@@ -190,12 +190,12 @@ function App() {
 
         {/* ── SuperAdmin ── */}
         <Route path="/superadmin/clinics" element={
-          <ProtectedRoute>
+          <ProtectedRoute role="SuperAdmin">
             <Layout><SuperAdminClinics /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/superadmin/plans" element={
-          <ProtectedRoute>
+          <ProtectedRoute role="SuperAdmin">
             <Layout><SuperAdminPlans /></Layout>
           </ProtectedRoute>
         } />

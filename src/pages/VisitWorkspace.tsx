@@ -3,22 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
 @keyframes fade-up { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0);} }
-@keyframes spin { to { transform:rotate(360deg); } }
 .visit-shell { animation: fade-up 0.35s ease both; }
 `
 
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const SUCCESS = '#22C55E'
 const SUCCESS_BG = '#E8F5E9'
 

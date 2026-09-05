@@ -1,16 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import api from '../api/axios'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-const PRIMARY = '#5B8C8F'
 const PRIMARY_DARK = '#4A7679'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
 const SUCCESS = '#4A7679'
@@ -183,14 +178,9 @@ const T = {
 
 // Global CSS
 const globalCss = `
-@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
 }
 
 .queue-shell { animation: fade-up 0.4s ease; }

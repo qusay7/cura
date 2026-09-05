@@ -3,24 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import AppointmentCalendar from '../components/AppointmentCalendar'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 // ─── Global CSS ──────────────────────────────────────────────────────────────
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
 @keyframes fade-in {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
 }
 @keyframes pulse-gentle {
   0%, 100% { box-shadow: 0 0 0 0 rgba(91, 140, 143, 0.4); }
@@ -290,13 +282,7 @@ const globalCss = `
 }
 `
 
-const PRIMARY = '#5B8C8F'
 const PRIMARY_DARK = '#4A7679'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
 const SUCCESS = '#4A7679'

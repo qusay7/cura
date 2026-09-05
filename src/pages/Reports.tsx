@@ -2,12 +2,12 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+import { PRIMARY_SOFT } from '../styles/theme'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
 const PRIMARY_DARK = '#4A7679'
-const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK    = '#2C3E3F'
 const TEXT_MUTED   = '#6B8A8C'
 const BORDER       = '#DCE5E5'
@@ -25,7 +25,6 @@ const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600&display=swap');
 @keyframes fade-up { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
-@keyframes spin { to{transform:rotate(360deg);} }
 .rep-shell { animation:fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .rep-shell * { box-sizing:border-box; }
 .stat-card { transition:all 0.2s ease; cursor:default; }
@@ -673,7 +672,6 @@ const { visibleKeys, toggle } = useColumnVisibility('reports-table', columnDefs)
             </div>
           </div>
         )}
-
 
         {/* ════════ TAB 4 — Detail ════════ */}
         {tab===4 && (

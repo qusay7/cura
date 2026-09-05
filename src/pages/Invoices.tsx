@@ -4,11 +4,11 @@ import api from '../api/axios'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+import { PRIMARY_SOFT } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
 const TEXT_DARK    = '#2C3E3F'
 const TEXT_MUTED   = '#6B8A8C'
 const BORDER       = '#DCE5E5'
