@@ -43,9 +43,7 @@ export const getAllRoles = async () => {
       return []
     }
 
-    const data = await response.json()
-    console.log('✅ Roles:', data)
-    return data
+    return await response.json()
   } catch (err) {
     console.error('❌ Failed to fetch roles:', err)
     return []

@@ -4,6 +4,7 @@ import api from '../api/axios'
 import type { DashboardData } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { hasPermission } from '../utils/permissions'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const formatPrice = (price: number, lang: 'ar' | 'en') => {
   if (!price && price !== 0) return '—'
@@ -16,13 +17,6 @@ const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-@keyframes pulse-soft { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 @keyframes notification-slide { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes bell-ring { 0%{transform:rotate(0)} 25%{transform:rotate(15deg)} 50%{transform:rotate(-15deg)} 75%{transform:rotate(5deg)} 100%{transform:rotate(0)} }
 
@@ -99,13 +93,7 @@ const globalCss = `
 }
 `
 
-const PRIMARY = '#5B8C8F'
 const PRIMARY_LIGHT = '#8BAFB1'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const PROGRESS_BG = '#E8F0F0'
 
 const T = {
@@ -375,8 +363,6 @@ export default function Dashboard() {
   const isSuperAdmin = user.role === 'SuperAdmin'
 
 useEffect(() => {
-  console.log('📊 Dashboard useEffect started')
-  
   const styleId = 'cura-dash-css'
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style')
@@ -389,12 +375,10 @@ useEffect(() => {
   window.addEventListener('cura-lang-change', handleLangChange)
 
   if (isSuperAdmin) {
-    console.log('✅ SuperAdmin detected')
     setLoading(false)
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }
 
-  console.log('📊 Fetching dashboard data...')
   const startTime = Date.now()
   
   Promise.all([

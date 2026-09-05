@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../styles/theme'
 
 // ✅ غيّر getImageUrl مع debugging:
 const getImageUrl = (path?: string | null) => {
@@ -19,25 +20,6 @@ const getStoredLang = (): 'ar' | 'en' =>
 
 // ─── Global CSS with Comfortable Colors ──────────────────────────────────────
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
-}
 
 .settings-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
 
@@ -336,11 +318,6 @@ const globalCss = `
 `
 
 // Comfortable color palette
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
 const ERROR_TEXT = '#C4A77D'
 
 // Translations
@@ -486,7 +463,6 @@ const SettingsLoadingScreen = ({ msg }: { msg: string }) => (
   </div>
 )
 
-
 export default function Settings() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [activeTab, setActiveTab] = useState<'clinic' | 'account' | 'subscription'>('clinic')
@@ -575,6 +551,8 @@ export default function Settings() {
       setAccountForm(prev => ({ ...prev, fullName: user.fullName ?? '' }))
     } catch (err) {
       console.error(err)
+      setError(T[lang].error)
+      setTimeout(() => setError(''), 3000)
     } finally {
       setLoading(false)
     }

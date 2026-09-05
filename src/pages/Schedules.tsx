@@ -28,8 +28,6 @@ const css = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600&display=swap');
 @keyframes fade-up   { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
 @keyframes slide-in  { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
-@keyframes soft-pulse{ 0%,100%{opacity:0.6;}50%{opacity:1;} }
-@keyframes spin      { to{transform:rotate(360deg);} }
 
 .sch-shell { animation:fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .sch-shell * { box-sizing:border-box; }
@@ -148,7 +146,7 @@ const T = {
     selectDoctor:'اختر طبيباً', allDoctors:'الأطباء',
     copyClinic:'📋 نسخ من جدول العيادة', copyConfirm:"سيتم نسخ دوام العيادة لهذا الطبيب. متابعة؟",
     copied:'تم نسخ جدول العيادة بنجاح',
-    errSave:'حدث خطأ أثناء الحفظ', errDel:'حدث خطأ أثناء الحذف',
+    errSave:'حدث خطأ أثناء الحفظ', errDel:'حدث خطأ أثناء الحذف', errLoad:'حدث خطأ أثناء تحميل البيانات',
     errNoDays:'اختر يوماً على الأقل', errNoClinic:'لا يوجد جدول للعيادة للنسخ منه',
     errAllClinicDaysAdded:'جميع أيام العيادة مضافة للطبيب مسبقاً',
     errEndDateBefore:'تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية',
@@ -183,7 +181,7 @@ const T = {
     selectDoctor:'Select a doctor', allDoctors:'Doctors',
     copyClinic:'📋 Copy from Clinic Schedule', copyConfirm:"Copy clinic schedule to this doctor?",
     copied:'Clinic schedule copied successfully',
-    errSave:'Error saving', errDel:'Error deleting',
+    errSave:'Error saving', errDel:'Error deleting', errLoad:'Error loading data',
     errNoDays:'Select at least one day', errNoClinic:'No clinic schedule to copy from',
     errAllClinicDaysAdded:'All clinic days are already assigned to this doctor',
     errEndDateBefore:'End date must be after or equal to start date',
@@ -360,7 +358,7 @@ export default function Schedules() {
     fetchClinic()
     api.get('/doctors')
       .then(r => setDoctors(r.data.filter((d:Doctor)=>d.isActive)))
-      .catch(err => console.error('Failed to fetch doctors:', err))
+      .catch(err => { console.error('Failed to fetch doctors:', err); showAlert('err', t.errLoad) })
     fetchAbsences()
   }, [])
 
@@ -379,6 +377,7 @@ export default function Schedules() {
       setCS(r.data)
     } catch (err) {
       console.error('Failed to fetch clinic schedule:', err)
+      showAlert('err', t.errLoad)
     } finally {
       setClinicLoading(false)
     }
@@ -406,6 +405,7 @@ export default function Schedules() {
       // عدم عرض خطأ إذا تم إلغاء الطلب
       if (err.name !== 'AbortError') {
         console.error('Failed to fetch doctor schedule:', err)
+        showAlert('err', t.errLoad)
       }
     } finally {
       setDoctorLoading(false)
@@ -419,6 +419,7 @@ export default function Schedules() {
       setABS(r.data)
     } catch (err) {
       console.error('Failed to fetch absences:', err)
+      showAlert('err', t.errLoad)
     } finally {
       setAbsenceLoading(false)
     }

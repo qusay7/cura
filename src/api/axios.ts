@@ -67,7 +67,6 @@ const setAuthTokens = (accessToken: string, refreshToken: string | null, expires
       refreshToken,
       expiresAt: authTokens.expiresAt
     }))
-    console.log('✅ Tokens saved to localStorage')
   } catch (e) {
     console.error('❌ Failed to save tokens:', e)
   }
@@ -94,16 +93,8 @@ const clearAuthTokens = () => {
 
 
 
-
-
-
-
  
-const getAccessToken = () => {
-  const token = authTokens.accessToken
-  console.log('Getting token:', token ? '✅ Found' : '❌ Not found')
-  return token
-}
+const getAccessToken = () => authTokens.accessToken
 
 
 

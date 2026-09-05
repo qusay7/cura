@@ -363,8 +363,6 @@ const handleLogin = async (e: React.FormEvent) => {
     
     // ✅ جديد — احفظ permissions من نفس Login Response
     localStorage.setItem('permissions', JSON.stringify(data.permissions || []))
-    
-   console.log('✅ Login successful, role:', data.role)
 
 if (data.role?.toLowerCase() === 'doctor') {
   navigate('/daily')

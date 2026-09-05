@@ -1,24 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
-@keyframes fade-up { 
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes soft-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
-}
 .clinics-shell { animation: fade-up 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) both; }
 .form-container {
   background: #FFFFFF; border-radius: 28px; border: 1px solid #DCE5E5;
@@ -70,12 +58,6 @@ const globalCss = `
 }
 `
 
-const PRIMARY = '#5B8C8F'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const WARNING = '#C4A77D'
 const DANGER = '#C0392B'
 const SUCCESS = '#4A7679'
@@ -240,8 +222,6 @@ export default function SuperAdminClinics() {
       // 1 — إنشاء العيادة
       const clinicRes = await api.post('/clinics', form)
       const clinic = clinicRes.data
-      console.log('Clinic created:', clinic)
-      console.log('Clinic ID:', clinic.id)
 
       // 2 — إنشاء ClinicAdmin
       await api.post('/users', {
@@ -272,14 +252,10 @@ export default function SuperAdminClinics() {
       await api.post(`/roles/seed-defaults/${clinic.id}`)
 
       // ✅ 5 — إنشاء الأقسام الافتراضية
-      console.log('Calling departments seed for:', clinic.id)
-      const deptRes = await api.post(`/departments/seed-defaults/${clinic.id}`)
-      console.log('Departments result:', deptRes.data)
+      await api.post(`/departments/seed-defaults/${clinic.id}`)
 
       // ✅ 6 — إنشاء قوالب الزيارة الافتراضية (كشف/مراجعة/استشارة/متابعة)
-      console.log('Calling templates seed for:', clinic.id)
-      const tplRes = await api.post(`/treatmentplans/templates/seed-defaults/${clinic.id}`)
-      console.log('Templates result:', tplRes.data)
+      await api.post(`/treatmentplans/templates/seed-defaults/${clinic.id}`)
 
       setSuccess(
         isAr

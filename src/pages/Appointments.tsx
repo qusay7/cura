@@ -10,17 +10,13 @@ import SearchableSelect from '../components/SearchableSelect'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const globalCss = `
-@keyframes fade-up { from { opacity:0; transform:translateY(20px) scale(0.98);} to { opacity:1; transform:translateY(0) scale(1);} }
-@keyframes soft-pulse { 0%,100%{opacity:0.6;} 50%{opacity:1;} }
-@keyframes pulse-soft { 0%,100%{opacity:0.3;transform:scale(0.8);} 50%{opacity:1;transform:scale(1.2);} }
-@keyframes slide-in { from{opacity:0;transform:translateX(-10px);} to{opacity:1;transform:translateX(0);} }
 @keyframes pulse-red { 0%,100%{background-color:#FFF0F0;} 50%{background-color:#FECACA;} }
-@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fade-up-modal { from{opacity:0;transform:translateY(12px) scale(0.98);} to{opacity:1;transform:translateY(0) scale(1);} }
 .detail-card { animation: fade-up-modal 0.2s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 
@@ -52,13 +48,7 @@ const globalCss = `
 .row-due{animation:pulse-red 1.2s ease-in-out infinite !important;}
 `
 
-const PRIMARY = '#5B8C8F'
 const PRIMARY_DARK = '#4A7679'
-const PRIMARY_SOFT = '#E8F0F0'
-const TEXT_DARK = '#2C3E3F'
-const TEXT_MUTED = '#6B8A8C'
-const BORDER = '#DCE5E5'
-const CARD_BG = '#FFFFFF'
 const SUCCESS = '#4A7679'
 const INFO = '#8BAFB1'
 const DANGER = '#C4A77D'
@@ -1026,7 +1016,10 @@ export default function Appointments() {
       if (!appointment) return
       await api.put(`/appointments/${id}`, { patientId: appointment.patientId, status: newStatus })
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
-    } catch { console.error('Failed to update status') }
+    } catch {
+      console.error('Failed to update status')
+      alert(lang === 'ar' ? 'حدث خطأ أثناء تحديث حالة الموعد' : 'Failed to update appointment status')
+    }
     finally { setChangingStatus(null) }
   }
 
@@ -1051,7 +1044,10 @@ export default function Appointments() {
       const res = await api.post(`/appointments/${id}/checkin`)
       setAppointments(prev => prev.map(a => a.id === id
         ? { ...a, status: 'confirmed', checkInTime: res.data.checkInTime } : a))
-    } catch { console.error('CheckIn failed') }
+    } catch {
+      console.error('CheckIn failed')
+      alert(lang === 'ar' ? 'حدث خطأ أثناء تسجيل الحضور' : 'Failed to check in')
+    }
     finally { setChangingStatus(null) }
   }
 
