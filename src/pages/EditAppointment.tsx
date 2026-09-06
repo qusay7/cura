@@ -457,29 +457,18 @@ export default function EditAppointment() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  // ✅ معالج التاريخ مع التحقق من التضارب
-  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value
-    setForm({ ...form, appointmentDate: newDate })
-
-    // التحقق من التضارب إذا كان فيه طبيب
-    if (form.doctorId && newDate) {
-      const conflict = await checkTimeConflict(form.doctorId, newDate)
-      if (conflict.conflict) {
-        setError(conflict.message || '')
-      } else {
-        setError('')
-      }
-    }
-  }
-
-  // ✅ دالة اختيار الموعد من التقويم
-  const handleSlotSelect = (dateTime: string, price?: number) => {
+  // ✅ دالة اختيار الموعد من التقويم — مع التحقق من التضارب
+  const handleSlotSelect = async (dateTime: string, price?: number) => {
     setForm(prev => ({
       ...prev,
       appointmentDate: dateTime,
       price: price ? String(price) : prev.price
     }))
+
+    if (form.doctorId) {
+      const conflict = await checkTimeConflict(form.doctorId, dateTime)
+      setError(conflict.conflict ? (conflict.message || '') : '')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

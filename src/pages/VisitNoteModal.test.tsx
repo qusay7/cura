@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VisitNoteModal from './VisitNoteModal'
 import api from '../api/axios'
@@ -39,11 +39,8 @@ describe('VisitNoteModal', () => {
     render(<VisitNoteModal {...baseProps} onClose={onClose} onSaved={onSaved} />)
 
     expect(screen.getByText('Visit Notes', { exact: false })).toBeInTheDocument()
-    // The Field wrapper is redefined on every render, so React remounts the
-    // textarea on every keystroke and userEvent.type only ever lands its
-    // first character. Set the full value in one shot instead.
-    fireEvent.change(screen.getByPlaceholderText('Enter diagnosis...'), { target: { value: 'Flu' } })
-    fireEvent.change(screen.getByPlaceholderText('Enter medications and dosages...'), { target: { value: 'Rest' } })
+    await user.type(screen.getByPlaceholderText('Enter diagnosis...'), 'Flu')
+    await user.type(screen.getByPlaceholderText('Enter medications and dosages...'), 'Rest')
     await user.click(screen.getByRole('button', { name: /save/i }))
 
     await waitFor(() =>

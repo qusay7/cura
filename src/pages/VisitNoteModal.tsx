@@ -42,6 +42,13 @@ interface VisitNote {
   cost?: number
 }
 
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div style={{ marginBottom: 16 }}>
+    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginBottom: 5, letterSpacing: '0.5px' }}>{label}</label>
+    {children}
+  </div>
+)
+
 interface Props {
   isOpen: boolean
   onClose: () => void
@@ -123,13 +130,6 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
   }
 
   const textareaStyle: React.CSSProperties = { ...inputStyle, resize: 'vertical' as const }
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginBottom: 5, letterSpacing: '0.5px' }}>{label}</label>
-      {children}
-    </div>
-  )
 
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}

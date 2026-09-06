@@ -179,6 +179,23 @@ describe('EditAppointment', () => {
     )
   })
 
+  it('shows a conflict error when the picked slot is too close to another appointment for that doctor', async () => {
+    mockEditAppointmentGets({
+      '/patients': [patient()],
+      '/doctors': [doctor()],
+      '/appointments?doctorId=doc-1': [{ id: 'other-appt', appointmentDate: MOCK_SLOT_DATE }],
+    })
+    const user = userEvent.setup()
+    renderEditAppointment()
+    await screen.findByDisplayValue('Regular checkup', {}, LOADING_TIMEOUT)
+
+    await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
+
+    // The same `error` state also feeds the inline error under the date
+    // field, so the message legitimately renders twice.
+    expect((await screen.findAllByText(/doctor has an appointment at/i)).length).toBeGreaterThan(0)
+  })
+
   it('cancels without saving and returns to the appointments list', async () => {
     mockEditAppointmentGets({ '/patients': [patient()], '/doctors': [doctor()] })
     const user = userEvent.setup()
