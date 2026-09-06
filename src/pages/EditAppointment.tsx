@@ -457,18 +457,13 @@ export default function EditAppointment() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  // ✅ دالة اختيار الموعد من التقويم — مع التحقق من التضارب
-  const handleSlotSelect = async (dateTime: string, price?: number) => {
+  // ✅ دالة اختيار الموعد من التقويم
+  const handleSlotSelect = (dateTime: string, price?: number) => {
     setForm(prev => ({
       ...prev,
       appointmentDate: dateTime,
       price: price ? String(price) : prev.price
     }))
-
-    if (form.doctorId) {
-      const conflict = await checkTimeConflict(form.doctorId, dateTime)
-      setError(conflict.conflict ? (conflict.message || '') : '')
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -477,6 +472,16 @@ export default function EditAppointment() {
     setSaving(true)
 
     try {
+      // ✅ التحقق من التضارب مباشرة قبل الحفظ — يغطي أي تغيير على الطبيب أو
+      // الموعد منذ آخر اختيار، ويتجنب مشاكل تعدد الطلبات غير المتزامنة
+      if (form.doctorId && form.appointmentDate) {
+        const conflict = await checkTimeConflict(form.doctorId, form.appointmentDate)
+        if (conflict.conflict) {
+          setError(conflict.message || '')
+          return
+        }
+      }
+
       const payload = {
         patientId: form.patientId,
         doctorId: form.doctorId || null,

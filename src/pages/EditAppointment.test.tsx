@@ -179,7 +179,7 @@ describe('EditAppointment', () => {
     )
   })
 
-  it('shows a conflict error when the picked slot is too close to another appointment for that doctor', async () => {
+  it('blocks saving and shows a conflict error when the picked slot is too close to another appointment for that doctor', async () => {
     mockEditAppointmentGets({
       '/patients': [patient()],
       '/doctors': [doctor()],
@@ -190,10 +190,33 @@ describe('EditAppointment', () => {
     await screen.findByDisplayValue('Regular checkup', {}, LOADING_TIMEOUT)
 
     await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     // The same `error` state also feeds the inline error under the date
     // field, so the message legitimately renders twice.
     expect((await screen.findAllByText(/doctor has an appointment at/i)).length).toBeGreaterThan(0)
+    expect(mockedApi.put).not.toHaveBeenCalled()
+  })
+
+  it('re-checks for a conflict against the newly selected doctor at save time', async () => {
+    mockEditAppointmentGets({
+      '/patients': [patient()],
+      '/doctors': [doctor(), doctor({ id: 'doc-2', fullName: 'Dr. Omar' })],
+      '/appointments?doctorId=doc-2': [{ id: 'other-appt', appointmentDate: MOCK_SLOT_DATE }],
+    })
+    const user = userEvent.setup()
+    renderEditAppointment()
+    await screen.findByDisplayValue('Regular checkup', {}, LOADING_TIMEOUT)
+
+    // Pick a slot while Doctor Ali is selected (no conflict for doc-1), then
+    // switch to Dr. Omar, who does conflict at that same time.
+    await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
+    const doctorSelects = screen.getAllByRole('combobox')
+    await user.selectOptions(doctorSelects[1], 'doc-2')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect((await screen.findAllByText(/doctor has an appointment at/i)).length).toBeGreaterThan(0)
+    expect(mockedApi.put).not.toHaveBeenCalled()
   })
 
   it('cancels without saving and returns to the appointments list', async () => {
