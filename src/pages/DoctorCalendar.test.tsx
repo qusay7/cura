@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useSearchParams } from 'react-router-dom'
 import DoctorCalendar from './DoctorCalendar'
 import api from '../api/axios'
 
@@ -46,13 +46,21 @@ function mockCalendarGets(overrides: Record<string, unknown> = {}) {
   })
 }
 
-function renderDoctorCalendar() {
+// Shows the incoming doctorId (if any) so a test can assert it was carried
+// over in the link to the daily schedule, without inspecting router internals.
+function DailyScheduleStub() {
+  const [params] = useSearchParams()
+  return <div>daily schedule page (doctorId={params.get('doctorId') || 'none'})</div>
+}
+
+function renderDoctorCalendar(initialEntry = '/doctor-calendar') {
   render(
-    <MemoryRouter initialEntries={['/doctor-calendar']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/doctor-calendar" element={<DoctorCalendar />} />
         <Route path="/appointments/add" element={<div>add appointment page</div>} />
         <Route path="/appointments/:id" element={<div>appointment detail page</div>} />
+        <Route path="/daily" element={<DailyScheduleStub />} />
       </Routes>
     </MemoryRouter>
   )
@@ -142,5 +150,26 @@ describe('DoctorCalendar', () => {
 
     expect(screen.queryByText('add appointment page')).not.toBeInTheDocument()
     expect(screen.queryByText('appointment detail page')).not.toBeInTheDocument()
+  })
+
+  it('links to the daily schedule, carrying over the selected doctor', async () => {
+    mockCalendarGets()
+    const user = userEvent.setup()
+    renderDoctorCalendar()
+    await screen.findByDisplayValue(/dr\. ali/i)
+
+    await user.click(screen.getByRole('button', { name: /today's schedule/i }))
+
+    expect(await screen.findByText('daily schedule page (doctorId=doc-1)')).toBeInTheDocument()
+  })
+
+  it('preselects the doctor passed in via the URL from the daily schedule link', async () => {
+    mockCalendarGets({
+      '/doctors': [...doctorsList(), { id: 'doc-2', fullName: 'Dr. Omar', specialty: 'Pediatrics' }],
+    })
+    renderDoctorCalendar('/doctor-calendar?doctorId=doc-2')
+
+    const select = await screen.findByDisplayValue(/dr\. omar/i)
+    expect(select).toBeInTheDocument()
   })
 })

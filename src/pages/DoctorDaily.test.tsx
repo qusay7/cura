@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useSearchParams } from 'react-router-dom'
 import DoctorDaily from './DoctorDaily'
 import api from '../api/axios'
 
@@ -28,14 +28,22 @@ const appointment = (overrides: Partial<Record<string, unknown>> = {}) => ({
   ...overrides,
 })
 
-function renderDoctorDaily() {
+// Shows the incoming doctorId (if any) so a test can assert it was carried
+// over in the link to the weekly calendar, without inspecting router internals.
+function DoctorCalendarStub() {
+  const [params] = useSearchParams()
+  return <div>doctor calendar page (doctorId={params.get('doctorId') || 'none'})</div>
+}
+
+function renderDoctorDaily(initialEntry = '/daily') {
   render(
-    <MemoryRouter initialEntries={['/daily']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/daily" element={<DoctorDaily />} />
         <Route path="/dashboard" element={<div>dashboard page</div>} />
         <Route path="/visit/:id" element={<div>visit workspace page</div>} />
         <Route path="/appointments/:id" element={<div>appointment detail page</div>} />
+        <Route path="/doctor-calendar" element={<DoctorCalendarStub />} />
       </Routes>
     </MemoryRouter>
   )
@@ -135,5 +143,36 @@ describe('DoctorDaily', () => {
     renderDoctorDaily()
 
     expect(await screen.findByText('dashboard page')).toBeInTheDocument()
+  })
+
+  it('links to the weekly calendar, carrying over the selected doctor', async () => {
+    localStorage.setItem('user', JSON.stringify({ role: 'Receptionist' }))
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === '/doctors') return Promise.resolve({ data: [{ id: 'doc-1', fullName: 'Dr. Ali', isActive: true }] })
+      if (url.startsWith('/appointments?')) return Promise.resolve({ data: [appointment()] })
+      return Promise.reject(new Error(`unexpected GET ${url}`))
+    })
+    const user = userEvent.setup()
+    renderDoctorDaily()
+    await user.click(await screen.findByText('Select a doctor'))
+    await user.click(await screen.findByText('Dr. Ali'))
+    await screen.findByText('Sara Ahmad')
+
+    await user.click(screen.getByRole('button', { name: /weekly calendar/i }))
+
+    expect(await screen.findByText('doctor calendar page (doctorId=doc-1)')).toBeInTheDocument()
+  })
+
+  it('preselects the doctor passed in via the URL from the weekly calendar link', async () => {
+    localStorage.setItem('user', JSON.stringify({ role: 'Receptionist' }))
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === '/doctors') return Promise.resolve({ data: [{ id: 'doc-1', fullName: 'Dr. Ali', isActive: true }] })
+      if (url.startsWith('/appointments?')) return Promise.resolve({ data: [appointment()] })
+      return Promise.reject(new Error(`unexpected GET ${url}`))
+    })
+    renderDoctorDaily('/daily?doctorId=doc-1')
+
+    expect(await screen.findByText('Sara Ahmad')).toBeInTheDocument()
+    expect(mockedApi.get).toHaveBeenCalledWith(expect.stringContaining('doctorId=doc-1'))
   })
 })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { getRole } from '../utils/permissions'
@@ -27,6 +27,7 @@ const T = {
     scheduled: 'مجدول', confirmed: 'مؤكد', checkIn: 'دخول', checkOut: 'خروج', done: 'مكتمل',
     patient: 'المريض', time: 'الوقت', type: 'نوع الزيارة', status: 'الحالة', actions: 'إجراء',
     viewDetails: 'التفاصيل', refresh: 'تحديث', notADoctor: 'اختر طبيباً لعرض جدوله',
+    weeklyCalendar: '📅 التقويم الأسبوعي',
   },
   en: {
     title: "Today's Schedule", subtitle: "Your appointments and progress for today",
@@ -35,6 +36,7 @@ const T = {
     scheduled: 'Scheduled', confirmed: 'Confirmed', checkIn: 'Check In', checkOut: 'Check Out', done: 'Done',
     patient: 'Patient', time: 'Time', type: 'Visit Type', status: 'Status', actions: 'Action',
     viewDetails: 'Details', refresh: 'Refresh', notADoctor: 'Select a doctor to view their schedule',
+    weeklyCalendar: '📅 Weekly Calendar',
   },
 }
 
@@ -60,10 +62,12 @@ const StatusPill = ({ status, checkInTime, checkOutTime, t }: { status: string; 
 
 export default function DoctorDaily() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [isDoctorUser, setIsDoctorUser] = useState(false)
   const [doctors, setDoctors] = useState<Doctor[]>([])
-  const [doctorId, setDoctorId] = useState('')
+  // ✅ يقبل ?doctorId= قادم من رابط التقويم الأسبوعي عشان يفتح نفس الطبيب مباشرة
+  const [doctorId, setDoctorId] = useState(searchParams.get('doctorId') || '')
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -143,12 +147,18 @@ export default function DoctorDaily() {
             <p style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 4 }}>{t.subtitle}</p>
           </div>
 
-          {!isDoctorUser && (
-            <div style={{ minWidth: 220 }}>
-              <SearchableSelect isRtl={isAr} value={doctorId} onChange={setDoctorId}
-                placeholder={t.selectDoctor} options={doctors.map(d => ({ value: d.id, label: d.fullName }))} />
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+            {!isDoctorUser && (
+              <div style={{ minWidth: 220 }}>
+                <SearchableSelect isRtl={isAr} value={doctorId} onChange={setDoctorId}
+                  placeholder={t.selectDoctor} options={doctors.map(d => ({ value: d.id, label: d.fullName }))} />
+              </div>
+            )}
+            <button onClick={() => navigate(`/doctor-calendar${doctorId ? `?doctorId=${doctorId}` : ''}`)}
+              style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '9px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {t.weeklyCalendar}
+            </button>
+          </div>
         </div>
 
         {(isDoctorUser || doctorId) && (

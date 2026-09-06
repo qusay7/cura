@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
 
 // ═══════════════════════════════════════════════
@@ -68,6 +68,7 @@ const T = {
     views: { "1w": "أسبوع", "2w": "أسبوعين", "3w": "٣ أسابيع", "1m": "شهر", "2m": "شهرين" },
     days: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
    print: "طباعة", excel: "إكسل", pdf: "PDF", exporting: "جارٍ التصدير…",
+   dailySchedule: "📋 جدول اليوم",
   },
   en: {
     noDoctors: "— No doctors —",
@@ -82,6 +83,7 @@ const T = {
     views: { "1w": "Week", "2w": "2 Weeks", "3w": "3 Weeks", "1m": "Month", "2m": "2 Months" },
     days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     print: "Print", excel: "Excel", pdf: "PDF", exporting: "Exporting…",
+    dailySchedule: "📋 Today's Schedule",
   },
 };
 
@@ -171,9 +173,11 @@ export default function DoctorCalendar({
   initialDoctorId,
 }: Props) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [lang, setLang] = useState<"ar" | "en">(getStoredLang);
   const [doctors, setDoctors] = useState<DoctorItem[]>([]);
-  const [doctorId, setDoctorId] = useState<string>(initialDoctorId ?? "");
+  // ✅ يقبل ?doctorId= قادم من رابط جدول اليوم عشان يفتح نفس الطبيب مباشرة
+  const [doctorId, setDoctorId] = useState<string>(initialDoctorId ?? searchParams.get("doctorId") ?? "");
   const [view, setView] = useState<ViewKey>("1w");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [data, setData] = useState<DoctorCalendarDto | null>(null);
@@ -336,6 +340,7 @@ export default function DoctorCalendar({
         </div>
 
                 <div style={{ display: "flex", gap: 6 }}>
+          <button style={btnStyle} onClick={() => navigate(`/daily${doctorId ? `?doctorId=${doctorId}` : ""}`)}>{t.dailySchedule}</button>
           <button style={btnStyle} onClick={() => window.print()}>🖨️ {t.print}</button>
           <button style={btnStyle} disabled={exporting} onClick={() => handleExport("excel")}>
             {exporting ? t.exporting : `📊 ${t.excel}`}
