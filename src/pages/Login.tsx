@@ -614,16 +614,17 @@ if (data.role?.toLowerCase() === 'doctor') {
                       required autoComplete="current-password" placeholder={t.pPh}
                       style={inputStyle({ padding:'12px 40px' })} />
                     <span style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', [isAr?'left':'right']:14, color:TM, fontSize:14, pointerEvents:'none' }}>🔒</span>
-                    <button type="button" onClick={()=>setShowPass(v=>!v)}
+                    <button type="button" onClick={()=>setShowPass(v=>!v)} aria-label={showPass ? t.hideP : t.showP}
                       style={{ position:'absolute', top:'50%', transform:'translateY(-50%)', [isAr?'right':'left']:12, background:'none', border:'none', cursor:'pointer', color:showPass?P:TM, padding:5, display:'flex', alignItems:'center' }}>
                       {showPass ? <EyeOffIcon /> : <EyeIcon />}
                     </button>
                   </div>
                 </div>
 
-                {/* Forgot */}
+                {/* Forgot — not implemented yet, so shown as inert rather than a dead link */}
                 <div style={{ textAlign:isAr?'right':'left', marginBottom:16 }}>
-                  <a href="#" onClick={e=>e.preventDefault()} style={{ fontSize:11, color:accent, textDecoration:'none', opacity:0.75 }}>{t.forgot}</a>
+                  <span aria-disabled="true" title={isAr ? 'غير متاح حالياً' : 'Not available yet'}
+                    style={{ fontSize:11, color:accent, opacity:0.5, cursor:'default' }}>{t.forgot}</span>
                 </div>
 
                 {/* Error */}

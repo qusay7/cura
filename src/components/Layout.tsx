@@ -571,6 +571,8 @@ const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
   return (
     <div className="notif-container" style={{ position: 'relative' }}>
       <button className="notification-btn" onClick={() => setIsOpen(!isOpen)}
+        aria-label={unreadCount > 0 ? `${t.notifications} (${unreadCount} ${isAr ? 'غير مقروءة' : 'unread'})` : t.notifications}
+        aria-expanded={isOpen} aria-haspopup="true"
         style={{ animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none' }}>
         <span style={{ fontSize: 17 }}>🔔</span>
         {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
@@ -730,7 +732,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button className="logout-top-btn" onClick={handleLogout}>{t.logout}</button>
 
           {/* هامبرغر - موبايل فقط */}
-          <button className="hamburger-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button className="hamburger-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? (isAr ? 'إغلاق القائمة' : 'Close menu') : (isAr ? 'فتح القائمة' : 'Open menu')}
+            aria-expanded={mobileMenuOpen}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="2">
               {mobileMenuOpen
                 ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>

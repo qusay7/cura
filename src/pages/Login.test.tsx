@@ -143,4 +143,31 @@ describe('Login', () => {
     expect(await screen.findByText('Invalid credentials')).toBeInTheDocument()
     expect(mockedAuthService.setTokens).not.toHaveBeenCalled()
   })
+
+  it('toggles the password field visibility with an accessible, labeled button', async () => {
+    const user = userEvent.setup()
+    renderLogin()
+
+    await user.type(screen.getByPlaceholderText('clinic-name'), 'admin')
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    const passwordInput = await screen.findByPlaceholderText('••••••••')
+    expect(passwordInput).toHaveAttribute('type', 'password')
+
+    await user.click(screen.getByRole('button', { name: /show password/i }))
+
+    expect(passwordInput).toHaveAttribute('type', 'text')
+    await user.click(screen.getByRole('button', { name: /hide password/i }))
+    expect(passwordInput).toHaveAttribute('type', 'password')
+  })
+
+  it('shows the forgot-password text as inert instead of a non-functional link', async () => {
+    const user = userEvent.setup()
+    renderLogin()
+    await user.type(screen.getByPlaceholderText('clinic-name'), 'admin')
+    await user.click(screen.getByRole('button', { name: /continue/i }))
+    await screen.findByPlaceholderText('email or username')
+
+    expect(screen.queryByRole('link', { name: /forgot password/i })).not.toBeInTheDocument()
+    expect(screen.getByText('Forgot password?')).toHaveAttribute('aria-disabled', 'true')
+  })
 })

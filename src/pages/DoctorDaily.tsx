@@ -24,7 +24,7 @@ const T = {
     title: 'جدول اليوم', subtitle: 'مواعيدك اليوم وتقدّمك خلال اليوم',
     selectDoctor: 'اختر طبيباً', loading: 'جاري التحميل...', noAppointments: 'لا توجد مواعيد اليوم 🎉',
     total: 'إجمالي اليوم', completed: 'مكتملة', remaining: 'متبقية', inProgress: 'جاري الآن',
-    scheduled: 'مجدول', confirmed: 'مؤكد', checkIn: 'دخول', checkOut: 'خروج', done: 'مكتمل',
+    scheduled: 'مجدول', confirmed: 'مؤكد', checkIn: 'دخول', checkOut: 'خروج', done: 'مكتمل', cancelled: 'ملغي',
     patient: 'المريض', time: 'الوقت', type: 'نوع الزيارة', status: 'الحالة', actions: 'إجراء',
     viewDetails: 'التفاصيل', refresh: 'تحديث', notADoctor: 'اختر طبيباً لعرض جدوله',
     weeklyCalendar: '📅 التقويم الأسبوعي',
@@ -34,7 +34,7 @@ const T = {
     title: "Today's Schedule", subtitle: "Your appointments and progress for today",
     selectDoctor: 'Select a doctor', loading: 'Loading...', noAppointments: 'No appointments today 🎉',
     total: "Today's Total", completed: 'Completed', remaining: 'Remaining', inProgress: 'In Progress',
-    scheduled: 'Scheduled', confirmed: 'Confirmed', checkIn: 'Check In', checkOut: 'Check Out', done: 'Done',
+    scheduled: 'Scheduled', confirmed: 'Confirmed', checkIn: 'Check In', checkOut: 'Check Out', done: 'Done', cancelled: 'Cancelled',
     patient: 'Patient', time: 'Time', type: 'Visit Type', status: 'Status', actions: 'Action',
     viewDetails: 'Details', refresh: 'Refresh', notADoctor: 'Select a doctor to view their schedule',
     weeklyCalendar: '📅 Weekly Calendar',
@@ -57,7 +57,7 @@ interface Appointment {
 
 const StatusPill = ({ status, checkInTime, checkOutTime, t }: { status: string; checkInTime?: string; checkOutTime?: string; t: typeof T['ar'] }) => {
   if (status === 'completed') return <span style={{ background: SUCCESS_BG, color: '#166534', padding: '4px 11px', borderRadius: 100, fontSize: 11.5, fontWeight: 700 }}>✅ {t.done}</span>
-  if (status === 'cancelled') return <span style={{ background: '#FFF5F5', color: '#EF4444', padding: '4px 11px', borderRadius: 100, fontSize: 11.5, fontWeight: 700 }}>✕</span>
+  if (status === 'cancelled') return <span style={{ background: '#FFF5F5', color: '#EF4444', padding: '4px 11px', borderRadius: 100, fontSize: 11.5, fontWeight: 700 }}>✕ {t.cancelled}</span>
   if (checkInTime && !checkOutTime) return <span style={{ background: WARNING_BG, color: '#92400E', padding: '4px 11px', borderRadius: 100, fontSize: 11.5, fontWeight: 700 }}>🟡 {t.inProgress}</span>
   return <span style={{ background: PRIMARY_SOFT, color: PRIMARY, padding: '4px 11px', borderRadius: 100, fontSize: 11.5, fontWeight: 700 }}>⏰ {t.scheduled}</span>
 }

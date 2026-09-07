@@ -229,7 +229,7 @@ const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: 
     try { await api.post('/auth/logout', { refreshToken }) } finally { localStorage.clear(); navigate('/login') }
   }
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><p style={{ color: TEXT_MUTED }}>جاري التحميل...</p></div>
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><p style={{ color: TEXT_MUTED }}>{isAr ? 'جاري التحميل...' : 'Loading...'}</p></div>
 
   const activeClinics = clinics.filter(c => c.isActive).length
 
