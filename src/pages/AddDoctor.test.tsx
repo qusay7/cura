@@ -67,7 +67,10 @@ describe('AddDoctor', () => {
         expect.objectContaining({ fullName: 'Dr. Ali', workType: 'appointments' })
       )
     )
-    expect(await screen.findByText('doctors page')).toBeInTheDocument()
+    expect(await screen.findByText('Doctor saved successfully')).toBeInTheDocument()
+    // Navigation is intentionally delayed so the success banner is visible
+    // for a moment first, rather than an instant, unconfirmed redirect.
+    expect(await screen.findByText('doctors page', undefined, { timeout: 2000 })).toBeInTheDocument()
   })
 
   it('shows the server error message when creating the doctor fails', async () => {

@@ -278,6 +278,7 @@ export default function EditDoctor() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [departments, setDepartments] = useState<Department[]>([])
   const [form, setForm] = useState({
@@ -474,7 +475,8 @@ export default function EditDoctor() {
       payload.departmentId = form.departmentId || null
 
       await api.put(`/doctors/${id}`, payload)
-      navigate('/doctors')
+      setSuccess(T[lang].financialSaved)
+      setTimeout(() => navigate('/doctors'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
       setError(typeof errData === 'string' ? errData : errData?.message || T[lang].error)
@@ -600,6 +602,13 @@ export default function EditDoctor() {
                 style={{ width: 18, height: 18, cursor: 'pointer', accentColor: SUCCESS }} />
               <label htmlFor="isActive" style={{ fontSize: 13, fontWeight: 500, color: TEXT_DARK, cursor: 'pointer' }}>{t.active}</label>
             </div>
+
+            {/* نجاح */}
+            {success && (
+              <div style={{ background: PRIMARY_SOFT, border: `1px solid ${SUCCESS}40`, borderRadius: 12, padding: '12px 16px', marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span>✅</span><span style={{ fontSize: 13, color: SUCCESS }}>{success}</span>
+              </div>
+            )}
 
             {/* خطأ */}
             {error && (

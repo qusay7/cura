@@ -152,7 +152,9 @@ describe('AddAppointment', () => {
         })
       )
     )
-    expect(await screen.findByText('appointments page')).toBeInTheDocument()
+    // Navigation is intentionally delayed so the success banner is visible
+    // for a moment first, rather than an instant, unconfirmed redirect.
+    expect(await screen.findByText('appointments page', undefined, { timeout: 2000 })).toBeInTheDocument()
   })
 
   it('books a queue appointment for a Queue-only doctor without requiring a date', async () => {
@@ -177,7 +179,9 @@ describe('AddAppointment', () => {
         expect.objectContaining({ patientId: 'pat-1', doctorId: 'doc-2', status: 'scheduled' })
       )
     )
-    expect(await screen.findByText('appointments page')).toBeInTheDocument()
+    // Navigation is intentionally delayed so the success banner is visible
+    // for a moment first, rather than an instant, unconfirmed redirect.
+    expect(await screen.findByText('appointments page', undefined, { timeout: 2000 })).toBeInTheDocument()
   })
 
   it('shows the server error message when booking fails', async () => {

@@ -65,7 +65,8 @@ const globalCss = `
 const PRIMARY_DARK = '#4A7679'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
-const SUCCESS = '#4A7679'
+const SUCCESS = '#16A34A'
+const SUCCESS_BG = '#F0FDF4'
 
 const T = {
   ar: {
@@ -91,6 +92,7 @@ const T = {
     reminderPreview: '📊 المريض سيستقبل تذكيرات في:',
     submit: 'حجز الموعد', submitQueue: 'حجز الدور',
     cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
+    saved: 'تم حجز الموعد بنجاح',
     error: 'حدث خطأ غير متوقع', required: 'هذا الحقل مطلوب',
     loadingMessage: 'جاري تحميل البيانات',
     loadingSub: 'يرجى الانتظار أثناء تجهيز النموذج',
@@ -127,6 +129,7 @@ const T = {
     reminderPreview: '📊 Patient will receive reminders at:',
     submit: 'Book Appointment', submitQueue: 'Book Queue',
     cancel: 'Cancel', saving: 'Saving...',
+    saved: 'Appointment booked successfully',
     error: 'An unexpected error occurred', required: 'This field is required',
     loadingMessage: 'Loading Data',
     loadingSub: 'Please wait while we prepare the booking form',
@@ -246,6 +249,7 @@ export default function AddAppointment() {
    const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [templates, setTemplates] = useState<VisitTemplate[]>([])
@@ -533,14 +537,18 @@ export default function AddAppointment() {
           alert(isAr
             ? `تم حجز ${bookedCount} من ${unlinkedSessions.length} جلسة تلقائياً. ${failedCount} جلسة تحتاج حجز يدوي (تعارض بالموعد المحسوب) — راجع خطة العلاج بملف المريض.`
             : `${bookedCount} of ${unlinkedSessions.length} sessions booked automatically. ${failedCount} session(s) need manual booking (schedule conflict) — check the treatment plan in the patient file.`)
+          navigate('/appointments')
+          return
         }
 
-        navigate('/appointments')
+        setSuccess(t.saved)
+        setTimeout(() => navigate('/appointments'), 1200)
         return
       }
 
       await api.post('/appointments', payload)
-      navigate('/appointments')
+      setSuccess(t.saved)
+      setTimeout(() => navigate('/appointments'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
       if (typeof errData === 'string') setError(errData)
@@ -890,6 +898,14 @@ export default function AddAppointment() {
               <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} placeholder={t.notesPlaceholder} className="form-textarea"
                 style={{ width:'100%', background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 14px', fontSize:14, fontFamily:isAr?"'Cairo',sans-serif":"'Inter',sans-serif", color:TEXT_DARK, outline:'none', resize:'vertical' }} />
             </FormField>
+
+            {/* نجاح */}
+            {success && (
+              <div style={{ background:SUCCESS_BG, border:`1px solid ${SUCCESS}40`, borderRadius:12, padding:'12px 16px', marginBottom:20, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:16 }}>✅</span>
+                <span style={{ fontSize:13, color:SUCCESS, fontWeight:600 }}>{success}</span>
+              </div>
+            )}
 
             {/* خطأ */}
             {error && (

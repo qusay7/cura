@@ -122,6 +122,8 @@ const globalCss = `
 const PRIMARY_DARK = '#4A7679'
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
+const SUCCESS = '#16A34A'
+const SUCCESS_BG = '#F0FDF4'
 
 // ─── Translations ───────────────────────────────────────────────────────────
 const T = {
@@ -165,6 +167,7 @@ const T = {
     timeConflict: 'الطبيب لديه موعد في',
     selectedTime: 'الموعد المحدد',
     conflictCheckFailed: 'تعذّر التحقق من تعارض المواعيد — يرجى المحاولة مرة أخرى',
+    saved: 'تم حفظ التعديلات بنجاح',
   },
   en: {
     title: 'Edit Appointment',
@@ -206,6 +209,7 @@ const T = {
     timeConflict: 'Doctor has an appointment at',
     selectedTime: 'Selected Time',
     conflictCheckFailed: 'Could not verify scheduling conflicts — please try again',
+    saved: 'Changes saved successfully',
   },
 }
 
@@ -320,6 +324,7 @@ export default function EditAppointment() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
@@ -511,7 +516,8 @@ export default function EditAppointment() {
       }
 
       await api.put(`/appointments/${id}`, payload)
-      navigate('/appointments')
+      setSuccess(T[lang].saved)
+      setTimeout(() => navigate('/appointments'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
       if (typeof errData === 'string') {
@@ -833,6 +839,23 @@ export default function EditAppointment() {
                 }}
               />
             </FormField>
+
+            {/* Success Message */}
+            {success && (
+              <div style={{
+                background: SUCCESS_BG,
+                border: `1px solid ${SUCCESS}40`,
+                borderRadius: 12,
+                padding: '12px 16px',
+                marginBottom: 20,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}>
+                <span style={{ fontSize: 16 }}>✅</span>
+                <span style={{ fontSize: 13, color: SUCCESS, fontWeight: 600 }}>{success}</span>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (

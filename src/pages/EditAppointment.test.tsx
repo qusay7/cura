@@ -131,7 +131,10 @@ describe('EditAppointment', () => {
         expect.objectContaining({ patientId: 'pat-1', doctorId: 'doc-1', status: 'scheduled', price: 25 })
       )
     )
-    expect(await screen.findByText('appointments page')).toBeInTheDocument()
+    expect(await screen.findByText('Changes saved successfully')).toBeInTheDocument()
+    // Navigation is intentionally delayed so the success banner is visible
+    // for a moment first, rather than an instant, unconfirmed redirect.
+    expect(await screen.findByText('appointments page', undefined, { timeout: 2000 })).toBeInTheDocument()
   })
 
   it('redirects to the appointments list when loading fails', async () => {

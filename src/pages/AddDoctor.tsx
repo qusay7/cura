@@ -22,6 +22,8 @@ const globalCss = `
 
 const ERROR_BG = '#FDF5F5'
 const ERROR_TEXT = '#C4A77D'
+const SUCCESS = '#16A34A'
+const SUCCESS_BG = '#F0FDF4'
 
 const SPECIALTIES = {
   ar: [
@@ -69,6 +71,7 @@ const T = {
     email: 'البريد الإلكتروني', emailPlaceholder: 'doctor@clinic.com',
     notes: 'ملاحظات', notesPlaceholder: 'أضف ملاحظات إضافية عن الطبيب...',
     submit: 'حفظ الطبيب', cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
+    saved: 'تم حفظ الطبيب بنجاح',
     error: 'حدث خطأ غير متوقع', required: 'هذا الحقل مطلوب',
     emailInvalid: 'البريد الإلكتروني غير صالح', phoneInvalid: 'رقم الهاتف غير صالح',
     noDepartments: 'لا توجد أقسام — أضف أقساماً أولاً من صفحة الأقسام',
@@ -83,6 +86,7 @@ const T = {
     email: 'Email', emailPlaceholder: 'doctor@clinic.com',
     notes: 'Notes', notesPlaceholder: 'Add additional notes about the doctor...',
     submit: 'Save Doctor', cancel: 'Cancel', saving: 'Saving...',
+    saved: 'Doctor saved successfully',
     error: 'An unexpected error occurred', required: 'This field is required',
     emailInvalid: 'Invalid email address', phoneInvalid: 'Invalid phone number',
     noDepartments: 'No departments — add departments first from Departments page',
@@ -114,6 +118,7 @@ export default function AddDoctor() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [departments, setDepartments] = useState<Department[]>([])
   const [form, setForm] = useState({
@@ -170,7 +175,8 @@ export default function AddDoctor() {
       if (form.departmentId) payload.departmentId = form.departmentId
 
       await api.post('/doctors', payload)
-      navigate('/doctors')
+      setSuccess(T[lang].saved)
+      setTimeout(() => navigate('/doctors'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
       setError(typeof errData === 'string' ? errData : errData?.message || T[lang].error)
@@ -369,6 +375,12 @@ const DepartmentSelect = ({ departments, value, onChange, placeholder, isAr }: {
             </FormField>
 
             {/* خطأ */}
+            {success && (
+              <div style={{ background: SUCCESS_BG, border: `1px solid ${SUCCESS}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>✅</span><span style={{ fontSize: 13, color: SUCCESS, fontWeight: 600 }}>{success}</span>
+              </div>
+            )}
+
             {error && (
               <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span>⚠️</span><span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
