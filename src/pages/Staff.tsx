@@ -425,7 +425,7 @@ const [departments, setDepartments] = useState<Department[]>([])
 
         {/* Alert */}
         {alert && (
-          <div style={{ position:'fixed', top:20, right:20, zIndex:9999, padding:'12px 20px', borderRadius:12,
+          <div role="alert" style={{ position:'fixed', top:20, right:20, zIndex:9999, padding:'12px 20px', borderRadius:12,
             background:alert.type==='ok'?SUCCESS_BG:DANGER_BG, border:`1px solid ${alert.type==='ok'?SUCCESS:DANGER}`,
             color:alert.type==='ok'?SUCCESS:DANGER, fontWeight:600, fontSize:13 }}>
             {alert.type==='ok'?'✅':'❌'} {alert.msg}
@@ -474,7 +474,7 @@ const [departments, setDepartments] = useState<Department[]>([])
       const a = document.createElement('a')
       a.href = url; a.download = 'staff.pdf'; a.click()
       URL.revokeObjectURL(url)
-      }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+      }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
     📄 {t.exportPdf || 'Export PDF'}
@@ -501,7 +501,7 @@ const [departments, setDepartments] = useState<Department[]>([])
       const a = document.createElement('a')
       a.href = url; a.download = 'staff.xlsx'; a.click()
       URL.revokeObjectURL(url)
-   }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+   }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
     📊 {t.exportExcel || 'Export Excel'}
@@ -932,7 +932,7 @@ const [departments, setDepartments] = useState<Department[]>([])
       const a = document.createElement('a')
       a.href = url; a.download = `staff-${selected.fullName}.pdf`; a.click()
       URL.revokeObjectURL(url)
-    }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+    }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
     📄
@@ -959,7 +959,7 @@ const [departments, setDepartments] = useState<Department[]>([])
       const a = document.createElement('a')
       a.href = url; a.download = `staff-${selected.fullName}.xlsx`; a.click()
       URL.revokeObjectURL(url)
-    }).catch(() => window.alert(isAr ? 'فشل التصدير' : 'Export failed'))
+    }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
     📊

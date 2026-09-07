@@ -701,7 +701,8 @@ export default function SuperAdminPlans() {
         p.id === id ? { ...p, isActive: !p.isActive } : p
       ))
     } catch {
-      alert(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
+      setError(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
+      setTimeout(() => setError(''), 5000)
     }
   }
 
@@ -800,7 +801,7 @@ export default function SuperAdminPlans() {
 
         {/* Messages */}
         {error && (
-          <div className="alert-error">
+          <div className="alert-error" role="alert">
             <span>⚠️ {error}</span>
             <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>✕</button>
           </div>

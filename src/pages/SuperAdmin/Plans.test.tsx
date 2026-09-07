@@ -153,7 +153,7 @@ describe('SuperAdminPlans', () => {
     expect(screen.getByText('Inactive')).toBeInTheDocument()
   })
 
-  it('shows a native alert when toggling a plan fails', async () => {
+  it('shows an inline error banner when toggling a plan fails', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: [plan()] })
     mockedApi.patch.mockRejectedValueOnce(new Error('server error'))
     const user = userEvent.setup()
@@ -162,6 +162,6 @@ describe('SuperAdminPlans', () => {
 
     await user.click(screen.getByRole('button', { name: /deactivate/i }))
 
-    await waitFor(() => expect(window.alert).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
   })
 })

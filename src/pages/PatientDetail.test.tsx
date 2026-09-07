@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import PatientDetail from './PatientDetail'
@@ -123,7 +123,7 @@ describe('PatientDetail', () => {
     expect(mockedApi.delete).toHaveBeenCalledWith('/patients/pat-1')
   })
 
-  it('shows an alert when deleting the patient fails', async () => {
+  it('shows an inline error toast when deleting the patient fails', async () => {
     localStorage.setItem('permissions', JSON.stringify(['patients.delete']))
     mockedApi.get.mockResolvedValueOnce({ data: patientRecord() })
     mockedApi.delete.mockRejectedValueOnce(new Error('server error'))
@@ -133,6 +133,6 @@ describe('PatientDetail', () => {
 
     await user.click(screen.getByRole('button', { name: /delete/i }))
 
-    expect(window.alert).toHaveBeenCalledWith('An error occurred while deleting')
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('An error occurred while deleting'))
   })
 })

@@ -164,7 +164,7 @@ describe('Invoices', () => {
     await user.click(screen.getByRole('button', { name: /^📤 submit$/i }))
 
     await waitFor(() => expect(mockedApi.post).toHaveBeenCalledWith('/invoices/inv-1/submit'))
-    expect(window.alert).toHaveBeenCalledWith('Submitted!')
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Submitted!'))
   })
 
   it('does not show a submit button for an already-submitted invoice', async () => {

@@ -255,7 +255,7 @@ export default function Insurance() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert(isAr ? 'فشل التصدير' : 'Export failed')
+      showAlert('err', isAr ? 'فشل التصدير' : 'Export failed')
     } finally {
       setDownloading(null)
     }
@@ -274,7 +274,7 @@ export default function Insurance() {
         {/* Alert */}
         {/* Alert */}
 {notification && (
-  <div style={{position:'fixed',top:20,right:20,zIndex:9999,padding:'12px 20px',borderRadius:12,background:notification.type==='ok'?SUCCESS_BG:DANGER_BG,border:`1px solid ${notification.type==='ok'?SUCCESS:DANGER}`,color:notification.type==='ok'?SUCCESS:DANGER,fontWeight:600,fontSize:13}}>
+  <div role="alert" style={{position:'fixed',top:20,right:20,zIndex:9999,padding:'12px 20px',borderRadius:12,background:notification.type==='ok'?SUCCESS_BG:DANGER_BG,border:`1px solid ${notification.type==='ok'?SUCCESS:DANGER}`,color:notification.type==='ok'?SUCCESS:DANGER,fontWeight:600,fontSize:13}}>
     {notification.type==='ok'?'✅':'❌'} {notification.msg}
   </div>
 )}

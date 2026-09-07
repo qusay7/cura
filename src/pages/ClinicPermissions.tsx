@@ -371,6 +371,14 @@ export default function ClinicPermissions() {
 
   const [loading, setLoading] = useState(true)
 
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
+
   const t = T[lang]
 
   const isAr = lang === 'ar'
@@ -607,7 +615,7 @@ export default function ClinicPermissions() {
         error
       )
 
-      alert(t.saveError)
+      setToastError(t.saveError)
     } finally {
       setSaving(false)
     }
@@ -647,7 +655,7 @@ export default function ClinicPermissions() {
         error
       )
 
-      alert(t.resetError)
+      setToastError(t.resetError)
     }
   }
 
@@ -734,6 +742,11 @@ export default function ClinicPermissions() {
           : "'Inter', sans-serif",
       }}
     >
+      {toastError && (
+        <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+          <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+        </div>
+      )}
       <div
         style={{
           maxWidth: 1200,

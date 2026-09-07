@@ -484,6 +484,13 @@ export default function Invoices() {
   const [newOpen, setNewOpen] = useState(false)
   const [submitting, setSubmitting] = useState<string | null>(null)
   const [viewer, setViewer] = useState<{ title: string; value: string } | null>(null)
+  const [toastMsg, setToastMsg] = useState<{ text: string; isError: boolean } | null>(null)
+
+  useEffect(() => {
+    if (!toastMsg) return
+    const timer = setTimeout(() => setToastMsg(null), 4000)
+    return () => clearTimeout(timer)
+  }, [toastMsg])
 
   const t = T[lang]
   const isAr = lang === 'ar'
@@ -537,10 +544,10 @@ export default function Invoices() {
     setSubmitting(id)
     try {
       const r = await api.post(`/invoices/${id}/submit`)
-      alert(r.data?.message || '')
+      if (r.data?.message) setToastMsg({ text: r.data.message, isError: false })
       fetchData()
     } catch (err: any) {
-      alert(err.response?.data?.message || err.response?.data || t.submitFailed)
+      setToastMsg({ text: err.response?.data?.message || err.response?.data || t.submitFailed, isError: true })
     } finally { setSubmitting(null) }
   }
 
@@ -562,6 +569,11 @@ export default function Invoices() {
     <>
       <style>{globalCss}</style>
       <div className="page-body" dir={isAr ? 'rtl' : 'ltr'} style={{ background: '#F8FAFA', minHeight: '100vh', padding: 24, fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif" }}>
+        {toastMsg && (
+          <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background: toastMsg.isError ? '#FFF5F5' : '#F0FDF4', border: `1px solid ${toastMsg.isError ? '#FCA5A5' : '#86EFAC'}`, borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+            <span>{toastMsg.isError ? '⚠️' : '✅'}</span><span style={{ fontSize:13, color: toastMsg.isError ? '#EF4444' : '#16A34A' }}>{toastMsg.text}</span>
+          </div>
+        )}
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
           {/* ✅ رأس الطباعة الموحّد — نفس صفحة المواعيد */}

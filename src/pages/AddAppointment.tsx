@@ -556,10 +556,11 @@ export default function AddAppointment() {
         }
 
         if (failedCount > 0) {
-          alert(isAr
+          setSuccess(isAr
             ? `تم حجز ${bookedCount} من ${unlinkedSessions.length} جلسة تلقائياً. ${failedCount} جلسة تحتاج حجز يدوي (تعارض بالموعد المحسوب) — راجع خطة العلاج بملف المريض.`
             : `${bookedCount} of ${unlinkedSessions.length} sessions booked automatically. ${failedCount} session(s) need manual booking (schedule conflict) — check the treatment plan in the patient file.`)
-          navigate('/appointments')
+          setLoading(false)
+          setTimeout(() => navigate('/appointments'), 3500)
           return
         }
 

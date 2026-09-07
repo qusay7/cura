@@ -1063,9 +1063,11 @@ function SummaryCards({ items }: { items: { label: string; value: string; color:
 
 function ExportBar({ t, endpoint, lang }: { t: typeof T['ar']; endpoint: string; lang: 'ar' | 'en' }) {
   const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+  const [failed, setFailed] = useState(false)
 
   const download = async (format: 'pdf' | 'excel') => {
     setDownloading(format)
+    setFailed(false)
     try {
       const sep = endpoint.includes('?') ? '&' : '?'
       const res = await api.get(`${endpoint}${sep}format=${format}&lang=${lang}`, { responseType: 'blob' })
@@ -1076,14 +1078,18 @@ function ExportBar({ t, endpoint, lang }: { t: typeof T['ar']; endpoint: string;
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
     } catch {
-      alert(lang === 'ar' ? 'تعذّر التصدير' : 'Export failed')
+      setFailed(true)
+      setTimeout(() => setFailed(false), 4000)
     } finally {
       setDownloading(null)
     }
   }
 
   return (
-    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12 }}>
+      {failed && (
+        <span role="alert" style={{ fontSize: 11.5, color: '#EF4444' }}>⚠️ {lang === 'ar' ? 'تعذّر التصدير' : 'Export failed'}</span>
+      )}
       <button onClick={() => window.print()}
         style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
         🖨️ {t.print}

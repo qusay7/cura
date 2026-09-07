@@ -106,6 +106,13 @@ export default function TreatmentTemplates() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
 
   // ✅ Column definitions
   const columnDefs: ColumnDef[] = [
@@ -255,7 +262,7 @@ export default function TreatmentTemplates() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert(isAr ? 'فشل التصدير' : 'Export failed')
+      setToastError(isAr ? 'فشل التصدير' : 'Export failed')
     } finally {
       setDownloading(null)
     }
@@ -263,6 +270,11 @@ export default function TreatmentTemplates() {
 
   return (
     <div className="templates-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '24px' }}>
+      {toastError && (
+        <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+          <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+        </div>
+      )}
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
         {/* Header */}

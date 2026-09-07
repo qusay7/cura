@@ -125,7 +125,7 @@ describe('ClinicPermissions', () => {
     expect(await screen.findByText('Saved ✅')).toBeInTheDocument()
   })
 
-  it('shows an alert when saving fails', async () => {
+  it('shows an inline error toast when saving fails', async () => {
     mockClinicPermGets()
     mockedApi.put.mockRejectedValueOnce(new Error('server error'))
     const user = userEvent.setup()
@@ -134,7 +134,7 @@ describe('ClinicPermissions', () => {
 
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
-    await waitFor(() => expect(window.alert).toHaveBeenCalledWith('Error saving permissions'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Error saving permissions'))
   })
 
   it('resets permissions to default after confirmation', async () => {

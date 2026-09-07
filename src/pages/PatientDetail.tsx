@@ -172,6 +172,13 @@ export default function PatientDetail() {
   const [loading, setLoading]  = useState(true)
   const [lang, setLang]        = useState<'ar'|'en'>(getStoredLang())
   const [activeTab, setActiveTab] = useState<'info'|'insurance'|'attachments'>('info')  // ✅ تبويبات
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
 
   useEffect(() => {
     const styleId = 'cura-patient-detail-css'
@@ -203,7 +210,7 @@ export default function PatientDetail() {
     const t = T[lang]
     if (!confirm(t.deleteConfirm)) return
     try { await api.delete(`/patients/${id}`); navigate('/patients') }
-    catch { alert(t.deleteError) }
+    catch { setToastError(t.deleteError) }
   }
 
   const t    = T[lang]
@@ -253,6 +260,11 @@ export default function PatientDetail() {
 
   return (
     <div className="patient-detail-shell" style={{ direction:isAr?'rtl':'ltr', background:'#F8FAFA', minHeight:'100vh', padding:'24px' }}>
+      {toastError && (
+        <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+          <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+        </div>
+      )}
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
 
         {/* ✅ رأس الطباعة الموحّد */}
@@ -294,7 +306,7 @@ export default function PatientDetail() {
         a.href = url; a.download = `patient-${patient.patientNumber}.pdf`; a.click()
         URL.revokeObjectURL(url)
       })
-      .catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+      .catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 20px', fontSize:13, fontWeight:500, color:TEXT_DARK, cursor:'pointer' }}>
     📄 {t.exportPdf}
@@ -309,7 +321,7 @@ export default function PatientDetail() {
         a.href = url; a.download = `patient-${patient.patientNumber}.xlsx`; a.click()
         URL.revokeObjectURL(url)
       })
-      .catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+      .catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:10, padding:'8px 20px', fontSize:13, fontWeight:500, color:TEXT_DARK, cursor:'pointer' }}>
     📊 {t.exportExcel}

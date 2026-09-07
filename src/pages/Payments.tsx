@@ -81,6 +81,13 @@ export default function Payments() {
   const [page, setPage]         = useState(1)
   const [expandedId, setExpandedId] = useState<string|null>(null)
   const [details, setDetails] = useState<Record<string, any>>({})
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
 
 const t    = T[lang]
 const isAr = lang === 'ar'
@@ -161,6 +168,11 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
     <>
       <style>{globalCss}</style>
       <div dir={isAr?'rtl':'ltr'} style={{ background:'#F8FAFA', minHeight:'100vh', padding:24, fontFamily:isAr?"'Noto Kufi Arabic',sans-serif":"'Inter',sans-serif" }}>
+        {toastError && (
+          <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+            <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+          </div>
+        )}
              <div style={{ maxWidth:1300, margin:'0 auto' }}>
 
         {/* Header */}
@@ -278,7 +290,7 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
       const a = document.createElement('a')
       a.href = url; a.download = 'payments.pdf'; a.click()
       URL.revokeObjectURL(url)
-    }).catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+    }).catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
     📄 {t.exportPdf}
@@ -305,7 +317,7 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
       const a = document.createElement('a')
       a.href = url; a.download = 'payments.xlsx'; a.click()
       URL.revokeObjectURL(url)
-    }).catch(() => alert(isAr ? 'فشل التصدير' : 'Export failed'))
+    }).catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
   }}
     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
     📊 {t.exportExcel}

@@ -27,9 +27,11 @@ export default function ExportBar({
 }) {
   const t = LABELS[lang]
   const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+  const [failed, setFailed] = useState(false)
 
   const download = async (format: 'pdf' | 'excel') => {
     setDownloading(format)
+    setFailed(false)
     try {
       const sep = endpoint.includes('?') ? '&' : '?'
       const res = await api.get(`${endpoint}${sep}format=${format}&lang=${lang}`, { responseType: 'blob' })
@@ -40,14 +42,18 @@ export default function ExportBar({
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
     } catch {
-      alert(t.failed)
+      setFailed(true)
+      setTimeout(() => setFailed(false), 4000)
     } finally {
       setDownloading(null)
     }
   }
 
   return (
-    <div className="no-print" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+    <div className="no-print" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+      {failed && (
+        <span role="alert" style={{ fontSize: 11.5, color: '#EF4444' }}>⚠️ {t.failed}</span>
+      )}
       {showPrint && (
         <button onClick={() => window.print()}
           style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
