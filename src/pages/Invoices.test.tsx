@@ -137,6 +137,23 @@ describe('Invoices', () => {
     expect(screen.getAllByText('INV-001').length).toBeGreaterThan(1)
   })
 
+  it('closes the invoice modal on Escape and returns focus to the View button', async () => {
+    mockInvoicesGets({ '/invoices?': { invoices: [invoice()], pages: 1 } })
+    const user = userEvent.setup()
+    renderInvoices()
+    await screen.findByText('Sara Ahmad')
+    const viewButton = screen.getByRole('button', { name: /view/i })
+
+    await user.click(viewButton)
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName(/sales invoice/i)
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(viewButton).toHaveFocus()
+  })
+
   it('submits an invoice and refetches the list', async () => {
     mockInvoicesGets({ '/invoices?': { invoices: [invoice()], pages: 1 } })
     mockedApi.post.mockResolvedValueOnce({ data: { message: 'Submitted!' } })
@@ -200,6 +217,27 @@ describe('Invoices', () => {
     )
   })
 
+  it('closes the new-invoice and credit-note modals on Escape, returning focus to their trigger', async () => {
+    mockInvoicesGets({ '/invoices?': { invoices: [invoice()], pages: 1 } })
+    const user = userEvent.setup()
+    renderInvoices()
+    await screen.findByText('Sara Ahmad')
+
+    const newInvoiceButton = screen.getByRole('button', { name: /new invoice/i })
+    await user.click(newInvoiceButton)
+    await screen.findByRole('dialog')
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(newInvoiceButton).toHaveFocus()
+
+    const creditNoteButton = screen.getByRole('button', { name: /credit note/i })
+    await user.click(creditNoteButton)
+    await screen.findByRole('dialog')
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(creditNoteButton).toHaveFocus()
+  })
+
   it('shows the QR/XML viewer for a submitted invoice', async () => {
     mockInvoicesGets({
       '/invoices?': { invoices: [invoice({ isSubmitted: true, invoiceXml: '<xml>data</xml>' })], pages: 1 },
@@ -208,9 +246,16 @@ describe('Invoices', () => {
     renderInvoices()
     await screen.findByText('Sara Ahmad')
 
-    await user.click(screen.getByRole('button', { name: '📄' }))
+    const xmlButton = screen.getByRole('button', { name: '📄' })
+    await user.click(xmlButton)
 
     expect(await screen.findByText('<xml>data</xml>')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(xmlButton).toHaveFocus()
   })
 
   it('paginates to the next page', async () => {

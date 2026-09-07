@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const PRIMARY = '#5B8C8F'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -70,6 +71,8 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
   const [form, setForm] = useState({
     diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '', cost: '',
   })
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef, isOpen, onClose)
 
   useEffect(() => {
     if (existingNote) {
@@ -134,17 +137,18 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: CARD_BG, borderRadius: 24, width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="visit-note-modal-title" tabIndex={-1}
+        style={{ background: CARD_BG, borderRadius: 24, width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
         dir={isAr ? 'rtl' : 'ltr'}>
 
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}`, background: PRIMARY_SOFT, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: PRIMARY, letterSpacing: '0.5px', marginBottom: 4 }}>
+            <div id="visit-note-modal-title" style={{ fontSize: 11, fontWeight: 600, color: PRIMARY, letterSpacing: '0.5px', marginBottom: 4 }}>
               🩺 {isEdit ? t.titleEdit : t.title}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} aria-label={isAr ? 'إغلاق' : 'Close'} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>✕</button>
         </div>
 
         {/* Body */}

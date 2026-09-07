@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../api/axios'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const PRIMARY = '#5B8C8F'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -64,6 +65,13 @@ export default function PatientAttachmentsTab({ patientId, lang, appointmentId }
   const [notes, setNotes] = useState('')
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const previewPanelRef = useRef<HTMLDivElement>(null)
+  const closePreview = () => {
+    setPreviewId(null)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+  }
+  useFocusTrap(previewPanelRef, !!(previewId && previewUrl), closePreview)
 
   const fetchAttachments = () => {
     setLoading(true)
@@ -245,15 +253,18 @@ export default function PatientAttachmentsTab({ patientId, lang, appointmentId }
 
       {/* نافذة معاينة الملف */}
       {previewId && previewUrl && (
-        <div onClick={() => { setPreviewId(null); URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }}
+        <div onClick={closePreview}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh', background: '#FFF', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div ref={previewPanelRef} role="dialog" aria-modal="true"
+            aria-label={items.find(i => i.id === previewId)?.fileName || (lang === 'ar' ? 'معاينة الملف' : 'File preview')}
+            tabIndex={-1} onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', background: '#FFF', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: 10, display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => { setPreviewId(null); URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }}
+              <button onClick={closePreview} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
                 style={{ background: '#F1F4F4', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14 }}>✕</button>
             </div>
             {items.find(i => i.id === previewId)?.isImage ? (
-              <img src={previewUrl} alt="" style={{ maxWidth: '90vw', maxHeight: '80vh', objectFit: 'contain' }} />
+              <img src={previewUrl} alt={items.find(i => i.id === previewId)?.fileName || ''} style={{ maxWidth: '90vw', maxHeight: '80vh', objectFit: 'contain' }} />
             ) : (
               <iframe src={previewUrl} title="preview" style={{ width: '80vw', height: '80vh', border: 'none' }} />
             )}

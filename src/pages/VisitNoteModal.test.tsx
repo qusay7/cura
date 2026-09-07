@@ -108,4 +108,20 @@ describe('VisitNoteModal', () => {
     expect(onClose).toHaveBeenCalled()
     expect(mockedApi.post).not.toHaveBeenCalled()
   })
+
+  it('exposes dialog semantics, traps focus inside, and closes on Escape', async () => {
+    const onClose = vi.fn()
+    const onSaved = vi.fn()
+    const user = userEvent.setup()
+    render(<VisitNoteModal {...baseProps} onClose={onClose} onSaved={onSaved} />)
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAccessibleName(/visit notes/i)
+    // The close button is the dialog's first focusable element.
+    expect(screen.getByRole('button', { name: /close/i })).toHaveFocus()
+
+    await user.keyboard('{Escape}')
+
+    expect(onClose).toHaveBeenCalled()
+  })
 })

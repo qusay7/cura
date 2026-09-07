@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { PRIMARY_SOFT } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -90,24 +91,27 @@ const btn = (bg: string, color: string, border = 'transparent'): React.CSSProper
 function TextViewer({ title, value, lang, onClose }: { title: string; value: string; lang: 'ar' | 'en'; onClose: () => void }) {
   const t = T[lang]
   const [copied, setCopied] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef, true, onClose)
 
   return (
     <div className="no-print" onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()}
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="invoice-text-viewer-title" tabIndex={-1}
+        onClick={e => e.stopPropagation()}
         style={{ background: CARD_BG, borderRadius: 16, padding: 20, maxWidth: 760, width: '100%', maxHeight: '88vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <h4 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>{title}</h4>
+          <h4 id="invoice-text-viewer-title" style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>{title}</h4>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
               style={btn(PRIMARY_SOFT, PRIMARY, BORDER)}>
               {copied ? `✅ ${t.copied}` : `📋 ${t.copy}`}
             </button>
-            <button onClick={onClose} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
+            <button onClick={onClose} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
           </div>
         </div>
         {value.startsWith('data:image') ? (
-          <img src={value} alt="QR" style={{ maxWidth: 260, display: 'block', margin: '0 auto' }} />
+          <img src={value} alt={lang === 'ar' ? 'رمز QR للفاتورة' : 'Invoice QR code'} style={{ maxWidth: 260, display: 'block', margin: '0 auto' }} />
         ) : (
           <pre style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 10, padding: 14, fontSize: 11, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', direction: 'ltr', textAlign: 'left', margin: 0 }}>
             {value}
@@ -124,6 +128,8 @@ function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: '
   const [loading, setLoading] = useState(true)
   const [inv, setInv] = useState<any>(null)
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef, true, onClose)
 
   useEffect(() => {
     api.get(`/invoices/${invoiceId}`)
@@ -159,14 +165,15 @@ function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: '
   return (
     <div className="inv-overlay" onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div className="inv-sheet" onClick={e => e.stopPropagation()}
+      <div ref={panelRef} className="inv-sheet" role="dialog" aria-modal="true" aria-labelledby="invoice-modal-title" tabIndex={-1}
+        onClick={e => e.stopPropagation()}
         style={{ background: CARD_BG, borderRadius: 18, padding: 28, maxWidth: 660, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
 
         <PrintHeader reportTitle={`${isReturn ? t.creditNote : t.sale} — ${inv?.patientName || ''}`} lang={lang} />
 
         <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>
+            <h3 id="invoice-modal-title" style={{ fontSize: 20, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>
               {isReturn ? '↩️' : '🧾'} {isReturn ? t.creditNote : t.sale}
             </h3>
             <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '4px 0 0' }}>{user.clinicName || ''}</p>
@@ -175,7 +182,7 @@ function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: '
             <button onClick={() => download('pdf', true)} style={btn(CARD_BG, TEXT_MUTED, BORDER)}>🖨️ {t.print}</button>
             <button onClick={() => download('pdf')} style={btn(PRIMARY, '#FFF')}>📄 PDF</button>
             <button onClick={() => download('excel')} style={btn('#E8F5E9', SUCCESS, '#A7D8B4')}>📊 Excel</button>
-            <button onClick={onClose} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
+            <button onClick={onClose} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
           </div>
         </div>
 
@@ -250,7 +257,7 @@ function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: '
             {inv.qrCode && (
               <div style={{ marginTop: 20, textAlign: 'center' }}>
                 {inv.qrCode.startsWith('data:image')
-                  ? <img src={inv.qrCode} alt="QR" style={{ width: 130, height: 130 }} />
+                  ? <img src={inv.qrCode} alt={lang === 'ar' ? 'رمز QR للفاتورة' : 'Invoice QR code'} style={{ width: 130, height: 130 }} />
                   : <span style={{ fontSize: 9, color: TEXT_MUTED, wordBreak: 'break-all', direction: 'ltr', display: 'block' }}>{inv.qrCode}</span>}
               </div>
             )}
@@ -273,6 +280,8 @@ function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onCl
   const [selected, setSelected] = useState('')
   const [taxMethod, setTaxMethod] = useState('2')
   const [taxRate, setTaxRate] = useState('')
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef, true, onClose)
 
   useEffect(() => {
     api.get('/invoices/uninvoiced-payments')
@@ -299,9 +308,10 @@ function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onCl
   return (
     <div className="no-print" onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()}
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="new-invoice-modal-title" tabIndex={-1}
+        onClick={e => e.stopPropagation()}
         style={{ background: CARD_BG, borderRadius: 18, padding: 24, maxWidth: 560, width: '100%', maxHeight: '88vh', overflowY: 'auto' }}>
-        <h3 style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: '0 0 16px' }}>🧾 {t.pickPayment}</h3>
+        <h3 id="new-invoice-modal-title" style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: '0 0 16px' }}>🧾 {t.pickPayment}</h3>
 
         {error && (
           <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: DANGER }}>⚠️ {error}</div>
@@ -368,6 +378,8 @@ function ReturnModal({ invoiceId, lang, onClose, onCreated }: { invoiceId: strin
   const [inv, setInv] = useState<any>(null)
   const [reason, setReason] = useState('')
   const [qty, setQty] = useState<Record<string, string>>({})
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef, true, onClose)
 
   useEffect(() => {
     api.get(`/invoices/${invoiceId}`)
@@ -399,9 +411,10 @@ function ReturnModal({ invoiceId, lang, onClose, onCreated }: { invoiceId: strin
   return (
     <div className="no-print" onClick={onClose}
       style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()}
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="return-modal-title" tabIndex={-1}
+        onClick={e => e.stopPropagation()}
         style={{ background: CARD_BG, borderRadius: 18, padding: 24, maxWidth: 600, width: '100%', maxHeight: '88vh', overflowY: 'auto' }}>
-        <h3 style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: '0 0 6px' }}>↩️ {t.creditNote}</h3>
+        <h3 id="return-modal-title" style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: '0 0 6px' }}>↩️ {t.creditNote}</h3>
         <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '0 0 16px' }}>{t.sourceInvoice}: {inv?.invoiceNumber || ''}</p>
 
         {error && (
