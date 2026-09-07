@@ -144,7 +144,7 @@ const globalCss = `
 }
 
 .plan-card.featured {
-  border-color: #C4A77D;
+  border-color: #79674D;
   box-shadow: 0 4px 20px rgba(196, 167, 125, 0.18);
 }
 
@@ -199,11 +199,11 @@ const globalCss = `
 
 .plan-badge.inactive {
   background: rgba(196, 167, 125, 0.15);
-  color: #C4A77D;
+  color: #79674D;
 }
 
 .plan-badge.featured {
-  background: #C4A77D;
+  background: #79674D;
   color: #FFFFFF;
 }
 
@@ -340,11 +340,11 @@ const globalCss = `
 
 .btn-toggle-active {
   background: rgba(196, 167, 125, 0.15);
-  color: #C4A77D;
+  color: #79674D;
 }
 
 .btn-toggle-active:hover {
-  background: #C4A77D;
+  background: #79674D;
   color: white;
 }
 
@@ -417,14 +417,14 @@ const globalCss = `
 /* Alert Messages */
 .alert-error {
   background: #FDF5F5;
-  border: 1px solid #C4A77D;
+  border: 1px solid #79674D;
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #C4A77D;
+  color: #79674D;
 }
 
 .alert-success {
@@ -499,7 +499,7 @@ const globalCss = `
 `
 
 const SUCCESS = '#4A7679'
-const WARNING = '#C4A77D'
+const WARNING = '#79674D'
 
 interface Plan {
   id: string
@@ -822,7 +822,7 @@ export default function SuperAdminPlans() {
               <div className="form-grid">
                 {fields.map(f => (
                   <div key={f.key} className="form-field">
-                    <label className="form-label">{f.label} {f.required && <span style={{ color: '#C4A77D' }}>*</span>}</label>
+                    <label className="form-label">{f.label} {f.required && <span style={{ color: '#79674D' }}>*</span>}</label>
                     <input
                       type={f.type}
                       value={form[f.key as keyof typeof form] as string}

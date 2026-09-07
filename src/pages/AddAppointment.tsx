@@ -65,7 +65,7 @@ const globalCss = `
 
 const PRIMARY_DARK = '#4A7679'
 const ERROR_BG = '#FDF5F5'
-const ERROR_TEXT = '#C4A77D'
+const ERROR_TEXT = '#79674D'
 const SUCCESS = '#16A34A'
 const SUCCESS_BG = '#F0FDF4'
 

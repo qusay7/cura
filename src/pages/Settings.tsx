@@ -167,7 +167,7 @@ const globalCss = `
 }
 
 .days-badge {
-  background: #C4A77D;
+  background: #79674D;
   color: white;
   padding: 8px 16px;
   border-radius: 100px;
@@ -211,7 +211,7 @@ const globalCss = `
 }
 
 .usage-bar-fill.high {
-  background: linear-gradient(90deg, #C4A77D, #D4B78D);
+  background: linear-gradient(90deg, #79674D, #D4B78D);
 }
 
 /* Alert Messages */
@@ -229,10 +229,10 @@ const globalCss = `
 
 .alert-error {
   background: #FDF5F5;
-  border: 1px solid #C4A77D;
+  border: 1px solid #79674D;
   border-radius: 14px;
   padding: 14px 20px;
-  color: #C4A77D;
+  color: #79674D;
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
@@ -270,7 +270,7 @@ const globalCss = `
   background: none;
   border: none;
   cursor: pointer;
-  color: #C4A77D;
+  color: #79674D;
   font-size: 14px;
   transition: all 0.2s ease;
 }
@@ -318,7 +318,7 @@ const globalCss = `
 `
 
 // Comfortable color palette
-const ERROR_TEXT = '#C4A77D'
+const ERROR_TEXT = '#79674D'
 
 // Translations
 const T = {

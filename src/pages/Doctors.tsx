@@ -64,7 +64,7 @@ input:focus {
 // Comfortable color palette
 const PRIMARY_LIGHT = '#8BAFB1'
 const SUCCESS = '#4A7679'
-const WARNING = '#C4A77D'
+const WARNING = '#79674D'
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {

@@ -50,8 +50,8 @@ const globalCss = `
 
 // Comfortable color palette
 const ERROR_BG = '#FDF5F5'
-const ERROR_TEXT = '#C4A77D'
- const WARNING = '#C4A77D'
+const ERROR_TEXT = '#79674D'
+ const WARNING = '#79674D'
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {

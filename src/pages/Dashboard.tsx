@@ -150,7 +150,7 @@ interface DoctorTodayAppointment {
 const ProgressBar = ({ label, current, max }: { label: string; current: number; max: number }) => {
   const isUnlimited = max === -1
   const pct = isUnlimited ? 100 : Math.min((current / max) * 100, 100)
-  const barColor = pct > 85 ? '#C4A77D' : pct > 70 ? '#8BAFB1' : PRIMARY
+  const barColor = pct > 85 ? '#79674D' : pct > 70 ? '#8BAFB1' : PRIMARY
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -252,7 +252,7 @@ const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: 
             <div className="sa-header-btns" style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => navigate('/superadmin/clinics')} style={{ background: PRIMARY, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🏥 {isAr ? 'العيادات' : 'Clinics'}</button>
               <button onClick={() => navigate('/superadmin/plans')} style={{ background: PRIMARY_SOFT, color: PRIMARY, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>💎 {isAr ? 'الخطط' : 'Plans'}</button>
-              <button onClick={handleLogout} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 12, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#C4A77D', flexShrink: 0 }}>
+              <button onClick={handleLogout} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 12, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#79674D', flexShrink: 0 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               </button>
             </div>
@@ -264,7 +264,7 @@ const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: 
           {[
             { icon: '🏥', label: isAr ? 'إجمالي العيادات' : 'Total Clinics', value: clinics.length, color: PRIMARY },
             { icon: '✅', label: isAr ? 'عيادات نشطة' : 'Active Clinics', value: activeClinics, color: '#4A7679' },
-            { icon: '⏸️', label: isAr ? 'عيادات موقوفة' : 'Inactive', value: clinics.length - activeClinics, color: '#C4A77D' },
+            { icon: '⏸️', label: isAr ? 'عيادات موقوفة' : 'Inactive', value: clinics.length - activeClinics, color: '#79674D' },
             { icon: '💎', label: isAr ? 'الخطط المتاحة' : 'Plans', value: plans.length, color: PRIMARY },
           ].map((s, i) => (
             <div key={i} style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 16 }}>
@@ -294,7 +294,7 @@ const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: 
                     <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clinic.name}</p>
                     <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>{clinic.ownerName || '—'} · {clinic.phone || '—'}</p>
                   </div>
-                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 100, flexShrink: 0, background: clinic.isActive ? '#4A767915' : '#C4A77D15', color: clinic.isActive ? '#4A7679' : '#C4A77D' }}>
+                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 100, flexShrink: 0, background: clinic.isActive ? '#4A767915' : '#79674D15', color: clinic.isActive ? '#4A7679' : '#79674D' }}>
                     {clinic.isActive ? (isAr ? '✅ نشطة' : '✅ Active') : (isAr ? '⏸️ موقوفة' : '⏸️ Inactive')}
                   </span>
                 </div>
@@ -324,7 +324,7 @@ const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: 
                     <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>
                       {plan.name === 'Basic' ? '🥉' : plan.name === 'Standard' ? '🥈' : '🥇'} {plan.name}
                     </p>
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: plan.isActive ? '#4A767915' : '#C4A77D15', color: plan.isActive ? '#4A7679' : '#C4A77D' }}>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: plan.isActive ? '#4A767915' : '#79674D15', color: plan.isActive ? '#4A7679' : '#79674D' }}>
                       {plan.isActive ? (isAr ? 'نشطة' : 'Active') : (isAr ? 'موقوفة' : 'Inactive')}
                     </span>
                   </div>
@@ -408,7 +408,7 @@ useEffect(() => {
   if (isSuperAdmin) return <SuperAdminDashboard lang={lang} navigate={navigate} />
 
   const sub = data?.subscription
-  const daysColor = sub ? (sub.daysRemaining <= 3 ? '#C4A77D' : sub.daysRemaining <= 7 ? '#8BAFB1' : PRIMARY) : PRIMARY
+  const daysColor = sub ? (sub.daysRemaining <= 3 ? '#79674D' : sub.daysRemaining <= 7 ? '#8BAFB1' : PRIMARY) : PRIMARY
 
   return (
     <div className="dash-shell" style={{ fontFamily: font, direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '16px 20px' }}>

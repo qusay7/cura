@@ -18,7 +18,7 @@ const globalCss = `
 
 const SUCCESS = '#4A7679'
 const SUCCESS_BG = '#E8F5E9'
-const WARNING = '#C4A77D'
+const WARNING = '#79674D'
 const WARNING_BG = '#FBF4E4'
 
 const T = {

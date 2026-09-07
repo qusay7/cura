@@ -51,7 +51,7 @@ const globalCss = `
 const PRIMARY_DARK = '#4A7679'
 const SUCCESS = '#4A7679'
 const INFO = '#8BAFB1'
-const DANGER = '#C4A77D'
+const DANGER = '#79674D'
 
 const T = {
   ar: {

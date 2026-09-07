@@ -14,7 +14,7 @@ const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
-const ERROR_TEXT = '#C4A77D'
+const ERROR_TEXT = '#79674D'
 
 const SPECIALTIES = {
   ar: [

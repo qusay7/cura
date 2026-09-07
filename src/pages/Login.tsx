@@ -132,7 +132,7 @@ const TD = '#2C3E3F'
 const TM = '#6B8A8C'
 const BR = '#DCE5E5'
 const EB = '#FDF5F5'
-const ET = '#C4A77D'
+const ET = '#79674D'
 // Gold accent reserved for the SuperAdmin path only, so it reads as a
 // distinct, higher-privilege entry point rather than "just another clinic".
 const GOLD   = '#B8892A'

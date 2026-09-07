@@ -146,7 +146,7 @@ const layoutCss = `
 .notification-badge {
   position: absolute;
   top: -4px; right: -4px;
-  background: #C4A77D;
+  background: #79674D;
   color: #FFFFFF;
   font-size: 10px;
   font-weight: 600;
@@ -598,7 +598,7 @@ const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
                   </div>
                   <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
                 </div>
-                {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#C4A77D', alignSelf: 'center', flexShrink: 0 }} />}
+                {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#79674D', alignSelf: 'center', flexShrink: 0 }} />}
               </div>
             ))}
           </div>

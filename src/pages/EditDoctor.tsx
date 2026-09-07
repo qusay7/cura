@@ -24,7 +24,7 @@ const globalCss = `
 `
 
 const ERROR_BG = '#FDF5F5'
-const ERROR_TEXT = '#C4A77D'
+const ERROR_TEXT = '#79674D'
 const SUCCESS = '#4A7679'
 
 const SPECIALTIES = {

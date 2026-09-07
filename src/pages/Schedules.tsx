@@ -20,7 +20,7 @@ const BORDER       = '#DCE5E5'
 const SUCCESS_BG   = '#F0FDF4'
 const SUCCESS_C    = '#16A34A'
 const ERROR_BG     = '#FDF5F5'
-const ERROR_C      = '#C4A77D'
+const ERROR_C      = '#79674D'
 const AMBER        = '#F59E0B'
 const AMBER_BG     = '#FFF8E1'
 

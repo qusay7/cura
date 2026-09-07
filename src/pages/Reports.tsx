@@ -17,7 +17,7 @@ const SUCCESS_BG   = '#F0FDF4'
 const WARNING      = '#F59E0B'
 const DANGER       = '#EF4444'
 const DANGER_BG    = '#FEF2F2'
-const AMBER        = '#C4A77D'
+const AMBER        = '#79674D'
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
 const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']

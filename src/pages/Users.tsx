@@ -12,7 +12,7 @@ const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const SUCCESS = '#4A7679'
-const WARNING = '#C4A77D'
+const WARNING = '#79674D'
 
 const globalCss = `
 @keyframes fade-up {

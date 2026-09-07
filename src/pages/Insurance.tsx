@@ -18,7 +18,7 @@ const WARNING     = '#F59E0B'
 const WARNING_BG  = '#FFFBEB'
 const DANGER      = '#EF4444'
 const DANGER_BG   = '#FEF2F2'
-const AMBER       = '#C4A77D'
+const AMBER       = '#79674D'
 
 const css = `
 @keyframes fade-up { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }

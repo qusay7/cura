@@ -27,7 +27,7 @@ const globalCss = `
 `
 
 const ERROR_BG = '#FDF5F5'
-const ERROR_TEXT = '#C4A77D'
+const ERROR_TEXT = '#79674D'
 const SUCCESS = '#4A7679'
 
 const T = {
@@ -442,7 +442,7 @@ export default function TreatmentTemplates() {
                       <h4 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>{tpl.name}</h4>
                       {tpl.nameEn && <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '2px 0 0', fontFamily: "'Inter',sans-serif" }}>{tpl.nameEn}</p>}
                     </div>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, color: tpl.departmentName ? PRIMARY : '#C4A77D', background: tpl.departmentName ? PRIMARY_SOFT : '#FBF4E4', borderRadius: 100, padding: '3px 10px', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: tpl.departmentName ? PRIMARY : '#79674D', background: tpl.departmentName ? PRIMARY_SOFT : '#FBF4E4', borderRadius: 100, padding: '3px 10px', whiteSpace: 'nowrap' }}>
                       {tpl.departmentName || t.generalBadge}
                     </span>
                   </div>
@@ -473,7 +473,7 @@ export default function TreatmentTemplates() {
                   )}
 
                   {!hasVisitPrice && !hasSessionPrice && (
-                    <p style={{ fontSize: 11.5, color: '#C4A77D', fontStyle: 'italic', marginBottom: 8 }}>⚠️ {t.noPriceSet}</p>
+                    <p style={{ fontSize: 11.5, color: '#79674D', fontStyle: 'italic', marginBottom: 8 }}>⚠️ {t.noPriceSet}</p>
                   )}
 
                   <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
