@@ -1,4 +1,5 @@
 import { useEffect, useState, useId, isValidElement, cloneElement } from 'react'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
@@ -300,6 +301,7 @@ export default function EditDoctor() {
     fullName: '', specialty: '', phone: '', email: '', notes: '',
     isActive: true, departmentId: '', workType: 'appointments',
   })
+  useUnsavedChangesWarning(form, !loading)
 
   // ✅ الإعدادات المالية
   const [activeTab, setActiveTab] = useState<'info' | 'financial'>('info')

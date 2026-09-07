@@ -1,4 +1,5 @@
 import { useEffect, useState, useId, isValidElement, cloneElement } from 'react'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
@@ -330,6 +331,7 @@ export default function EditPatient() {
     notes: '',
     stopped: false,
   })
+  useUnsavedChangesWarning(form, !loading)
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 

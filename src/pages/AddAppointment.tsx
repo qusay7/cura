@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useId, isValidElement, cloneElement } from 'react'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
@@ -290,6 +291,7 @@ export default function AddAppointment() {
     type: '', templateId: '', price: '', notes: '',
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  useUnsavedChangesWarning(form)
 
   const fetchData = async () => {
     setLoadingData(true)

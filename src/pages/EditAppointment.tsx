@@ -1,4 +1,5 @@
 import { useEffect, useState, useId, isValidElement, cloneElement } from 'react'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
@@ -353,6 +354,7 @@ export default function EditAppointment() {
     status: '',
     notes: '',
   })
+  useUnsavedChangesWarning(form, !loading)
 
   // ✅ التحقق من تضارب الأوقات
   const checkTimeConflict = async (doctorId: string | undefined, dateTime: string) => {

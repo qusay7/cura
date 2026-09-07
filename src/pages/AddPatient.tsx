@@ -1,4 +1,5 @@
 import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
@@ -220,6 +221,7 @@ export default function AddPatient() {
     chronicDiseases:'', occupation:'', maritalStatus:'', notes:'',
   })
   const [validationErrors, setValidationErrors] = useState<Record<string,string>>({})
+  useUnsavedChangesWarning(form)
 
   useEffect(() => {
     const styleId = 'cura-add-patient-css'

@@ -1,4 +1,5 @@
 import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
@@ -138,6 +139,7 @@ export default function AddDoctor() {
     departmentId: '',   workType: 'appointments',
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  useUnsavedChangesWarning(form)
 
   useEffect(() => {
     const styleId = 'cura-add-doctor-css'

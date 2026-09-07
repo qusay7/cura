@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -54,6 +55,7 @@ export default function AddUser() {
     role: '', clinicId: user.clinicId || '',
     departmentId: '', specialty: '',
   })
+  useUnsavedChangesWarning(form)
 
   useEffect(() => {
     if (user.clinicId) {

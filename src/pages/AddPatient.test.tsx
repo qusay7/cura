@@ -44,6 +44,21 @@ describe('AddPatient', () => {
     expect(await screen.findByLabelText('Full Name', { exact: false })).toBeInTheDocument()
   })
 
+  it('warns before closing the tab once a field has been typed into', async () => {
+    const user = userEvent.setup()
+    renderAddPatient()
+
+    let event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+
+    await user.type(await screen.findByLabelText('Full Name', { exact: false }), 'Sara')
+
+    event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it('requires a full name before submitting', async () => {
     const user = userEvent.setup()
     renderAddPatient()

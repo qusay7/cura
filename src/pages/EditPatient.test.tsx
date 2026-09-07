@@ -48,6 +48,23 @@ describe('EditPatient', () => {
     vi.clearAllMocks()
   })
 
+  it('warns before closing the tab only after editing a field, not on the initial data load', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: patientRecord() })
+    const user = userEvent.setup()
+    renderEditPatient()
+    const nameInput = await screen.findByDisplayValue('Sara Ahmad', {}, LOADING_TIMEOUT)
+
+    let event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+
+    await user.type(nameInput, ' Hassan')
+
+    event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it('loads and pre-fills the patient data', async () => {
     mockedApi.get.mockResolvedValueOnce({ data: patientRecord() })
     renderEditPatient()
