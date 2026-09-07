@@ -748,7 +748,7 @@ export default function AddAppointment() {
                 )
               ) : (
                 <div className="calendar-container">
-                  <AppointmentCalendar doctorId={form.doctorId} onSelectSlot={handleSlotSelect} />
+                  <AppointmentCalendar doctorId={form.doctorId} onSelectSlot={handleSlotSelect} initialDateTime={form.appointmentDate || undefined} />
                 </div>
               )}
 

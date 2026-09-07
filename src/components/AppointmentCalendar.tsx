@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
 
 interface Slot {
@@ -28,9 +28,16 @@ interface Props {
   doctorId: string
   onSelectSlot: (dateTime: string, price?: number) => void
   isFirstVisit?: boolean
+  // ✅ موعد مُختار مسبقاً (مثلاً من الضغط على فترة متاحة بتقويم الطبيب) —
+  // يفتح التقويم على اليوم الصحيح ويُبرز نفس الفترة تلقائياً، بدل ما يضطر
+  // المستخدم يعيد البحث عنها يدوياً من جديد
+  initialDateTime?: string
 }
 
-
+// ✅ نفس منطق التنظيف بـ handleSlotSelect بالأسفل — يوحّد صيغ التاريخ/الوقت
+// (مع/بدون ثوانٍ، T أو مسافة، مع/بدون منطقة زمنية) عشان تقدر تُقارَن
+const normalizeDateTime = (dt: string) =>
+  dt.replace('T', ' ').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '').slice(0, 16)
 
 const PRIMARY = '#5B8C8F'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -38,11 +45,16 @@ const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 
-export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVisit = true }: Props) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVisit = true, initialDateTime }: Props) {
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (!initialDateTime) return new Date()
+    const d = new Date(initialDateTime.replace(' ', 'T'))
+    return isNaN(d.getTime()) ? new Date() : d
+  })
   const [slotsData, setSlotsData] = useState<SlotsData | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
+  const appliedInitialSelectionRef = useRef(false)
 
   const fetchSlots = async (date: Date) => {
   setLoading(true)
@@ -68,6 +80,16 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
     if (doctorId) fetchSlots(selectedDate)
   }, [doctorId, selectedDate])
 
+  // ✅ يُبرز الفترة اللي وصلت مسبقاً (initialDateTime) بمجرد ما تجيب بيانات
+  // نفس اليوم — مرة وحدة بس، عشان ما يلغي اختيار المستخدم لفترة ثانية بعدها
+  useEffect(() => {
+    if (!slotsData || !initialDateTime || appliedInitialSelectionRef.current) return
+    appliedInitialSelectionRef.current = true
+    const target = normalizeDateTime(initialDateTime)
+    const match = slotsData.slots.find(s => normalizeDateTime(s.dateTime) === target)
+    if (match) setSelectedSlot(match.dateTime)
+  }, [slotsData, initialDateTime])
+
   const getWeekDays = () => {
     const days = []
     const today = new Date()
@@ -84,18 +106,13 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
  const handleSlotSelect = (slot: Slot) => {
   if (!slot.isAvailable) return
   setSelectedSlot(slot.dateTime)
-  
-  // ✅ إزالة Z أو timezone إن وجد
-  const cleanDateTime = slot.dateTime
-    .replace('T', ' ')        // "2024-01-15T09:00" → "2024-01-15 09:00"
-    .replace(/Z$/, '')        // إزالة Z
-    .replace(/\+\d{2}:\d{2}$/, '') // إزالة +03:00
-    .slice(0, 16)             // أخذ أول 16 حرف فقط "2024-01-15 09:00"
-  
+
+  const cleanDateTime = normalizeDateTime(slot.dateTime)
+
   const price = isFirstVisit
     ? slotsData?.firstVisitPrice ?? undefined
     : slotsData?.followUpPrice ?? undefined
-    
+
   onSelectSlot(cleanDateTime, price)
 
 }
