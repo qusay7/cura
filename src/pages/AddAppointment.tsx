@@ -96,6 +96,7 @@ const T = {
     error: 'حدث خطأ غير متوقع', required: 'هذا الحقل مطلوب',
     loadingMessage: 'جاري تحميل البيانات',
     loadingSub: 'يرجى الانتظار أثناء تجهيز النموذج',
+    loadFailed: 'تعذّر تحميل بيانات الحجز', retry: 'إعادة المحاولة',
     invalidDate: 'يرجى اختيار تاريخ ووقت صحيح',
     futureDateError: 'يجب أن يكون الموعد في المستقبل',
     selectedAppointment: 'الموعد المحدد', change: 'تغيير',
@@ -133,6 +134,7 @@ const T = {
     error: 'An unexpected error occurred', required: 'This field is required',
     loadingMessage: 'Loading Data',
     loadingSub: 'Please wait while we prepare the booking form',
+    loadFailed: 'Failed to load booking data', retry: 'Retry',
     invalidDate: 'Please select a valid date and time',
     futureDateError: 'Appointment must be in the future',
     selectedAppointment: 'Selected Appointment', change: 'Change',
@@ -248,6 +250,7 @@ export default function AddAppointment() {
   const prefill = (location.state as { prefillPatientId?: string; prefillDoctorId?: string; prefillDate?: string; prefillDateTime?: string } | null) || {}
    const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
+  const [loadDataFailed, setLoadDataFailed] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [patients, setPatients] = useState<Patient[]>([])
@@ -276,6 +279,23 @@ export default function AddAppointment() {
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
+  const fetchData = async () => {
+    setLoadingData(true)
+    setLoadDataFailed(false)
+    try {
+      const [patientsRes, doctorsRes, templatesRes] = await Promise.all([
+        api.get('/patients'), api.get('/doctors'), api.get('/treatmentplans/templates'),
+      ])
+      setPatients(patientsRes.data)
+      setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
+      setTemplates(templatesRes.data)
+    } catch (err: any) {
+      if (err?.response?.status === 401) navigate('/login')
+      else setLoadDataFailed(true)
+    }
+    finally { setLoadingData(false) }
+  }
+
   useEffect(() => {
     const styleId = 'cura-add-appointment-css'
     if (!document.getElementById(styleId)) {
@@ -283,18 +303,6 @@ export default function AddAppointment() {
     }
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
-
-    const fetchData = async () => {
-      try {
-        const [patientsRes, doctorsRes, templatesRes] = await Promise.all([
-          api.get('/patients'), api.get('/doctors'), api.get('/treatmentplans/templates'),
-        ])
-        setPatients(patientsRes.data)
-        setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
-        setTemplates(templatesRes.data)
-      } catch { navigate('/login') }
-      finally { setLoadingData(false) }
-    }
     fetchData()
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }, [navigate])
@@ -574,6 +582,19 @@ export default function AddAppointment() {
   }
 
   if (loadingData) return <FormLoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
+
+  if (loadDataFailed) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ textAlign: 'center', background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 40 }}>
+        <span style={{ fontSize: 40, opacity: 0.5 }}>⚠️</span>
+        <p style={{ fontSize: 14, color: TEXT_MUTED, margin: '16px 0 20px' }}>{t.loadFailed}</p>
+        <button onClick={fetchData}
+          style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 10, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          {t.retry}
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="add-appointment-shell" style={{ direction:isAr?'rtl':'ltr', background:'#F8FAFA', minHeight:'100vh', padding:'24px' }}>

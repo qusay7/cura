@@ -48,11 +48,12 @@ describe('PatientVisitNotes', () => {
     vi.clearAllMocks()
   })
 
-  it('redirects to the patients list when loading fails', async () => {
+  it('shows a failure message before redirecting to the patients list when loading fails', async () => {
     mockedApi.get.mockRejectedValue(new Error('not found'))
     renderVisitNotes()
 
-    expect(await screen.findByText('patients list page')).toBeInTheDocument()
+    expect(await screen.findByText('Failed to load visit history')).toBeInTheDocument()
+    expect(await screen.findByText('patients list page', undefined, { timeout: 3000 })).toBeInTheDocument()
   })
 
   it('shows the empty state when there are no visit notes', async () => {

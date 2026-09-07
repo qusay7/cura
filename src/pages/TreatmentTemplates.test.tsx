@@ -57,8 +57,24 @@ describe('TreatmentTemplates', () => {
     window.confirm = vi.fn(() => true)
   })
 
-  it('redirects to the dashboard when loading fails', async () => {
-    mockTemplatesGets({ '/treatmentplans/templates': new Error('unauthorized') })
+  it('shows a retry option instead of silently redirecting when loading fails', async () => {
+    mockTemplatesGets({ '/treatmentplans/templates': new Error('network error') })
+    const user = userEvent.setup()
+    renderTemplates()
+
+    expect(await screen.findByText('Failed to load templates', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText('dashboard page')).not.toBeInTheDocument()
+
+    mockTemplatesGets({ '/treatmentplans/templates': [template()] })
+    await user.click(screen.getByRole('button', { name: /retry/i }))
+
+    expect(await screen.findByText('Checkup')).toBeInTheDocument()
+  })
+
+  it('redirects to the dashboard when the session has expired (401)', async () => {
+    mockTemplatesGets({
+      '/treatmentplans/templates': Object.assign(new Error('unauthorized'), { response: { status: 401 } }),
+    })
     renderTemplates()
 
     expect(await screen.findByText('dashboard page')).toBeInTheDocument()

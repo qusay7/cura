@@ -107,8 +107,22 @@ describe('AddAppointment', () => {
     vi.clearAllMocks()
   })
 
-  it('redirects to /login when the booking data fails to load', async () => {
-    mockedApi.get.mockRejectedValue(new Error('unauthorized'))
+  it('shows a retry option instead of assuming the session expired when loading fails', async () => {
+    mockedApi.get.mockRejectedValue(new Error('network error'))
+    const user = userEvent.setup()
+    renderAddAppointment()
+
+    expect(await screen.findByText('Failed to load booking data', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText('login page')).not.toBeInTheDocument()
+
+    mockAddAppointmentGets()
+    await user.click(screen.getByRole('button', { name: /retry/i }))
+
+    expect(await screen.findByText('Book New Appointment')).toBeInTheDocument()
+  })
+
+  it('redirects to /login when the session has expired (401)', async () => {
+    mockedApi.get.mockRejectedValue(Object.assign(new Error('unauthorized'), { response: { status: 401 } }))
     renderAddAppointment()
 
     expect(await screen.findByText('login page')).toBeInTheDocument()

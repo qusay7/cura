@@ -137,9 +137,24 @@ describe('DoctorDaily', () => {
     expect(await screen.findByText('appointment detail page')).toBeInTheDocument()
   })
 
-  it('redirects to the dashboard when loading the schedule fails', async () => {
+  it('shows a retry option instead of silently navigating away when loading fails', async () => {
     localStorage.setItem('user', JSON.stringify({ role: 'Doctor' }))
     mockedApi.get.mockRejectedValueOnce(new Error('server error'))
+    const user = userEvent.setup()
+    renderDoctorDaily()
+
+    expect(await screen.findByText("Failed to load today's schedule", { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText('dashboard page')).not.toBeInTheDocument()
+
+    mockedApi.get.mockResolvedValueOnce({ data: [appointment()] })
+    await user.click(screen.getByRole('button', { name: /retry/i }))
+
+    expect(await screen.findByText('Sara Ahmad')).toBeInTheDocument()
+  })
+
+  it('redirects to the dashboard when the session has expired (401)', async () => {
+    localStorage.setItem('user', JSON.stringify({ role: 'Doctor' }))
+    mockedApi.get.mockRejectedValueOnce(Object.assign(new Error('unauthorized'), { response: { status: 401 } }))
     renderDoctorDaily()
 
     expect(await screen.findByText('dashboard page')).toBeInTheDocument()

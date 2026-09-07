@@ -77,11 +77,22 @@ describe('EditDoctor', () => {
     expect(screen.getByDisplayValue('0501234567')).toBeInTheDocument()
   })
 
-  it('redirects to the doctors list when loading fails', async () => {
+  it('shows a failure message before redirecting to the doctors list when loading fails', async () => {
     mockEditDoctorGets({ '/doctors/doc-1': new Error('not found') })
     renderEditDoctor()
 
+    expect(await screen.findByText('Failed to load doctor data', {}, LOADING_TIMEOUT)).toBeInTheDocument()
+    expect(await screen.findByText('doctors page', undefined, { timeout: 3000 })).toBeInTheDocument()
+  })
+
+  it('redirects to the doctors list immediately when the session has expired (401)', async () => {
+    mockEditDoctorGets({
+      '/doctors/doc-1': Object.assign(new Error('unauthorized'), { response: { status: 401 } }),
+    })
+    renderEditDoctor()
+
     expect(await screen.findByText('doctors page', undefined, LOADING_TIMEOUT)).toBeInTheDocument()
+    expect(screen.queryByText('Failed to load doctor data')).not.toBeInTheDocument()
   })
 
   it('saves the doctor info and navigates back to the list', async () => {

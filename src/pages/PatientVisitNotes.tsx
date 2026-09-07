@@ -22,6 +22,7 @@ const T = {
     appointment: 'موعد', queue: 'دور',
     noNotes: 'لا توجد زيارات مسجلة بعد', loading: 'جاري التحميل...',
     riyal: 'د.أ', visitDate: 'تاريخ الزيارة',
+    loadFailed: 'تعذّر تحميل سجل الزيارات',
   },
   en: {
     back: 'Back', title: 'Visit History',
@@ -31,6 +32,7 @@ const T = {
     appointment: 'Appointment', queue: 'Queue',
     noNotes: 'No visits recorded yet', loading: 'Loading...',
     riyal: 'JD', visitDate: 'Visit Date',
+    loadFailed: 'Failed to load visit history',
   },
 }
 
@@ -47,6 +49,7 @@ export default function PatientVisitNotes() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [notes, setNotes] = useState<VisitNote[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [patientName, setPatientName] = useState('')
 
   useEffect(() => {
@@ -64,7 +67,11 @@ export default function PatientVisitNotes() {
         ])
         setNotes(notesRes.data)
         setPatientName(patientRes.data.fullName)
-      } catch { navigate('/patients') }
+      } catch (err: any) {
+        if (err?.response?.status === 401) { navigate('/patients'); return }
+        setLoadFailed(true)
+        setTimeout(() => navigate('/patients'), 2000)
+      }
       finally { setLoading(false) }
     }
     fetchData()
@@ -84,6 +91,15 @@ export default function PatientVisitNotes() {
           <ECGAnimation height={80} showLetters={false} speed={0.7} />
         </div>
         <p style={{ color:TEXT_MUTED, fontSize:14 }}>{t.loading}</p>
+      </div>
+    </div>
+  )
+
+  if (loadFailed) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
+      <div style={{ textAlign:'center', background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, padding:40 }}>
+        <span style={{ fontSize:40, opacity:0.5 }}>⚠️</span>
+        <p style={{ fontSize:14, color:TEXT_MUTED, marginTop:16 }}>{t.loadFailed}</p>
       </div>
     </div>
   )

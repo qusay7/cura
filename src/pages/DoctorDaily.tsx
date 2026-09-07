@@ -28,6 +28,7 @@ const T = {
     patient: 'المريض', time: 'الوقت', type: 'نوع الزيارة', status: 'الحالة', actions: 'إجراء',
     viewDetails: 'التفاصيل', refresh: 'تحديث', notADoctor: 'اختر طبيباً لعرض جدوله',
     weeklyCalendar: '📅 التقويم الأسبوعي',
+    loadError: 'تعذّر تحميل جدول اليوم', retry: 'إعادة المحاولة',
   },
   en: {
     title: "Today's Schedule", subtitle: "Your appointments and progress for today",
@@ -37,6 +38,7 @@ const T = {
     patient: 'Patient', time: 'Time', type: 'Visit Type', status: 'Status', actions: 'Action',
     viewDetails: 'Details', refresh: 'Refresh', notADoctor: 'Select a doctor to view their schedule',
     weeklyCalendar: '📅 Weekly Calendar',
+    loadError: 'Failed to load today\'s schedule', retry: 'Retry',
   },
 }
 
@@ -70,6 +72,7 @@ export default function DoctorDaily() {
   const [doctorId, setDoctorId] = useState(searchParams.get('doctorId') || '')
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   const t = T[lang]
   const isAr = lang === 'ar'
@@ -97,14 +100,16 @@ export default function DoctorDaily() {
 
   const fetchToday = async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const params = new URLSearchParams({ date: todayStr })
       if (!isDoctorUser && doctorId) params.set('doctorId', doctorId)
       const res = await api.get(`/appointments?${params}`)
       setAppointments(res.data.filter((a: Appointment) => a.status !== 'cancelled')
         .sort((a: Appointment, b: Appointment) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()))
-    } catch {
-      navigate('/dashboard')
+    } catch (err: any) {
+      if (err?.response?.status === 401) navigate('/dashboard')
+      else setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -163,6 +168,16 @@ export default function DoctorDaily() {
 
         {(isDoctorUser || doctorId) && (
           <>
+            {loadError ? (
+              <div style={{ textAlign: 'center', padding: '40px 24px', background: CARD_BG, borderRadius: 20, border: `1px solid ${BORDER}` }}>
+                <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 14 }}>⚠️ {t.loadError}</p>
+                <button onClick={fetchToday}
+                  style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '9px 20px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                  {t.retry}
+                </button>
+              </div>
+            ) : (
+              <>
             {/* بطاقات الإحصائيات */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
               {[
@@ -223,6 +238,8 @@ export default function DoctorDaily() {
                   </div>
                 ))}
               </div>
+            )}
+              </>
             )}
           </>
         )}

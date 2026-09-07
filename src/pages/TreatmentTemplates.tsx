@@ -44,6 +44,7 @@ const T = {
     pricePlaceholder: '—', save: 'حفظ', cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
     edit: 'تعديل', delete: 'حذف', noTemplates: 'لا توجد قوالب — اضغط "إضافة قالب" للبدء',
     loading: 'جاري التحميل...', confirmDelete: 'متأكد تبي تحذف هذا القالب؟',
+    loadFailed: 'تعذّر تحميل القوالب', retry: 'إعادة المحاولة',
     saved: 'تم الحفظ بنجاح', errGeneric: 'حدث خطأ', nameRequired: 'الاسم مطلوب',
     generalBadge: 'عام لكل الأقسام', sessionsBadge: 'جلسة',
     noPriceSet: 'السعر غير محدد بعد',
@@ -62,6 +63,7 @@ const T = {
     pricePlaceholder: '—', save: 'Save', cancel: 'Cancel', saving: 'Saving...',
     edit: 'Edit', delete: 'Delete', noTemplates: 'No templates yet — click "Add Template" to start',
     loading: 'Loading...', confirmDelete: 'Are you sure you want to delete this template?',
+    loadFailed: 'Failed to load templates', retry: 'Retry',
     saved: 'Saved successfully', errGeneric: 'An error occurred', nameRequired: 'Name is required',
     generalBadge: 'General — all departments', sessionsBadge: 'session(s)',
     noPriceSet: 'Price not set yet',
@@ -96,6 +98,7 @@ export default function TreatmentTemplates() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -130,6 +133,8 @@ export default function TreatmentTemplates() {
   }, [])
 
   const fetchAll = async () => {
+    setLoading(true)
+    setLoadFailed(false)
     try {
       const [tplRes, deptRes] = await Promise.all([
         api.get('/treatmentplans/templates'),
@@ -137,8 +142,9 @@ export default function TreatmentTemplates() {
       ])
       setTemplates(tplRes.data)
       setDepartments(deptRes.data.filter((d: Department) => d.isActive))
-    } catch {
-      navigate('/dashboard')
+    } catch (err: any) {
+      if (err?.response?.status === 401) navigate('/dashboard')
+      else setLoadFailed(true)
     } finally {
       setLoading(false)
     }
@@ -406,7 +412,15 @@ export default function TreatmentTemplates() {
         )}
 
         {/* Templates Grid */}
-        {loading ? (
+        {loadFailed ? (
+          <div style={{ textAlign: 'center', padding: '60px 24px', background: CARD_BG, borderRadius: 20, border: `1px solid ${BORDER}` }}>
+            <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 14 }}>⚠️ {t.loadFailed}</p>
+            <button onClick={fetchAll}
+              style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '9px 20px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              {t.retry}
+            </button>
+          </div>
+        ) : loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: TEXT_MUTED }}>
             <div style={{ width: 32, height: 32, margin: '0 auto 12px', borderRadius: '50%', border: `3px solid ${BORDER}`, borderTopColor: PRIMARY, animation: 'spin 0.8s linear infinite' }} />
             {t.loading}

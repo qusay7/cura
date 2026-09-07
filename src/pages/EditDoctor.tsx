@@ -170,6 +170,7 @@ const T = {
     active: 'نشط', error: 'حدث خطأ غير متوقع',
     loadingMessage: 'جاري تحميل بيانات الطبيب',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات',
+    loadFailed: 'تعذّر تحميل بيانات الطبيب',
     noDepartments: 'لا توجد أقسام',
     // ✅ الإعدادات المالية
     tabInfo: 'بيانات الطبيب', tabFinancial: 'الإعدادات المالية',
@@ -200,6 +201,7 @@ const T = {
     active: 'Active', error: 'An unexpected error occurred',
     loadingMessage: 'Loading Doctor Data',
     loadingSub: 'Please wait while we load doctor information',
+    loadFailed: 'Failed to load doctor data',
     noDepartments: 'No departments available',
     tabInfo: 'Doctor Info', tabFinancial: 'Financial Settings',
     generalTitle: 'General Settings', generalHint: 'Applies to all visit templates unless a specific exception exists',
@@ -276,6 +278,7 @@ export default function EditDoctor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -443,7 +446,11 @@ export default function EditDoctor() {
           workType:     d.workType     ?? 'both',
         })
         setDepartments(deptsRes.data.filter((dep: Department) => dep.isActive))
-      } catch { navigate('/doctors') }
+      } catch (err: any) {
+        if (err?.response?.status === 401) { navigate('/doctors'); return }
+        setLoadFailed(true)
+        setTimeout(() => navigate('/doctors'), 2000)
+      }
       finally {
         const elapsed = Date.now() - startTime
         setTimeout(() => setLoading(false), Math.max(0, 800 - elapsed))
@@ -487,6 +494,15 @@ export default function EditDoctor() {
   const isAr = lang === 'ar'
 
   if (loading) return <LoadingScreen msg={t.loadingMessage} subMsg={t.loadingSub} />
+
+  if (loadFailed) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ textAlign: 'center', background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 40 }}>
+        <span style={{ fontSize: 40, opacity: 0.5 }}>⚠️</span>
+        <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 16 }}>{t.loadFailed}</p>
+      </div>
+    </div>
+  )
 
   return (
     <div className="edit-doctor-shell" style={{ direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: '24px' }}>
