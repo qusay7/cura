@@ -1,6 +1,7 @@
 import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../styles/theme'
+import { hasPermission } from '../utils/permissions'
 
 // ✅ غيّر getImageUrl مع debugging:
 const getImageUrl = (path?: string | null) => {
@@ -361,6 +362,16 @@ const T = {
     passwordMismatch: 'كلمة المرور الجديدة غير متطابقة',
     saveSuccess: 'تم الحفظ بنجاح ✅',
     loading: 'جارٍ التحميل...',
+    whatsapp: 'واتساب',
+    whatsappTitle: 'ربط واتساب العيادة',
+    whatsappDesc: 'اربط رقم واتساب العيادة لإرسال تأكيدات وتذكيرات المواعيد تلقائياً للمرضى.',
+    whatsappConnected: 'متصل ✅',
+    whatsappNotConnected: 'غير متصل',
+    whatsappConnecting: 'جارٍ الاتصال...',
+    whatsappScanQr: 'امسح هذا الرمز من واتساب على جوال العيادة: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز',
+    whatsappConnectBtn: 'ربط واتساب',
+    whatsappReconnectBtn: 'إعادة الربط برقم جديد',
+    whatsappGeneratingQr: 'جارٍ توليد الرمز...',
   },
   en: {
     title: 'Settings',
@@ -401,6 +412,16 @@ const T = {
     passwordMismatch: 'New password does not match',
     saveSuccess: 'Saved successfully ✅',
     loading: 'Loading...',
+    whatsapp: 'WhatsApp',
+    whatsappTitle: 'Connect Clinic WhatsApp',
+    whatsappDesc: 'Link the clinic\'s WhatsApp number to automatically send appointment confirmations and reminders to patients.',
+    whatsappConnected: 'Connected ✅',
+    whatsappNotConnected: 'Not connected',
+    whatsappConnecting: 'Connecting...',
+    whatsappScanQr: 'Scan this code from the clinic\'s phone: WhatsApp Settings → Linked Devices → Link a Device',
+    whatsappConnectBtn: 'Connect WhatsApp',
+    whatsappReconnectBtn: 'Reconnect with a new number',
+    whatsappGeneratingQr: 'Generating code...',
   },
 }
 
@@ -477,7 +498,7 @@ const SettingsLoadingScreen = ({ msg }: { msg: string }) => (
 
 export default function Settings() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
-  const [activeTab, setActiveTab] = useState<'clinic' | 'account' | 'subscription'>('clinic')
+  const [activeTab, setActiveTab] = useState<'clinic' | 'account' | 'subscription' | 'whatsapp'>('clinic')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -517,6 +538,11 @@ export default function Settings() {
   // Subscription
   const [subscription, setSubscription] = useState<any>(null)
 
+  // WhatsApp
+  const [whatsappStatus, setWhatsappStatus] = useState<string>('not_started')
+  const [whatsappQr, setWhatsappQr] = useState<string | null>(null)
+  const [whatsappConnecting, setWhatsappConnecting] = useState(false)
+
   // Inject styles
   useEffect(() => {
     const styleId = 'cura-settings-css'
@@ -536,6 +562,38 @@ export default function Settings() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  // ✅ يحدّث حالة واتساب/QR كل 3 ثواني بس وقت ما التبويبة مفتوحة — الـ QR
+  // يتجدد تلقائياً من عندنا بالباك اند كل ~20-60 ثانية، فلازم نطلبه بشكل دوري
+  useEffect(() => {
+    if (activeTab !== 'whatsapp') return
+
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const res = await api.get('/whatsapp/status')
+        if (cancelled) return
+        setWhatsappStatus(res.data.status)
+        setWhatsappQr(res.data.qrDataUrl || null)
+      } catch { /* تجاهل فشل الاستطلاع المؤقت */ }
+    }
+
+    poll()
+    const interval = setInterval(poll, 3000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [activeTab])
+
+  const handleWhatsappConnect = async () => {
+    setWhatsappConnecting(true)
+    try {
+      const res = await api.post('/whatsapp/connect')
+      setWhatsappStatus(res.data.status)
+    } catch {
+      setError(t.error)
+    } finally {
+      setWhatsappConnecting(false)
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -688,6 +746,7 @@ export default function Settings() {
     { key: 'clinic' as const, label: t.clinic, icon: '🏥' },
     { key: 'account' as const, label: t.account, icon: '👤' },
     { key: 'subscription' as const, label: t.subscription, icon: '💎' },
+    ...(hasPermission('settings.edit') ? [{ key: 'whatsapp' as const, label: t.whatsapp, icon: '💬' }] : []),
   ]
 
   return (
@@ -917,7 +976,61 @@ export default function Settings() {
             )}
           </div>
         )}
-        
+
+        {/* WhatsApp Tab */}
+        {activeTab === 'whatsapp' && (
+          <div className="subscription-card" style={{ padding: 28 }}>
+            <h3 style={{ fontFamily: "'DM Serif Display','Georgia',serif", fontSize: 20, fontWeight: 500, color: TEXT_DARK, margin: 0 }}>
+              💬 {t.whatsappTitle}
+            </h3>
+            <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 8, marginBottom: 24, maxWidth: 480 }}>
+              {t.whatsappDesc}
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <span style={{
+                fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 100,
+                background: whatsappStatus === 'open' ? '#E8F0F0' : '#F3F4F6',
+                color: whatsappStatus === 'open' ? PRIMARY : TEXT_MUTED,
+              }}>
+                {whatsappStatus === 'open'
+                  ? t.whatsappConnected
+                  : whatsappStatus === 'qr' || whatsappStatus === 'connecting'
+                    ? t.whatsappConnecting
+                    : t.whatsappNotConnected}
+              </span>
+            </div>
+
+            {whatsappStatus === 'open' && (
+              <button onClick={handleWhatsappConnect} disabled={whatsappConnecting}
+                style={{ background: 'transparent', border: `1px solid ${BORDER}`, color: TEXT_DARK, borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 500, cursor: whatsappConnecting ? 'not-allowed' : 'pointer' }}>
+                {t.whatsappReconnectBtn}
+              </button>
+            )}
+
+            {(whatsappStatus === 'not_started' || whatsappStatus === 'logged_out') && (
+              <button onClick={handleWhatsappConnect} disabled={whatsappConnecting}
+                style={{ background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: whatsappConnecting ? 'not-allowed' : 'pointer', opacity: whatsappConnecting ? 0.7 : 1 }}>
+                {t.whatsappConnectBtn}
+              </button>
+            )}
+
+            {(whatsappStatus === 'qr' || whatsappStatus === 'connecting') && (
+              <div style={{ marginTop: 8 }}>
+                <p style={{ fontSize: 13, color: TEXT_DARK, marginBottom: 16, maxWidth: 420 }}>{t.whatsappScanQr}</p>
+                {whatsappQr ? (
+                  <img src={whatsappQr} alt="WhatsApp QR"
+                    style={{ width: 260, height: 260, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 12, background: '#FFFFFF' }} />
+                ) : (
+                  <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${BORDER}`, borderRadius: 12, color: TEXT_MUTED, fontSize: 13 }}>
+                    {t.whatsappGeneratingQr}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   )
