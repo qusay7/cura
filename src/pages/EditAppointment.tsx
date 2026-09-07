@@ -164,6 +164,7 @@ const T = {
     checkingAvailability: 'جارٍ التحقق من التوفر...',
     timeConflict: 'الطبيب لديه موعد في',
     selectedTime: 'الموعد المحدد',
+    conflictCheckFailed: 'تعذّر التحقق من تعارض المواعيد — يرجى المحاولة مرة أخرى',
   },
   en: {
     title: 'Edit Appointment',
@@ -204,6 +205,7 @@ const T = {
     checkingAvailability: 'Checking availability...',
     timeConflict: 'Doctor has an appointment at',
     selectedTime: 'Selected Time',
+    conflictCheckFailed: 'Could not verify scheduling conflicts — please try again',
   },
 }
 
@@ -365,7 +367,9 @@ export default function EditAppointment() {
       }
       return { conflict: false }
     } catch {
-      return { conflict: false }
+      // ✅ لو فشل طلب التحقق نفسه (شبكة مثلاً)، ما نفترض عدم وجود تعارض —
+      // نمنع الحفظ صراحة بدل حفظ حجز مزدوج محتمل بصمت
+      return { conflict: true, message: T[lang].conflictCheckFailed }
     }
   }
 

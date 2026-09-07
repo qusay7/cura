@@ -227,6 +227,23 @@ describe('EditAppointment', () => {
     expect(mockedApi.put).not.toHaveBeenCalled()
   })
 
+  it('blocks saving when the conflict check itself fails, rather than assuming no conflict', async () => {
+    mockEditAppointmentGets({
+      '/patients': [patient()],
+      '/doctors': [doctor()],
+      '/appointments?doctorId=doc-1': new Error('network error'),
+    })
+    const user = userEvent.setup()
+    renderEditAppointment()
+    await screen.findByDisplayValue('Regular checkup', {}, LOADING_TIMEOUT)
+
+    await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect((await screen.findAllByText(/could not verify scheduling conflicts/i)).length).toBeGreaterThan(0)
+    expect(mockedApi.put).not.toHaveBeenCalled()
+  })
+
   it('cancels without saving and returns to the appointments list', async () => {
     mockEditAppointmentGets({ '/patients': [patient()], '/doctors': [doctor()] })
     const user = userEvent.setup()
