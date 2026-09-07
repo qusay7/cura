@@ -718,7 +718,7 @@ export default function EditAppointment() {
                 )
               ) : (
                 <div className="calendar-container">
-                  <AppointmentCalendar doctorId={form.doctorId} onSelectSlot={handleSlotSelect} initialDateTime={form.appointmentDate || undefined} />
+                  <AppointmentCalendar doctorId={form.doctorId} onSelectSlot={handleSlotSelect} initialDateTime={form.appointmentDate || undefined} lang={lang} />
                 </div>
               )}
               {form.appointmentDate && (

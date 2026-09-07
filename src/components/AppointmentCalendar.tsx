@@ -1,6 +1,28 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
 
+const getStoredLang = (): 'ar' | 'en' =>
+  (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
+
+const T = {
+  ar: {
+    chooseDay: 'اختر اليوم', today: 'اليوم', loading: 'جارٍ التحميل...',
+    fetchFailed: 'تعذّر جلب المواعيد', minutesPerSlot: 'دقيقة/موعد', slotsAvailable: 'موعد متاح',
+    firstVisit: 'أول زيارة', followUp: 'متابعة', currency: 'د.أ',
+    unavailableTitle: 'غير متاح — اجتماع أو استراحة',
+    legendAvailable: 'متاح', legendBooked: 'محجوز', legendAbsent: 'إجازة', legendSelected: 'مختار',
+    days: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
+  },
+  en: {
+    chooseDay: 'Choose a day', today: 'Today', loading: 'Loading...',
+    fetchFailed: 'Failed to load appointments', minutesPerSlot: 'min/slot', slotsAvailable: 'slots available',
+    firstVisit: 'First visit', followUp: 'Follow-up', currency: 'JD',
+    unavailableTitle: 'Not available — meeting or break',
+    legendAvailable: 'Available', legendBooked: 'Booked', legendAbsent: 'Off', legendSelected: 'Selected',
+    days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  },
+}
+
 interface Slot {
   time: string
   dateTime: string
@@ -32,6 +54,9 @@ interface Props {
   // يفتح التقويم على اليوم الصحيح ويُبرز نفس الفترة تلقائياً، بدل ما يضطر
   // المستخدم يعيد البحث عنها يدوياً من جديد
   initialDateTime?: string
+  // ✅ يحدَّد صراحة من الصفحة الأم عادةً — بدون تمريره كان يفرض العربية/RTL
+  // دائماً بغض النظر عن لغة الصفحة، وإذا ما مُرِّر يرجع لتخزين المتصفح
+  lang?: 'ar' | 'en'
 }
 
 // ✅ نفس منطق التنظيف بـ handleSlotSelect بالأسفل — يوحّد صيغ التاريخ/الوقت
@@ -45,7 +70,10 @@ const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 
-export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVisit = true, initialDateTime }: Props) {
+export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVisit = true, initialDateTime, lang }: Props) {
+  const resolvedLang = lang ?? getStoredLang()
+  const isAr = resolvedLang === 'ar'
+  const t = T[resolvedLang]
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (!initialDateTime) return new Date()
     const d = new Date(initialDateTime.replace(' ', 'T'))
@@ -101,8 +129,6 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
     return days
   }
 
-  const dayNames = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت']
-
  const handleSlotSelect = (slot: Slot) => {
   if (!slot.isAvailable) return
   setSelectedSlot(slot.dateTime)
@@ -118,11 +144,11 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
 }
 
   return (
-    <div dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+    <div dir={isAr ? 'rtl' : 'ltr'} style={{ fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif" }}>
 
       {/* ── اختيار اليوم ── */}
       <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10, letterSpacing: '0.5px' }}>
-        اختر اليوم
+        {t.chooseDay}
       </p>
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 16 }}>
         {getWeekDays().map((day, i) => {
@@ -144,11 +170,11 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
                 minWidth: 60,
               }}
             >
-              <span style={{ fontSize: 10, opacity: 0.8 }}>{dayNames[day.getDay()]}</span>
+              <span style={{ fontSize: 10, opacity: 0.8 }}>{t.days[day.getDay()]}</span>
               <span style={{ fontSize: 18, fontWeight: 700, margin: '2px 0' }}>{day.getDate()}</span>
               {isToday && (
                 <span style={{ fontSize: 9, color: isSelected ? 'rgba(255,255,255,0.8)' : PRIMARY }}>
-                  اليوم
+                  {t.today}
                 </span>
               )}
             </button>
@@ -164,11 +190,11 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
             border: `3px solid ${PRIMARY_SOFT}`, borderTopColor: PRIMARY,
             animation: 'spin 0.8s linear infinite', margin: '0 auto 10px',
           }} />
-          <p style={{ fontSize: 13 }}>جارٍ التحميل...</p>
+          <p style={{ fontSize: 13 }}>{t.loading}</p>
         </div>
       ) : slotsData === null ? (
         <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>
-          <p style={{ fontSize: 13 }}>تعذّر جلب المواعيد</p>
+          <p style={{ fontSize: 13 }}>{t.fetchFailed}</p>
         </div>
       ) : !slotsData.available ? (
         <div style={{
@@ -189,10 +215,10 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
           }}>
             <span style={{ fontSize: 12, color: TEXT_MUTED }}>
               🕐 {slotsData.workStart} - {slotsData.workEnd}
-              <span style={{ marginRight: 8 }}>({slotsData.slotDuration} دقيقة/موعد)</span>
+              <span style={{ marginRight: 8 }}>({slotsData.slotDuration} {t.minutesPerSlot})</span>
             </span>
             <span style={{ fontSize: 12, color: '#4A7679', fontWeight: 600 }}>
-              {slotsData.availableSlots} موعد متاح
+              {slotsData.availableSlots} {t.slotsAvailable}
             </span>
           </div>
 
@@ -204,7 +230,7 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
                   fontSize: 11, background: '#EBF4FF', color: '#3B7DD8',
                   padding: '4px 12px', borderRadius: 100, fontWeight: 600,
                 }}>
-                  أول زيارة: {slotsData.firstVisitPrice} د.أ
+                  {t.firstVisit}: {slotsData.firstVisitPrice} {t.currency}
                 </span>
               )}
               {slotsData.followUpPrice && (
@@ -212,7 +238,7 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
                   fontSize: 11, background: '#E8F5E9', color: '#388E3C',
                   padding: '4px 12px', borderRadius: 100, fontWeight: 600,
                 }}>
-                  متابعة: {slotsData.followUpPrice} د.أ
+                  {t.followUp}: {slotsData.followUpPrice} {t.currency}
                 </span>
               )}
             </div>
@@ -249,7 +275,7 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
   return (
     <button key={i} type="button" onClick={() => handleSlotSelect(slot)}
       disabled={!isAvail && !isSelected}
-      title={isAbsent ? 'غير متاح — اجتماع أو استراحة' : ''}
+      title={isAbsent ? t.unavailableTitle : ''}
       style={{ padding:'8px 4px', borderRadius:10, border:`1px solid ${border}`, background:bg, color, fontSize:12, fontWeight:600, cursor, transition:'all 0.15s', fontFamily:"'Inter', monospace", position:'relative' }}>
       {slot.time}
       {isBooked && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'#DC2626', border:'1px solid #FFF' }} />}
@@ -262,10 +288,10 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
           {/* مفتاح الألوان */}
          <div style={{ display:'flex', gap:16, fontSize:11, color:TEXT_MUTED, flexWrap:'wrap' }}>
   {[
-    { color:'#E8F5E9', border:'#A5D6A7', label:'متاح' },
-    { color:'#FFF5F5', border:'#FECACA', label:'محجوز' },
-    { color:'#FEF3C7', border:'#FCD34D', label:'إجازة' },  // ✅ جديد
-    { color:PRIMARY, border:PRIMARY, label:'مختار' },
+    { color:'#E8F5E9', border:'#A5D6A7', label:t.legendAvailable },
+    { color:'#FFF5F5', border:'#FECACA', label:t.legendBooked },
+    { color:'#FEF3C7', border:'#FCD34D', label:t.legendAbsent },
+    { color:PRIMARY, border:PRIMARY, label:t.legendSelected },
   ].map(item => (
     <span key={item.label} style={{ display:'flex', alignItems:'center', gap:5 }}>
       <span style={{ width:12, height:12, borderRadius:4, background:item.color, border:`1px solid ${item.border}`, display:'inline-block' }} />

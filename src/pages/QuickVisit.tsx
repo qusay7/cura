@@ -953,6 +953,7 @@ export default function QuickVisit() {
                     <AppointmentCalendar
                       doctorId={visitForm.doctorId}
                       onSelectSlot={handleSlotSelect}
+                      lang={lang}
                     />
                   </div>
                 )}
