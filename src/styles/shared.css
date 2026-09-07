@@ -32,3 +32,16 @@
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* Respect the OS-level "reduce motion" setting everywhere — animations and
+   transitions are defined per-page (inline styles, injected <style> tags,
+   this file), so a single global override here is far simpler and more
+   reliable than adding a check to every animated element individually. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
