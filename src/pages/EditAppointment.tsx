@@ -4,6 +4,7 @@ import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
 import AppointmentCalendar from '../components/AppointmentCalendar'
+import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 const getStoredLang = (): 'ar' | 'en' =>
@@ -457,6 +458,9 @@ export default function EditAppointment() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const handlePatientSelect = (patientId: string) => setForm(prev => ({ ...prev, patientId }))
+  const handleDoctorSelect = (doctorId: string) => setForm(prev => ({ ...prev, doctorId }))
+
   // ✅ دالة اختيار الموعد من التقويم
   const handleSlotSelect = (dateTime: string, price?: number) => {
     setForm(prev => ({
@@ -469,6 +473,14 @@ export default function EditAppointment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // ✅ التحقق يدوياً — SearchableSelect لا يشارك بالتحقق الأصلي للمتصفح
+    // (لا عنصر <select required> فعلي)، فلم يعد ممكناً الاعتماد عليه هنا
+    if (!form.patientId) {
+      setError(T[lang].required)
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -628,63 +640,24 @@ export default function EditAppointment() {
 
             {/* Patient Field */}
             <FormField label={t.patient} required>
-              <select
-                name="patientId"
+              <SearchableSelect
+                isRtl={isAr}
                 value={form.patientId}
-                onChange={handleChange}
-                required
-                className="form-select"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="">{t.patientPlaceholder}</option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>
-                    #{p.patientNumber} — {p.fullName}
-                  </option>
-                ))}
-              </select>
+                onChange={handlePatientSelect}
+                placeholder={t.patientPlaceholder}
+                options={patients.map(p => ({ value: p.id, label: `#${p.patientNumber} — ${p.fullName}` }))}
+              />
             </FormField>
 
             {/* Doctor Field */}
             <FormField label={t.doctor}>
-              <select
-                name="doctorId"
+              <SearchableSelect
+                isRtl={isAr}
                 value={form.doctorId}
-                onChange={handleChange}
-                className="form-select"
-                style={{
-                  width: '100%',
-                  background: CARD_BG,
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
-                  color: TEXT_DARK,
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="">{t.doctorPlaceholder}</option>
-                {doctors.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.fullName} {d.specialty ? `— ${d.specialty}` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={handleDoctorSelect}
+                placeholder={t.doctorPlaceholder}
+                options={doctors.map(d => ({ value: d.id, label: `${d.fullName}${d.specialty ? ` — ${d.specialty}` : ''}` }))}
+              />
             </FormField>
 
             {/* Date Field */}

@@ -80,6 +80,15 @@ function mockAddAppointmentGets(overrides: Record<string, unknown> = {}) {
   })
 }
 
+// Patient/doctor are SearchableSelect (a button that reveals a searchable
+// list), not a native <select> — so picking a value means opening it and
+// clicking the option's text. The trigger's accessible name is the label
+// text with a trailing "▼" glyph concatenated (no separating space).
+async function pickFromSearchable(user: ReturnType<typeof userEvent.setup>, triggerName: RegExp, optionText: string) {
+  await user.click(screen.getByRole('button', { name: triggerName }))
+  await user.click(await screen.findByText(optionText))
+}
+
 function renderAddAppointment() {
   render(
     <MemoryRouter initialEntries={['/appointments/add']}>
@@ -123,9 +132,8 @@ describe('AddAppointment', () => {
     renderAddAppointment()
     await screen.findByText('Book New Appointment')
 
-    const [patientSelect, doctorSelect] = screen.getAllByRole('combobox')
-    await user.selectOptions(patientSelect, 'pat-1')
-    await user.selectOptions(doctorSelect, 'doc-1')
+    await pickFromSearchable(user, /select a patient/i, '#101 — Sara Ahmad')
+    await pickFromSearchable(user, /no doctor/i, '📅 Dr. Ali — Cardiology')
     await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
 
     expect(await screen.findByText('Active Insurance — Bupa')).toBeInTheDocument()
@@ -157,9 +165,8 @@ describe('AddAppointment', () => {
     renderAddAppointment()
     await screen.findByText('Book New Appointment')
 
-    const [patientSelect, doctorSelect] = screen.getAllByRole('combobox')
-    await user.selectOptions(patientSelect, 'pat-1')
-    await user.selectOptions(doctorSelect, 'doc-2')
+    await pickFromSearchable(user, /select a patient/i, '#101 — Sara Ahmad')
+    await pickFromSearchable(user, /no doctor/i, '🔢 Dr. Ali — Cardiology')
 
     expect(await screen.findByText(/queue booking/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /book queue/i }))
@@ -180,9 +187,8 @@ describe('AddAppointment', () => {
     renderAddAppointment()
     await screen.findByText('Book New Appointment')
 
-    const [patientSelect, doctorSelect] = screen.getAllByRole('combobox')
-    await user.selectOptions(patientSelect, 'pat-1')
-    await user.selectOptions(doctorSelect, 'doc-1')
+    await pickFromSearchable(user, /select a patient/i, '#101 — Sara Ahmad')
+    await pickFromSearchable(user, /no doctor/i, '📅 Dr. Ali — Cardiology')
     await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
     await user.click(screen.getByRole('button', { name: /^book appointment$/i }))
 

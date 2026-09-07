@@ -89,6 +89,15 @@ function mockEditAppointmentGets(overrides: Record<string, unknown> = {}) {
   })
 }
 
+// Patient/doctor are SearchableSelect (a button that reveals a searchable
+// list), not a native <select> — so picking a value means opening it and
+// clicking the option's text. The trigger's accessible name is the label
+// text with a trailing "▼" glyph concatenated (no separating space).
+async function pickFromSearchable(user: ReturnType<typeof userEvent.setup>, triggerName: RegExp, optionText: string) {
+  await user.click(screen.getByRole('button', { name: triggerName }))
+  await user.click(await screen.findByText(optionText))
+}
+
 function renderEditAppointment() {
   render(
     <MemoryRouter initialEntries={['/appointments/appt-1/edit']}>
@@ -211,8 +220,7 @@ describe('EditAppointment', () => {
     // Pick a slot while Doctor Ali is selected (no conflict for doc-1), then
     // switch to Dr. Omar, who does conflict at that same time.
     await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
-    const doctorSelects = screen.getAllByRole('combobox')
-    await user.selectOptions(doctorSelects[1], 'doc-2')
+    await pickFromSearchable(user, /dr\. ali — cardiology/i, 'Dr. Omar — Cardiology')
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect((await screen.findAllByText(/doctor has an appointment at/i)).length).toBeGreaterThan(0)

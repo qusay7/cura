@@ -371,6 +371,16 @@ export default function AddAppointment() {
     }))
   }
 
+  const handlePatientSelect = (patientId: string) => {
+    setForm(prev => ({ ...prev, patientId }))
+    if (validationErrors.patientId) setValidationErrors(prev => ({ ...prev, patientId: '' }))
+  }
+
+  const handleDoctorSelect = (doctorId: string) => {
+    setForm(prev => ({ ...prev, doctorId }))
+    if (validationErrors.doctorId) setValidationErrors(prev => ({ ...prev, doctorId: '' }))
+  }
+
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(tpl => tpl.id === templateId)
     setForm(prev => ({
@@ -593,10 +603,13 @@ export default function AddAppointment() {
 
             {/* المريض */}
             <FormField label={t.patient} required error={validationErrors.patientId}>
-              <select name="patientId" value={form.patientId} onChange={handleChange} className="form-select" style={selectStyle}>
-                <option value="">{isAr ? 'اختر مريضاً...' : 'Select a patient...'}</option>
-                {patients.map(p => <option key={p.id} value={p.id}>#{p.patientNumber} — {p.fullName}</option>)}
-              </select>
+              <SearchableSelect
+                isRtl={isAr}
+                value={form.patientId}
+                onChange={handlePatientSelect}
+                placeholder={isAr ? 'اختر مريضاً...' : 'Select a patient...'}
+                options={patients.map(p => ({ value: p.id, label: `#${p.patientNumber} — ${p.fullName}` }))}
+              />
               <p style={{ fontSize:10, color:TEXT_MUTED, marginTop:4 }}>
                 {t.registeredPatients} {patients.length}
               </p>
@@ -604,15 +617,16 @@ export default function AddAppointment() {
 
             {/* الطبيب */}
             <FormField label={t.doctor}>
-              <select name="doctorId" value={form.doctorId} onChange={handleChange} className="form-select" style={selectStyle}>
-                <option value="">{t.noDoctor}</option>
-                {doctors.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.workType === 'queue' ? '🔢' : d.workType === 'appointments' ? '📅' : '✅'} {d.fullName}
-                    {d.specialty ? ` — ${d.specialty}` : ''}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                isRtl={isAr}
+                value={form.doctorId}
+                onChange={handleDoctorSelect}
+                placeholder={t.noDoctor}
+                options={doctors.map(d => ({
+                  value: d.id,
+                  label: `${d.workType === 'queue' ? '🔢' : d.workType === 'appointments' ? '📅' : '✅'} ${d.fullName}${d.specialty ? ` — ${d.specialty}` : ''}`,
+                }))}
+              />
               {doctors.length === 0 && (
                 <p style={{ fontSize:11, color:'#F59E0B', marginTop:4 }}>⚠️ {t.noActiveDoctors}</p>
               )}
