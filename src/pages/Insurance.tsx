@@ -198,8 +198,8 @@ export default function Insurance() {
     }
   }
 
-  const handleDeleteCompany = async (id:string) => {
-    if (!window.confirm(t.confirm)) return
+  const handleDeleteCompany = async (id:string, name:string) => {
+    if (!window.confirm(`${t.confirm} — ${name}`)) return
     try {
       await api.delete(`/insurance/companies/${id}?lang=${lang}`)
       showAlert('ok', t.successSave); fetchAll()
@@ -412,7 +412,7 @@ export default function Insurance() {
                             style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
                             ✏️ {t.edit}
                           </button>
-                          <button onClick={()=>handleDeleteCompany(c.id)}
+                          <button onClick={()=>handleDeleteCompany(c.id, c.name)}
                             style={{padding:'5px 12px',border:`1px solid ${DANGER}`,borderRadius:8,background:'transparent',color:DANGER,fontSize:12,cursor:'pointer'}}>
                             🗑️ {t.delete}
                           </button>

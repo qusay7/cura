@@ -379,8 +379,8 @@ const [departments, setDepartments] = useState<Department[]>([])
   // ✅ يمنع الضغط المزدوج على زر الحفظ (مثلاً وقت نت بطيء وتأخر رد الـ API)
   const { run: handleSave, loading: savingStaff } = useSubmitGuard(handleSaveRaw)
 
-  const handleDelete = async (id:string) => {
-    if (!window.confirm(t.confirm)) return
+  const handleDelete = async (id:string, name:string) => {
+    if (!window.confirm(`${t.confirm} — ${name}`)) return
     try {
       await api.delete(`/staff/${id}?lang=${lang}`)
       showAlrt('ok', isAr?'تم الحذف':'Deleted')
@@ -629,7 +629,7 @@ const [departments, setDepartments] = useState<Department[]>([])
                     style={{ padding:'7px 12px', border:`1px solid ${s.isActive?DANGER:SUCCESS}`, borderRadius:9, background:'transparent', color:s.isActive?DANGER:SUCCESS, fontSize:12, cursor:'pointer' }}>
                     {s.isActive?'⏸':'▶'}
                   </button>
-                  <button onClick={()=>handleDelete(s.id)}
+                  <button onClick={()=>handleDelete(s.id, s.fullName)}
                     style={{ padding:'7px 12px', border:`1px solid ${DANGER}`, borderRadius:9, background:'transparent', color:DANGER, fontSize:12, cursor:'pointer' }}>
                     🗑️
                   </button>
@@ -978,7 +978,7 @@ const [departments, setDepartments] = useState<Department[]>([])
                   style={{ padding:'9px 16px', border:`1px solid ${selected.isActive?DANGER:SUCCESS}`, borderRadius:10, background:'transparent', color:selected.isActive?DANGER:SUCCESS, fontSize:13, cursor:'pointer' }}>
                   {selected.isActive?'⏸':'▶'}
                 </button>
-                <button onClick={()=>handleDelete(selected.id)}
+                <button onClick={()=>handleDelete(selected.id, selected.fullName)}
                   style={{ padding:'9px 16px', border:`1px solid ${DANGER}`, borderRadius:10, background:'transparent', color:DANGER, fontSize:13, cursor:'pointer' }}>
                   🗑️
                 </button>
