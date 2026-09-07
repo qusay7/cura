@@ -105,7 +105,7 @@ describe('Appointments', () => {
 
     await user.click(screen.getByRole('button', { name: /check in/i }))
 
-    await waitFor(() => expect(window.alert).toHaveBeenCalledWith('Failed to check in'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Failed to check in'))
     expect(screen.getByRole('button', { name: /check in/i })).toBeInTheDocument()
   })
 
@@ -139,7 +139,7 @@ describe('Appointments', () => {
 
     await user.click(screen.getByRole('button', { name: /confirm(?!ed)/i }))
 
-    await waitFor(() => expect(window.alert).toHaveBeenCalledWith('Failed to update appointment status'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Failed to update appointment status'))
     expect(screen.getByRole('button', { name: /confirm(?!ed)/i })).toBeInTheDocument()
   })
 })

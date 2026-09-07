@@ -387,6 +387,13 @@ export default function Departments() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingDept, setEditingDept] = useState<Department | null>(null)
   const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
 
   // ✅ Column definitions للطباعة والتصدير
   const columnDefs: ColumnDef[] = [
@@ -439,7 +446,7 @@ export default function Departments() {
       await api.delete(`/departments/${id}`)
       setDepartments(prev => prev.filter(d => d.id !== id))
     } catch {
-      alert(lang === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting department')
+      setToastError(lang === 'ar' ? 'حدث خطأ أثناء الحذف' : 'Error deleting department')
     }
   }
 
@@ -450,7 +457,7 @@ export default function Departments() {
         d.id === id ? { ...d, isActive: !d.isActive } : d
       ))
     } catch {
-      alert(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
+      setToastError(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
     }
   }
 
@@ -485,7 +492,7 @@ export default function Departments() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert(lang === 'ar' ? 'فشل التصدير' : 'Export failed')
+      setToastError(lang === 'ar' ? 'فشل التصدير' : 'Export failed')
     } finally {
       setDownloading(null)
     }
@@ -514,6 +521,11 @@ export default function Departments() {
       background: '#F8FAFA', minHeight: '100vh', padding: 24,
       fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif",
     }}>
+      {toastError && (
+        <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+          <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+        </div>
+      )}
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
         <div style={{

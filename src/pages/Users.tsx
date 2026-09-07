@@ -133,6 +133,13 @@ export default function Users() {
   const [filterStatus, setFilterStatus] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [toggling, setToggling] = useState<string | null>(null)
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const clinicId = user.clinicId
@@ -176,7 +183,7 @@ export default function Users() {
         u.id === userId ? { ...u, isActive: !u.isActive } : u
       ))
     } catch {
-      alert(isAr ? 'حدث خطأ' : 'An error occurred')
+      setToastError(isAr ? 'حدث خطأ' : 'An error occurred')
     } finally {
       setToggling(null)
     }
@@ -223,6 +230,11 @@ export default function Users() {
       background: '#F8FAFA', minHeight: '100vh', padding: 24,
       fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif",
     }}>
+      {toastError && (
+        <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+          <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+        </div>
+      )}
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
         {/* ✅ رأس الطباعة الموحّد */}

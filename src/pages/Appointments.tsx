@@ -983,6 +983,13 @@ export default function Appointments() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [changingStatus, setChangingStatus] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
+  const [toastError, setToastError] = useState('')
+
+  useEffect(() => {
+    if (!toastError) return
+    const timer = setTimeout(() => setToastError(''), 4000)
+    return () => clearTimeout(timer)
+  }, [toastError])
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60000)
@@ -1018,7 +1025,7 @@ export default function Appointments() {
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
     } catch {
       console.error('Failed to update status')
-      alert(lang === 'ar' ? 'حدث خطأ أثناء تحديث حالة الموعد' : 'Failed to update appointment status')
+      setToastError(lang === 'ar' ? 'حدث خطأ أثناء تحديث حالة الموعد' : 'Failed to update appointment status')
     }
     finally { setChangingStatus(null) }
   }
@@ -1046,7 +1053,7 @@ export default function Appointments() {
         ? { ...a, status: 'confirmed', checkInTime: res.data.checkInTime } : a))
     } catch {
       console.error('CheckIn failed')
-      alert(lang === 'ar' ? 'حدث خطأ أثناء تسجيل الحضور' : 'Failed to check in')
+      setToastError(lang === 'ar' ? 'حدث خطأ أثناء تسجيل الحضور' : 'Failed to check in')
     }
     finally { setChangingStatus(null) }
   }
@@ -1113,6 +1120,11 @@ export default function Appointments() {
 
   return (
     <div className="appointments-shell" style={{ direction:isAr?'rtl':'ltr', background:'#F8FAFA', minHeight:'100vh', padding:'24px' }}>
+      {toastError && (
+        <div role="alert" style={{ position:'fixed', top:20, [isAr?'left':'right']:20, zIndex:2000, background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 18px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 6px 20px rgba(0,0,0,0.12)', maxWidth:340 }}>
+          <span>⚠️</span><span style={{ fontSize:13, color:'#EF4444' }}>{toastError}</span>
+        </div>
+      )}
       <div style={{ maxWidth:1400, margin:'0 auto' }}>
 
         {/* ✅ رأس الطباعة الموحّد */}

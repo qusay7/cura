@@ -117,7 +117,7 @@ describe('Users', () => {
     expect(await screen.findByRole('button', { name: /enable/i })).toBeInTheDocument()
   })
 
-  it('shows a native alert when toggling a user fails', async () => {
+  it('shows an inline error toast when toggling a user fails', async () => {
     localStorage.setItem('permissions', JSON.stringify(['users.toggle']))
     mockedApi.get.mockResolvedValueOnce({ data: [userItem()] })
     mockedApi.patch.mockRejectedValueOnce(new Error('server error'))
@@ -127,7 +127,7 @@ describe('Users', () => {
 
     await user.click(screen.getByRole('button', { name: /disable/i }))
 
-    await waitFor(() => expect(window.alert).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
   })
 
   it('filters the list by name or email as the user types', async () => {

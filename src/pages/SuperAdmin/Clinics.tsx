@@ -282,7 +282,8 @@ export default function SuperAdminClinics() {
       await api.patch(`/clinics/${id}/toggle`)
       setClinics(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c))
     } catch {
-      alert('حدث خطأ')
+      setError(isAr ? 'حدث خطأ' : 'An error occurred')
+      setTimeout(() => setError(''), 5000)
     }
   }
 
@@ -434,7 +435,7 @@ export default function SuperAdminClinics() {
 
         {/* Messages */}
         {error && (
-          <div className="alert-error">
+          <div className="alert-error" role="alert">
             <span style={{ whiteSpace: 'pre-line' }}>⚠️ {error}</span>
             <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
           </div>

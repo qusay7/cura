@@ -176,7 +176,7 @@ describe('SuperAdminClinics', () => {
     expect(screen.getByText('Inactive')).toBeInTheDocument()
   })
 
-  it('shows a native alert when toggling a clinic fails', async () => {
+  it('shows an inline error banner when toggling a clinic fails', async () => {
     mockClinicsGets({ '/clinics': [clinic()] })
     mockedApi.patch.mockRejectedValueOnce(new Error('server error'))
     const user = userEvent.setup()
@@ -185,6 +185,6 @@ describe('SuperAdminClinics', () => {
 
     await user.click(screen.getByRole('button', { name: /deactivate/i }))
 
-    await waitFor(() => expect(window.alert).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
   })
 })
