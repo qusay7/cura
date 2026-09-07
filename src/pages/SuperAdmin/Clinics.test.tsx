@@ -159,7 +159,36 @@ describe('SuperAdminClinics', () => {
     )
     expect(mockedApi.post).toHaveBeenCalledWith('/roles/seed-defaults/new-clinic-id')
     expect(mockedApi.post).toHaveBeenCalledWith('/departments/seed-defaults/new-clinic-id')
-    expect(await screen.findByText(/testclinic/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/testclinic/i)).length).toBeGreaterThan(0)
+  })
+
+  // Protects the fix made this session: the generated-credentials banner used
+  // to be a plain auto-dismissing toast with no way to copy the password, so
+  // a slow admin could lose it after 12s. It now stays until dismissed and
+  // has a copy-to-clipboard button.
+  it('copies the generated credentials to the clipboard', async () => {
+    mockClinicsGets({ '/plans': [activePlan()] })
+    mockedApi.post.mockImplementation((url: string) => {
+      if (url === '/clinics') return Promise.resolve({ data: { id: 'new-clinic-id' } })
+      return Promise.resolve({ data: {} })
+    })
+    const user = userEvent.setup()
+    // userEvent.setup() installs its own navigator.clipboard stub, so ours
+    // has to be defined after it to be the one the component actually calls.
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    renderClinics()
+    await screen.findByText('No clinics registered')
+
+    await user.click(screen.getByRole('button', { name: /add clinic/i }))
+    await user.type(screen.getByPlaceholderText('Al Amal Clinic'), 'Test Clinic')
+    await user.type(screen.getByPlaceholderText('alamal'), 'testclinic')
+    await user.click(await screen.findByText('Basic', { exact: false }))
+    await user.click(screen.getByRole('button', { name: /save clinic/i }))
+
+    await user.click(await screen.findByRole('button', { name: /copy/i }))
+    expect(writeText).toHaveBeenCalledWith('Username: testclinic\nPassword: testclinic@123')
+    expect(await screen.findByRole('button', { name: /copied/i })).toBeInTheDocument()
   })
 
   it('toggles a clinic active/inactive', async () => {

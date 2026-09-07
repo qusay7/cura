@@ -139,6 +139,8 @@ export default function SuperAdminClinics() {
   const [selectedPlan, setSelectedPlan] = useState('')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [permsSeeding, setPermsSeeding] = useState(false)
+  const [generatedCreds, setGeneratedCreds] = useState<{ username: string; password: string } | null>(null)
+  const [credsCopied, setCredsCopied] = useState(false)
 
   const emptyForm = {
     name: '', subDomain: '', phone: '', email: '',
@@ -257,18 +259,14 @@ export default function SuperAdminClinics() {
       // ✅ 6 — إنشاء قوالب الزيارة الافتراضية (كشف/مراجعة/استشارة/متابعة)
       await api.post(`/treatmentplans/templates/seed-defaults/${clinic.id}`)
 
-      setSuccess(
-        isAr
-          ? `تم إنشاء العيادة والمدير والاشتراك والأدوار بنجاح!\n👤 Username: ${form.subDomain}\n🔑 Password: ${form.subDomain}@123`
-          : `Clinic, admin, subscription and roles created!\n👤 Username: ${form.subDomain}\n🔑 Password: ${form.subDomain}@123`
-      )
+      setGeneratedCreds({ username: form.subDomain, password: `${form.subDomain}@123` })
+      setCredsCopied(false)
       setShowForm(false)
       setForm(emptyForm)
       setSelectedPlan('')
       setBillingCycle('monthly')
       fetchClinics()
       fetchSubscriptions()
-      setTimeout(() => setSuccess(''), 12000)
     } catch (err: any) {
       setError(err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
       setTimeout(() => setError(''), 5000)
@@ -444,6 +442,27 @@ export default function SuperAdminClinics() {
           <div className="alert-success">
             <span style={{ whiteSpace: 'pre-line' }}>✅ {success}</span>
             <button onClick={() => setSuccess('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
+          </div>
+        )}
+        {generatedCreds && (
+          <div className="alert-success" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span>✅ {isAr ? 'تم إنشاء العيادة والمدير والاشتراك والأدوار بنجاح!' : 'Clinic, admin, subscription and roles created!'}</span>
+              <button onClick={() => setGeneratedCreds(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontFamily: "'Inter',monospace", fontSize: 13, background: '#FFFFFF', border: '1px solid #DCE5E5', borderRadius: 10, padding: '10px 14px' }}>
+              <span>👤 {generatedCreds.username}</span>
+              <span>🔑 {generatedCreds.password}</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`Username: ${generatedCreds.username}\nPassword: ${generatedCreds.password}`)
+                  setCredsCopied(true)
+                  setTimeout(() => setCredsCopied(false), 2000)
+                }}
+                style={{ marginInlineStart: 'auto', background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                {credsCopied ? (isAr ? '✓ تم النسخ' : '✓ Copied') : (isAr ? '📋 نسخ' : '📋 Copy')}
+              </button>
+            </div>
           </div>
         )}
 
