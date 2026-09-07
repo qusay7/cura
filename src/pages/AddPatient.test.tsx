@@ -36,6 +36,14 @@ describe('AddPatient', () => {
     mockedApi.get.mockResolvedValue({ data: [] })
   })
 
+  it('associates the Full Name field with its label', async () => {
+    renderAddPatient()
+
+    // Previously the <label> wasn't linked via htmlFor/id, so a screen
+    // reader announced nothing when this input received focus.
+    expect(await screen.findByLabelText('Full Name', { exact: false })).toBeInTheDocument()
+  })
+
   it('requires a full name before submitting', async () => {
     const user = userEvent.setup()
     renderAddPatient()

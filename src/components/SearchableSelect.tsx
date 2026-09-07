@@ -28,6 +28,11 @@ interface SearchableSelectProps {
   loading?: boolean
   emptyText?: string
   colors?: Partial<typeof DEFAULTS>
+  // ✅ تُمرَّر عادةً من FormField لربط <label htmlFor> ورسالة الخطأ برمجياً
+  id?: string
+  'aria-invalid'?: boolean
+  'aria-describedby'?: string
+  'aria-required'?: boolean
 }
 
 const css = `
@@ -44,6 +49,7 @@ const css = `
 export default function SearchableSelect({
   value, onChange, options, placeholder, searchPlaceholder,
   isRtl = true, disabled = false, loading = false, emptyText, colors,
+  id, 'aria-invalid': ariaInvalid, 'aria-describedby': ariaDescribedBy, 'aria-required': ariaRequired,
 }: SearchableSelectProps) {
   const c = { ...DEFAULTS, ...colors }
   const [open, setOpen] = useState(false)
@@ -123,10 +129,14 @@ export default function SearchableSelect({
     <div ref={wrapRef} style={{ position: 'relative', width: '100%', ['--sso-primary-soft' as any]: c.primarySoft }}>
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-invalid={ariaInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
+        aria-required={ariaRequired || undefined}
         onClick={() => setOpen(v => !v)}
         style={{
           width: '100%', padding: '9px 12px', border: `1px solid ${open ? c.primary : c.border}`,

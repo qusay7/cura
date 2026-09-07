@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId, isValidElement, cloneElement } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
@@ -168,15 +168,27 @@ const FormLoadingScreen = ({ msg, subMsg }: { msg: string; subMsg: string }) => 
 
 // ─── Form Field ─────────────────────────────────────────────────────────────
 const FormField = ({ label, required, children, error }: {
-  label: string; required?: boolean; children: React.ReactNode; error?: string }) => (
-  <div style={{ marginBottom:20 }}>
-    <label style={{ display:'block', fontSize:12, fontWeight:600, color:TEXT_MUTED, marginBottom:8, letterSpacing:'0.5px' }}>
-      {label} {required && <span style={{ color:'#EF4444' }}>*</span>}
-    </label>
-    {children}
-    {error && <p style={{ fontSize:11, color:'#EF4444', marginTop:5 }}>{error}</p>}
-  </div>
-)
+  label: string; required?: boolean; children: React.ReactNode; error?: string }) => {
+  const fieldId = useId()
+  const errorId = `${fieldId}-error`
+  const child = isValidElement(children)
+    ? cloneElement(children as React.ReactElement<any>, {
+        id: fieldId,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': error ? errorId : undefined,
+        'aria-required': required || undefined,
+      })
+    : children
+  return (
+    <div style={{ marginBottom:20 }}>
+      <label htmlFor={fieldId} style={{ display:'block', fontSize:12, fontWeight:600, color:TEXT_MUTED, marginBottom:8, letterSpacing:'0.5px' }}>
+        {label} {required && <span style={{ color:'#EF4444' }}>*</span>}
+      </label>
+      {child}
+      {error && <p id={errorId} role="alert" style={{ fontSize:11, color:'#EF4444', marginTop:5 }}>{error}</p>}
+    </div>
+  )
+}
 
 // ─── Format Date for display ────────────────────────────────────────────────
 const formatAppointmentDate = (dateString: string, isArabic: boolean): string => {

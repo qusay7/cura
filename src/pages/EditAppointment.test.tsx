@@ -223,7 +223,10 @@ describe('EditAppointment', () => {
     // Pick a slot while Doctor Ali is selected (no conflict for doc-1), then
     // switch to Dr. Omar, who does conflict at that same time.
     await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
-    await pickFromSearchable(user, /dr\. ali — cardiology/i, 'Dr. Omar — Cardiology')
+    // The doctor field's <label> is now genuinely associated with its
+    // SearchableSelect trigger (htmlFor/id), so the button's accessible
+    // name is the field label "Doctor", not its currently-selected value.
+    await pickFromSearchable(user, /^doctor$/i, 'Dr. Omar — Cardiology')
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect((await screen.findAllByText(/doctor has an appointment at/i)).length).toBeGreaterThan(0)

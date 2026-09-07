@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../styles/theme'
 
@@ -410,13 +410,25 @@ const FormField = ({ label, required, children, error }: {
   required?: boolean;
   children: React.ReactNode;
   error?: string;
-}) => (
-  <div className="form-field">
-    <label className="form-label">{label} {required && <span style={{ color: ERROR_TEXT }}>*</span>}</label>
-    {children}
-    {error && <p style={{ fontSize: 11, color: ERROR_TEXT, marginTop: 4 }}>{error}</p>}
-  </div>
-)
+}) => {
+  const fieldId = useId()
+  const errorId = `${fieldId}-error`
+  const child = isValidElement(children)
+    ? cloneElement(children as React.ReactElement<any>, {
+        id: fieldId,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': error ? errorId : undefined,
+        'aria-required': required || undefined,
+      })
+    : children
+  return (
+    <div className="form-field">
+      <label htmlFor={fieldId} className="form-label">{label} {required && <span style={{ color: ERROR_TEXT }}>*</span>}</label>
+      {child}
+      {error && <p id={errorId} role="alert" style={{ fontSize: 11, color: ERROR_TEXT, marginTop: 4 }}>{error}</p>}
+    </div>
+  )
+}
 
 // Usage Bar Component
 const UsageBar = ({ label, current, max }: {

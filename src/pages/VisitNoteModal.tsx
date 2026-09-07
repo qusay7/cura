@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId, isValidElement, cloneElement } from 'react'
 import api from '../api/axios'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 
@@ -43,12 +43,18 @@ interface VisitNote {
   cost?: number
 }
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div style={{ marginBottom: 16 }}>
-    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginBottom: 5, letterSpacing: '0.5px' }}>{label}</label>
-    {children}
-  </div>
-)
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => {
+  const fieldId = useId()
+  const child = isValidElement(children)
+    ? cloneElement(children as React.ReactElement<any>, { id: fieldId })
+    : children
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label htmlFor={fieldId} style={{ display: 'block', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginBottom: 5, letterSpacing: '0.5px' }}>{label}</label>
+      {child}
+    </div>
+  )
+}
 
 interface Props {
   isOpen: boolean

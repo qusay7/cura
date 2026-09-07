@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
@@ -97,15 +97,27 @@ interface Department { id: string; name: string; nameEn?: string; isActive: bool
 
 const FormField = ({ label, required, children, error }: {
   label: string; required?: boolean; children: React.ReactNode; error?: string
-}) => (
-  <div style={{ marginBottom: 18 }}>
-    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6, letterSpacing: '0.5px' }}>
-      {label} {required && <span style={{ color: ERROR_TEXT }}>*</span>}
-    </label>
-    {children}
-    {error && <p style={{ fontSize: 11, color: ERROR_TEXT, marginTop: 5, marginBottom: 0 }}>{error}</p>}
-  </div>
-)
+}) => {
+  const fieldId = useId()
+  const errorId = `${fieldId}-error`
+  const child = isValidElement(children)
+    ? cloneElement(children as React.ReactElement<any>, {
+        id: fieldId,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': error ? errorId : undefined,
+        'aria-required': required || undefined,
+      })
+    : children
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <label htmlFor={fieldId} style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6, letterSpacing: '0.5px' }}>
+        {label} {required && <span style={{ color: ERROR_TEXT }}>*</span>}
+      </label>
+      {child}
+      {error && <p id={errorId} role="alert" style={{ fontSize: 11, color: ERROR_TEXT, marginTop: 5, marginBottom: 0 }}>{error}</p>}
+    </div>
+  )
+}
 
 const inputStyle = (isAr: boolean) => ({
   width: '100%', background: CARD_BG, border: `1px solid ${BORDER}`,
