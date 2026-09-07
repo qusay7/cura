@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 // ─── ألوان افتراضية (نفس هوية Cura) — تقدر تتجاوزها بالـ props لو صفحة عندها لوحة ألوان مختلفة ───
 const DEFAULTS = {
@@ -48,8 +48,13 @@ export default function SearchableSelect({
   const c = { ...DEFAULTS, ...colors }
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [activeIndex, setActiveIndex] = useState(-1)
   const wrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const instanceId = useId()
+  const listboxId = `sso-listbox-${instanceId}`
+  const optionId = (i: number) => `sso-option-${instanceId}-${i}`
 
   useEffect(() => {
     const id = 'cura-searchable-select-css'
@@ -73,17 +78,55 @@ export default function SearchableSelect({
     ? options.filter(o => o.label.toLowerCase().includes(query.trim().toLowerCase()))
     : options
 
+  // ✅ يعيد ضبط عنصر التنقّل النشط كلما تغيّرت نتائج البحث أو فُتحت القائمة —
+  // يمنع بقاء مؤشر يشير لخيار لم يعد ظاهراً بالنتائج المفلترة
+  useEffect(() => {
+    setActiveIndex(filtered.length > 0 ? 0 : -1)
+  }, [query, open])
+
+  useEffect(() => {
+    if (activeIndex < 0) return
+    document.getElementById(optionId(activeIndex))?.scrollIntoView?.({ block: 'nearest' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex])
+
   const pick = (opt: SearchableSelectOption) => {
     if (opt.disabled) return
     onChange(opt.value)
     setOpen(false); setQuery('')
   }
 
+  const closeAndReturnFocus = () => {
+    setOpen(false); setQuery('')
+    triggerRef.current?.focus()
+  }
+
+  // ✅ نمط combobox/listbox القياسي: الأسهم تحرّك عنصراً "نشطاً" (aria-activedescendant)
+  // بدل نقل التركيز الفعلي، فيبقى المستخدم يكتب بحقل البحث بينما يتنقّل بالنتائج
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex(i => (filtered.length === 0 ? -1 : Math.min(i + 1, filtered.length - 1)))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex(i => (filtered.length === 0 ? -1 : Math.max(i - 1, 0)))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (activeIndex >= 0 && filtered[activeIndex]) pick(filtered[activeIndex])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      closeAndReturnFocus()
+    }
+  }
+
   return (
     <div ref={wrapRef} style={{ position: 'relative', width: '100%', ['--sso-primary-soft' as any]: c.primarySoft }}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen(v => !v)}
         style={{
           width: '100%', padding: '9px 12px', border: `1px solid ${open ? c.primary : c.border}`,
@@ -109,8 +152,14 @@ export default function SearchableSelect({
           <div style={{ padding: 8, borderBottom: `1px solid ${c.border}` }}>
             <input
               ref={inputRef}
+              role="combobox"
+              aria-expanded="true"
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
               value={query}
               onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleInputKeyDown}
               placeholder={searchPlaceholder || (isRtl ? 'بحث...' : 'Search...')}
               style={{
                 width: '100%', padding: '7px 10px', border: `1px solid ${c.border}`, borderRadius: 8,
@@ -118,7 +167,7 @@ export default function SearchableSelect({
               }}
             />
           </div>
-          <div style={{ overflowY: 'auto' }}>
+          <div id={listboxId} role="listbox" style={{ overflowY: 'auto' }}>
             {loading ? (
               <div style={{ padding: '14px 12px', fontSize: 12, color: c.textMuted, textAlign: 'center' }}>
                 {isRtl ? 'جاري التحميل...' : 'Loading...'}
@@ -127,15 +176,21 @@ export default function SearchableSelect({
               <div style={{ padding: '14px 12px', fontSize: 12, color: c.textMuted, textAlign: 'center' }}>
                 {emptyText || (isRtl ? 'لا توجد نتائج' : 'No results')}
               </div>
-            ) : filtered.map(opt => (
+            ) : filtered.map((opt, i) => (
               <div
                 key={opt.value}
-                className={`sso-option${opt.value === value ? ' sso-active' : ''}${opt.disabled ? ' sso-disabled' : ''}`}
+                id={optionId(i)}
+                role="option"
+                aria-selected={opt.value === value}
+                aria-disabled={opt.disabled || undefined}
+                className={`sso-option${opt.value === value ? ' sso-active' : ''}${opt.disabled ? ' sso-disabled' : ''}${i === activeIndex ? ' sso-highlighted' : ''}`}
+                onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => pick(opt)}
                 style={{
                   padding: '9px 12px', fontSize: 13, cursor: opt.disabled ? 'not-allowed' : 'pointer',
                   color: opt.disabled ? c.textMuted : c.textDark, opacity: opt.disabled ? 0.6 : 1,
                   display: 'flex', flexDirection: 'column', gap: 1,
+                  background: i === activeIndex ? c.primarySoft : undefined,
                 }}
               >
                 <span>{opt.label}</span>
