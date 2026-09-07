@@ -453,17 +453,31 @@ export default function DoctorCalendar({
                     return (
                       <td
                         key={key}
-                        onClick={() => clickable && handleSlotClick(key, slot)}
                         title={`${time} — ${slot.end}`}
                         style={{
-                          border: `1px solid ${BORDER}`, padding: "6px 8px", textAlign: "center",
-                          whiteSpace: "nowrap", background: s.bg, color: s.color,
-                          cursor: clickable ? "pointer" : "default",
+                          border: `1px solid ${BORDER}`, padding: 0, textAlign: "center",
+                          whiteSpace: "nowrap", background: s.bg,
                           boxShadow: isToday ? `inset 0 0 0 1px ${PRIMARY}33` : undefined,
                           maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis",
                         }}
                       >
-                        {label[slot.status]}
+                        {clickable ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSlotClick(key, slot)}
+                            style={{
+                              width: "100%", padding: "6px 8px", border: "none", background: "transparent",
+                              color: s.color, cursor: "pointer", font: "inherit", whiteSpace: "nowrap",
+                              overflow: "hidden", textOverflow: "ellipsis",
+                            }}
+                          >
+                            {label[slot.status]}
+                          </button>
+                        ) : (
+                          <span style={{ display: "block", padding: "6px 8px", color: s.color }}>
+                            {label[slot.status]}
+                          </span>
+                        )}
                       </td>
                     );
                   })}

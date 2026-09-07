@@ -113,6 +113,21 @@ describe('DoctorCalendar', () => {
     expect(await screen.findByText('add appointment page')).toBeInTheDocument()
   })
 
+  it('books an available slot via the keyboard (Tab + Enter), not just a mouse click', async () => {
+    mockCalendarGets({ '/schedules/doctor/doc-1/calendar': calendarData() })
+    const user = userEvent.setup()
+    renderDoctorCalendar()
+
+    const table = await screen.findByRole('table')
+    const slotButton = within(table).getByRole('button', { name: '🟢 Available' })
+    slotButton.focus()
+    expect(slotButton).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+
+    expect(await screen.findByText('add appointment page')).toBeInTheDocument()
+  })
+
   it('renders a booked slot with the patient name and opens the appointment when clicked', async () => {
     mockCalendarGets({
       '/schedules/doctor/doc-1/calendar': calendarData({

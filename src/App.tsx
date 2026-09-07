@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -37,7 +38,23 @@ import DoctorDaily from './pages/DoctorDaily'
 import VisitWorkspace from './pages/VisitWorkspace'
 import Invoices from './pages/Invoices'
 import DoctorCalendar from './pages/DoctorCalendar'
+// ✅ يزامن <html lang>/dir مع اللغة الفعلية — كانت تتغيّر ترجمة النصوص فقط
+// بدون خصائص المستند نفسها، فتقرأ تقنيات المساعدة (قارئ الشاشة) لغة خاطئة
+const applyDocumentLang = (lang: 'ar' | 'en') => {
+  document.documentElement.lang = lang
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
+}
+
 function App() {
+  useEffect(() => {
+    const stored = (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
+    applyDocumentLang(stored)
+
+    const onLangChange = (e: Event) => applyDocumentLang((e as CustomEvent).detail)
+    window.addEventListener('cura-lang-change', onLangChange)
+    return () => window.removeEventListener('cura-lang-change', onLangChange)
+  }, [])
+
   return (
     <>
       <Routes>
