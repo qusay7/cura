@@ -75,6 +75,11 @@ const layoutCss = `
   border-radius: 100px;
   transition: background 0.2s ease;
   flex-shrink: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
 }
 .user-menu:hover { background: #E8F0F0; }
 
@@ -590,8 +595,8 @@ const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
                 <p style={{ fontSize: 13, marginTop: 8 }}>{t.noNotifications}</p>
               </div>
             ) : notifications.map(notif => (
-              <div key={notif.id} onClick={() => onMarkAsRead(notif.id)}
-                style={{ padding: '11px 14px', borderBottom: `1px solid ${BORDER}`, display: 'flex', gap: 10, cursor: 'pointer', background: notif.read ? 'transparent' : '#E8F0F0' }}>
+              <button key={notif.id} type="button" onClick={() => onMarkAsRead(notif.id)}
+                style={{ padding: '11px 14px', borderBottom: `1px solid ${BORDER}`, borderInline: 'none', borderTop: 'none', display: 'flex', gap: 10, cursor: 'pointer', background: notif.read ? 'transparent' : '#E8F0F0', width: '100%', textAlign: isAr ? 'right' : 'left', font: 'inherit', color: 'inherit' }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${PRIMARY}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{getIcon(notif.type)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, gap: 8 }}>
@@ -601,7 +606,7 @@ const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
                   <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
                 </div>
                 {!notif.read && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#79674D', alignSelf: 'center', flexShrink: 0 }} />}
-              </div>
+              </button>
             ))}
           </div>
           {notifications.length > 0 && (
@@ -720,13 +725,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
 
           {/* المستخدم */}
-          <div className="user-menu" onClick={() => navigate('/profile')}>
+          <button type="button" className="user-menu" onClick={() => navigate('/profile')}>
             <div className="user-avatar">{(user.fullName || 'U')[0].toUpperCase()}</div>
             <div className="user-info">
               <p className="user-name">{user.fullName || '---'}</p>
               <p className="user-role">{user.role || ''}</p>
             </div>
-          </div>
+          </button>
 
           {/* تسجيل خروج */}
           <button className="logout-top-btn" onClick={handleLogout}>{t.logout}</button>
