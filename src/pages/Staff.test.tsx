@@ -59,6 +59,7 @@ function renderStaff() {
 describe('Staff', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify(['staff.manage']))
     vi.clearAllMocks()
     window.confirm = vi.fn(() => true)
   })

@@ -29,6 +29,11 @@ function mockGetsResolved(overrides: Record<string, unknown> = {}) {
 describe('Schedules', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify([
+      'schedules.clinic.add', 'schedules.clinic.edit', 'schedules.clinic.delete',
+      'schedules.doctor.add', 'schedules.doctor.edit', 'schedules.doctor.delete',
+      'schedules.absence.add', 'schedules.absence.delete',
+    ]))
     vi.clearAllMocks()
     window.confirm = vi.fn(() => true)
   })

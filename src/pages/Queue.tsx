@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -579,6 +580,7 @@ export default function Queue() {
               </button>
             ))}
           </div>
+          {hasPermission('queue.manage') && (
           <button onClick={() => {
             setShowForm(!showForm)
             if (!showForm) {
@@ -596,6 +598,7 @@ export default function Queue() {
           }}>
             {showForm ? t.buttons.close : t.buttons.add}
           </button>
+          )}
         </div>
 
         {/* Add Form */}
@@ -942,7 +945,7 @@ export default function Queue() {
                 </span>
 
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  {entry.status === 'waiting' && (
+                  {hasPermission('queue.manage') && entry.status === 'waiting' && (
                     <button onClick={() => handleAction(entry.id, 'call')} style={{
                       background: '#EBF4FF', color: '#3B82F6', border: '1px solid #93C5FD',
                       borderRadius: 10, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -951,7 +954,7 @@ export default function Queue() {
                       {t.buttons.call}
                     </button>
                   )}
-                  {entry.status === 'called' && (
+                  {hasPermission('queue.manage') && entry.status === 'called' && (
                     <button onClick={() => handleAction(entry.id, 'complete')} style={{
                       background: '#E8F5E9', color: '#22C55E', border: '1px solid #86EFAC',
                       borderRadius: 10, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -960,7 +963,7 @@ export default function Queue() {
                       {t.buttons.complete}
                     </button>
                   )}
-                  {(entry.status === 'waiting' || entry.status === 'called') && (
+                  {hasPermission('queue.manage') && (entry.status === 'waiting' || entry.status === 'called') && (
                     <button onClick={() => handleAction(entry.id, 'cancel')} style={{
                       background: '#FFF5F5', color: '#EF4444', border: '1px solid #FCA5A5',
                       borderRadius: 10, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',

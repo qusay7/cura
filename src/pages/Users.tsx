@@ -479,7 +479,7 @@ export default function Users() {
                     ),
                     actions: (
                       <div className="no-print" style={{ display: 'flex', gap: 8 }}>
-                        {hasPermission('users.toggle') && (
+                        {['SuperAdmin', 'ClinicStaff', 'ClinicAdmin'].includes(user.role) && (
                           <button
                             onClick={() => handleToggle(u.id)}
                             disabled={toggling === u.id}

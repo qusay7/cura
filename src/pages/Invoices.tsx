@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
+import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { PRIMARY_SOFT } from '../styles/theme'
@@ -598,7 +599,9 @@ export default function Invoices() {
               <h2 style={{ fontFamily: "'DM Serif Display',serif", fontSize: 30, fontWeight: 500, color: TEXT_DARK, margin: 0 }}>{t.title}</h2>
               <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '6px 0 0' }}>{t.subtitle}</p>
             </div>
-            <button onClick={() => setNewOpen(true)} style={btn(PRIMARY, '#FFF')}>{t.newInvoice}</button>
+            {hasPermission('invoices.manage') && (
+              <button onClick={() => setNewOpen(true)} style={btn(PRIMARY, '#FFF')}>{t.newInvoice}</button>
+            )}
           </div>
 
           {/* فلتر */}
@@ -730,13 +733,13 @@ export default function Invoices() {
                             <td className="no-print" style={cell}>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button onClick={() => setViewId(inv.id)} style={btn(CARD_BG, PRIMARY, BORDER)}>🧾 {t.view}</button>
-                                {!inv.isSubmitted && hasElectronicInvoicing && (
+                                {!inv.isSubmitted && hasElectronicInvoicing && hasPermission('invoices.manage') && (
                                   <button onClick={() => submitInvoice(inv.id)} disabled={submitting === inv.id}
                                     style={{ ...btn('#FFF8E1', WARNING, '#E8D4A8'), opacity: submitting === inv.id ? 0.6 : 1 }}>
                                     {submitting === inv.id ? t.submitting : `📤 ${t.submit}`}
                                   </button>
                                 )}
-                                {!isReturn && (
+                                {!isReturn && hasPermission('invoices.manage') && (
                                   <button onClick={() => setReturnId(inv.id)} style={btn('#FFF5F5', DANGER, '#FCA5A5')}>{t.newReturn}</button>
                                 )}
                               </div>

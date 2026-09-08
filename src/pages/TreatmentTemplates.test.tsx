@@ -53,6 +53,7 @@ function renderTemplates() {
 describe('TreatmentTemplates', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify(['treatmenttemplates.manage']))
     vi.clearAllMocks()
     window.confirm = vi.fn(() => true)
   })

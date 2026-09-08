@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 import type { ColumnDef } from '../components/ColumnToggle'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -334,10 +335,12 @@ export default function Insurance() {
                   </button>
                   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
                 </div>
-              <button onClick={()=>{setShowCF(true);setEditId(null);setCf({name:'',nameEn:'',phone:'',email:'',contact:'',coverage:80,isActive:true})}}
-                style={{padding:'9px 18px',background:PRIMARY,color:'#FFF',border:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer'}}>
-                + {t.addCompany}
-              </button>
+              {hasPermission('insurance.manage') && (
+                <button onClick={()=>{setShowCF(true);setEditId(null);setCf({name:'',nameEn:'',phone:'',email:'',contact:'',coverage:80,isActive:true})}}
+                  style={{padding:'9px 18px',background:PRIMARY,color:'#FFF',border:'none',borderRadius:10,fontSize:13,fontWeight:600,cursor:'pointer'}}>
+                  + {t.addCompany}
+                </button>
+              )}
             </div>
 
             {/* Company Form */}
@@ -407,16 +410,18 @@ export default function Insurance() {
                         </span>
                       </td>
                       <td className="no-print">
-                        <div style={{display:'flex',gap:8}}>
-                          <button onClick={()=>{setEditId(c.id);setCf({name:c.name,nameEn:c.nameEn||'',phone:c.phone||'',email:c.email||'',contact:c.contactName||'',coverage:c.coverageRate,isActive:c.isActive});setShowCF(true)}}
-                            style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
-                            ✏️ {t.edit}
-                          </button>
-                          <button onClick={()=>handleDeleteCompany(c.id, c.name)}
-                            style={{padding:'5px 12px',border:`1px solid ${DANGER}`,borderRadius:8,background:'transparent',color:DANGER,fontSize:12,cursor:'pointer'}}>
-                            🗑️ {t.delete}
-                          </button>
-                        </div>
+                        {hasPermission('insurance.manage') && (
+                          <div style={{display:'flex',gap:8}}>
+                            <button onClick={()=>{setEditId(c.id);setCf({name:c.name,nameEn:c.nameEn||'',phone:c.phone||'',email:c.email||'',contact:c.contactName||'',coverage:c.coverageRate,isActive:c.isActive});setShowCF(true)}}
+                              style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
+                              ✏️ {t.edit}
+                            </button>
+                            <button onClick={()=>handleDeleteCompany(c.id, c.name)}
+                              style={{padding:'5px 12px',border:`1px solid ${DANGER}`,borderRadius:8,background:'transparent',color:DANGER,fontSize:12,cursor:'pointer'}}>
+                              🗑️ {t.delete}
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -491,10 +496,12 @@ export default function Insurance() {
                           <td key={col.key}>{cellsByKey[col.key]}</td>
                         ))}
                         <td className="no-print">
-                          <button onClick={()=>{setSelectedClaim(c);setNewStatus(c.status);setApprovalNo(c.approvalNumber||'');setRejReason(c.rejectionReason||'');setStatusNotes(c.notes||'');setShowUSM(true)}}
-                            style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
-                            🔄 {t.updateStatus}
-                          </button>
+                          {hasPermission('insurance.manage') && (
+                            <button onClick={()=>{setSelectedClaim(c);setNewStatus(c.status);setApprovalNo(c.approvalNumber||'');setRejReason(c.rejectionReason||'');setStatusNotes(c.notes||'');setShowUSM(true)}}
+                              style={{padding:'5px 12px',border:`1px solid ${PRIMARY}`,borderRadius:8,background:'transparent',color:PRIMARY,fontSize:12,cursor:'pointer'}}>
+                              🔄 {t.updateStatus}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     )

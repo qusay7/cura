@@ -3,6 +3,7 @@ import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -215,7 +216,7 @@ function PatientDuesTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
       paid: `${d.paid?.toFixed(2)}`,
       balance: <span style={{ color: DANGER, fontWeight: 700 }}>{d.balance?.toFixed(2)}</span>,
       date: new Date(d.date).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
-      action: (
+      action: hasPermission('payments.manage') && (
         <button onClick={() => setPayItem(d)}
           style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
           💳 {t.payAction}
@@ -518,7 +519,7 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
         </div>
 
         {/* ✅ زر إعادة الاحتساب — للمواعيد اللي اكتملت قبل ما تُحدَّد نسبة الطبيب */}
-        {mode === 'doctor' && partyId && (
+        {mode === 'doctor' && partyId && hasPermission('settlements.manage') && (
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px dashed ${BORDER}` }}>
             <button onClick={handleRecalculate} disabled={recalculating}
               style={{ background: 'transparent', border: `1px solid ${PRIMARY}50`, color: PRIMARY, borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: recalculating ? 'not-allowed' : 'pointer', opacity: recalculating ? 0.6 : 1 }}>
@@ -607,10 +608,12 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
                     ⚠️ {isAr ? `دفعة جزئية — سيبقى ${(selectedTotal - parseFloat(amountPaidNow)).toFixed(2)} مستحق` : `Partial payment — ${(selectedTotal - parseFloat(amountPaidNow)).toFixed(2)} will remain due`}
                   </p>
                 )}
-                <button onClick={handleSettle} disabled={saving || selectedItems.length === 0}
-                  style={{ background: SUCCESS, color: '#FFF', border: 'none', borderRadius: 12, padding: '12px 24px', fontSize: 13.5, fontWeight: 700, cursor: (saving || selectedItems.length === 0) ? 'not-allowed' : 'pointer', opacity: (saving || selectedItems.length === 0) ? 0.7 : 1 }}>
-                  {saving ? t.saving : `✅ ${t.registerSettlement}`}
-                </button>
+                {hasPermission('settlements.manage') && (
+                  <button onClick={handleSettle} disabled={saving || selectedItems.length === 0}
+                    style={{ background: SUCCESS, color: '#FFF', border: 'none', borderRadius: 12, padding: '12px 24px', fontSize: 13.5, fontWeight: 700, cursor: (saving || selectedItems.length === 0) ? 'not-allowed' : 'pointer', opacity: (saving || selectedItems.length === 0) ? 0.7 : 1 }}>
+                    {saving ? t.saving : `✅ ${t.registerSettlement}`}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -852,7 +855,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
                         claimNumber: c.claimNumber,
                         patient: c.patientName,
                         amount: <span style={{ fontWeight: 700, color: SUCCESS }}>{c.insuranceAmount?.toFixed(2)}</span>,
-                        action: (
+                        action: hasPermission('insurance.manage') && (
                           <button onClick={() => openStatusModal(c)}
                             style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
                             {t.updateStatus}
@@ -864,7 +867,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
                   />
 
                   {/* إجراء جماعي — يختلف حسب الحالة المعروضة */}
-                  {status === 'pending' && (
+                  {status === 'pending' && hasPermission('settlements.manage') && (
                     <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 18, marginTop: 16 }}>
                       <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>📤 {t.submitBatchHint}</p>
                       <button onClick={handleSubmitBatch} disabled={busy}
@@ -874,7 +877,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
                     </div>
                   )}
 
-                  {status === 'approved' && (
+                  {status === 'approved' && hasPermission('settlements.manage') && (
                     <div style={{ background: SUCCESS_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 18, marginTop: 16 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                         <div>

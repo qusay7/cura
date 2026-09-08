@@ -4,6 +4,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
+import { hasPermission } from '../utils/permissions'
 
 // ✅ تحسين #11: التحقق الصحيح من اللغة المحفوظة
 const getStoredLang = (): 'ar' | 'en' => {
@@ -843,7 +844,7 @@ export default function Schedules() {
                   )}
                 </div>
                 <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-                  <button className="btn-p" onClick={handleAddClinicDays}>{t.save}</button>
+                  {hasPermission('schedules.clinic.add') && <button className="btn-p" onClick={handleAddClinicDays}>{t.save}</button>}
                   <button className="btn-s" onClick={()=>{
                     // ✅ تحسين #8: تصفير عند الإلغاء
                     setCDays([])
@@ -873,7 +874,7 @@ export default function Schedules() {
                             {fmtTime(s.openTime)==='00:00'&&fmtTime(s.closeTime)==='23:59' ? `🕐 ${t.h24}` : `${fmtTime12(s.openTime)} — ${fmtTime12(s.closeTime)}`}
                           </p>
                         </div>
-                        <button className="btn-del no-print" onClick={()=>delClinic(s.id)}>✕</button>
+                        {hasPermission('schedules.clinic.delete') && <button className="btn-del no-print" onClick={()=>delClinic(s.id)}>✕</button>}
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {clinicVisible.has('openTime') && <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY }}>🕗 {fmtTime12(s.openTime)}</span>}
@@ -970,7 +971,7 @@ export default function Schedules() {
                       </div>
                     </div>
                     <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-                      <button className="btn-p" onClick={handleAddDoctorDays}>{t.save}</button>
+                      {hasPermission('schedules.doctor.add') && <button className="btn-p" onClick={handleAddDoctorDays}>{t.save}</button>}
                       <button className="btn-s" onClick={()=>{
                         // ✅ تحسين #8: تصفير عند الإلغاء
                         setDDays([])
@@ -1003,10 +1004,12 @@ export default function Schedules() {
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
                               <p style={{ fontSize:15, fontWeight:700, color:TEXT_DARK, margin:0 }}>{t.daysLong[s.dayOfWeek]}</p>
                               <div className="no-print" style={{ display:'flex', gap:6 }}>
-                                <button className="btn-edit" onClick={()=>isEditing?setEditId(null):startEdit(s)}>
-                                  {isEditing ? t.cancel : `✏️ ${t.edit}`}
-                                </button>
-                                <button className="btn-del" onClick={()=>delDoctor(s.id)}>✕</button>
+                                {hasPermission('schedules.doctor.edit') && (
+                                  <button className="btn-edit" onClick={()=>isEditing?setEditId(null):startEdit(s)}>
+                                    {isEditing ? t.cancel : `✏️ ${t.edit}`}
+                                  </button>
+                                )}
+                                {hasPermission('schedules.doctor.delete') && <button className="btn-del" onClick={()=>delDoctor(s.id)}>✕</button>}
                               </div>
                             </div>
                             {isEditing ? (
@@ -1027,7 +1030,7 @@ export default function Schedules() {
                                     {slotOptions.map(v=><option key={v} value={v}>{v} {t.min}</option>)}
                                   </select>
                                 </div>
-                                <button className="btn-p" onClick={handleEdit} style={{ width:'100%', borderRadius:10, justifyContent:'center' }}>💾 {t.save}</button>
+                                {hasPermission('schedules.doctor.edit') && <button className="btn-p" onClick={handleEdit} style={{ width:'100%', borderRadius:10, justifyContent:'center' }}>💾 {t.save}</button>}
                               </div>
                             ) : (
                               <>
@@ -1163,7 +1166,7 @@ export default function Schedules() {
                 </div>
 
                 <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-                  <button className="btn-amber" onClick={handleAddAbsence}>{t.save}</button>
+                  {hasPermission('schedules.absence.add') && <button className="btn-amber" onClick={handleAddAbsence}>{t.save}</button>}
                   <button className="btn-s" onClick={()=>{
                     // ✅ تحسين #8: تصفير عند الإلغاء
                     setAbsStart('')
@@ -1215,7 +1218,7 @@ export default function Schedules() {
                             )}
                           </div>
                         </div>
-                        <button className="btn-del no-print" onClick={()=>delAbsence(a.id)}>✕</button>
+                        {hasPermission('schedules.absence.delete') && <button className="btn-del no-print" onClick={()=>delAbsence(a.id)}>✕</button>}
                       </div>
 
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>

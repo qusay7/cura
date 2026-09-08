@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
+import { hasPermission } from '../utils/permissions'
 import type { ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
@@ -309,12 +310,14 @@ export default function TreatmentTemplates() {
         </div>
 
         {/* Action */}
-        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end' }} className="no-print">
-          <button onClick={openAdd}
-            style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            {t.addTemplate}
-          </button>
-        </div>
+        {hasPermission('treatmenttemplates.manage') && (
+          <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end' }} className="no-print">
+            <button onClick={openAdd}
+              style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              {t.addTemplate}
+            </button>
+          </div>
+        )}
 
         {/* Messages */}
         {success && (
@@ -488,16 +491,18 @@ export default function TreatmentTemplates() {
                     <p style={{ fontSize: 11.5, color: '#79674D', fontStyle: 'italic', marginBottom: 8 }}>⚠️ {t.noPriceSet}</p>
                   )}
 
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
-                    <button onClick={() => openEdit(tpl)}
-                      style={{ flex: 1, background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 9, padding: '7px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                      ✏️ {t.edit}
-                    </button>
-                    <button onClick={() => handleDelete(tpl.id)}
-                      style={{ flex: 1, background: ERROR_BG, color: ERROR_TEXT, border: 'none', borderRadius: 9, padding: '7px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                      🗑️ {t.delete}
-                    </button>
-                  </div>
+                  {hasPermission('treatmenttemplates.manage') && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
+                      <button onClick={() => openEdit(tpl)}
+                        style={{ flex: 1, background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 9, padding: '7px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        ✏️ {t.edit}
+                      </button>
+                      <button onClick={() => handleDelete(tpl.id)}
+                        style={{ flex: 1, background: ERROR_BG, color: ERROR_TEXT, border: 'none', borderRadius: 9, padding: '7px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        🗑️ {t.delete}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}

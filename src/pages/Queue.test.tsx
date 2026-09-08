@@ -63,6 +63,7 @@ function mockQueueGets(overrides: Record<string, unknown> = {}) {
 describe('Queue', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify(['queue.manage']))
     vi.clearAllMocks()
   })
 

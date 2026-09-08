@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
+import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY_SOFT } from '../styles/theme'
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -441,10 +442,12 @@ const [departments, setDepartments] = useState<Department[]>([])
             <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:30, fontWeight:500, color:TEXT_DARK, margin:0 }}>{t.title}</h2>
             <p style={{ fontSize:13, color:TEXT_MUTED, margin:'6px 0 0' }}>{t.subtitle}</p>
           </div>
-          <button onClick={openAdd}
-            style={{ padding:'10px 22px', background:PRIMARY, color:'#FFF', border:'none', borderRadius:12, fontSize:14, fontWeight:600, cursor:'pointer' }}>
-            + {t.add}
-          </button>
+          {hasPermission('staff.manage') && (
+            <button onClick={openAdd}
+              style={{ padding:'10px 22px', background:PRIMARY, color:'#FFF', border:'none', borderRadius:12, fontSize:14, fontWeight:600, cursor:'pointer' }}>
+              + {t.add}
+            </button>
+          )}
         </div>
         {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
 <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap', alignItems:'center' }} className="no-print">
@@ -620,20 +623,22 @@ const [departments, setDepartments] = useState<Department[]>([])
                 </div>
 
                 {/* أزرار */}
-                <div style={{ display:'flex', gap:8 }} onClick={e=>e.stopPropagation()}>
-                  <button onClick={()=>openEdit(s)}
-                    style={{ flex:1, padding:'7px', border:`1px solid ${PRIMARY}`, borderRadius:9, background:'transparent', color:PRIMARY, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                    ✏️ {t.edit}
-                  </button>
-                  <button onClick={()=>handleToggle(s.id)}
-                    style={{ padding:'7px 12px', border:`1px solid ${s.isActive?DANGER:SUCCESS}`, borderRadius:9, background:'transparent', color:s.isActive?DANGER:SUCCESS, fontSize:12, cursor:'pointer' }}>
-                    {s.isActive?'⏸':'▶'}
-                  </button>
-                  <button onClick={()=>handleDelete(s.id, s.fullName)}
-                    style={{ padding:'7px 12px', border:`1px solid ${DANGER}`, borderRadius:9, background:'transparent', color:DANGER, fontSize:12, cursor:'pointer' }}>
-                    🗑️
-                  </button>
-                </div>
+                {hasPermission('staff.manage') && (
+                  <div style={{ display:'flex', gap:8 }} onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>openEdit(s)}
+                      style={{ flex:1, padding:'7px', border:`1px solid ${PRIMARY}`, borderRadius:9, background:'transparent', color:PRIMARY, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                      ✏️ {t.edit}
+                    </button>
+                    <button onClick={()=>handleToggle(s.id)}
+                      style={{ padding:'7px 12px', border:`1px solid ${s.isActive?DANGER:SUCCESS}`, borderRadius:9, background:'transparent', color:s.isActive?DANGER:SUCCESS, fontSize:12, cursor:'pointer' }}>
+                      {s.isActive?'⏸':'▶'}
+                    </button>
+                    <button onClick={()=>handleDelete(s.id, s.fullName)}
+                      style={{ padding:'7px 12px', border:`1px solid ${DANGER}`, borderRadius:9, background:'transparent', color:DANGER, fontSize:12, cursor:'pointer' }}>
+                      🗑️
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -840,10 +845,12 @@ const [departments, setDepartments] = useState<Department[]>([])
               )}
 
               <div style={{ display:'flex', gap:10, marginTop:20 }}>
-                <button onClick={handleSave} disabled={savingStaff}
-                  style={{ flex:1, padding:'10px', background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, fontSize:14, fontWeight:600, cursor: savingStaff ? 'not-allowed' : 'pointer', opacity: savingStaff ? 0.7 : 1 }}>
-                  {savingStaff ? '⏳ ...' : `💾 ${t.save}`}
-                </button>
+                {hasPermission('staff.manage') && (
+                  <button onClick={handleSave} disabled={savingStaff}
+                    style={{ flex:1, padding:'10px', background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, fontSize:14, fontWeight:600, cursor: savingStaff ? 'not-allowed' : 'pointer', opacity: savingStaff ? 0.7 : 1 }}>
+                    {savingStaff ? '⏳ ...' : `💾 ${t.save}`}
+                  </button>
+                )}
                 <button onClick={()=>setShowForm(false)} disabled={savingStaff}
                   style={{ padding:'10px 20px', background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, fontSize:13, cursor:'pointer', color:TEXT_MUTED }}>
                   {t.cancel}
@@ -969,6 +976,7 @@ const [departments, setDepartments] = useState<Department[]>([])
   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
 </div>
 
+{hasPermission('staff.manage') && (
 <div style={{ display:'flex', gap:10, marginTop:20 }}>
   <button onClick={()=>openEdit(selected)}
                   style={{ flex:1, padding:'9px', border:`1px solid ${PRIMARY}`, borderRadius:10, background:'transparent', color:PRIMARY, fontSize:13, fontWeight:600, cursor:'pointer' }}>
@@ -983,6 +991,7 @@ const [departments, setDepartments] = useState<Department[]>([])
                   🗑️
                 </button>
               </div>
+            )}
             </div>
           </div>
         )}

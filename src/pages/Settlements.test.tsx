@@ -46,6 +46,7 @@ function mockSettlementsGets(overrides: Record<string, unknown> = {}) {
 describe('Settlements', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify(['settlements.manage', 'insurance.manage', 'payments.manage']))
     vi.clearAllMocks()
     window.confirm = vi.fn(() => true)
   })

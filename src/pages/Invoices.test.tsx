@@ -75,6 +75,7 @@ function renderInvoices() {
 describe('Invoices', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify(['invoices.manage']))
     vi.clearAllMocks()
     window.alert = vi.fn()
     URL.createObjectURL = vi.fn(() => 'blob:mock')

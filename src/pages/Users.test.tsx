@@ -94,8 +94,8 @@ describe('Users', () => {
     expect(screen.getByRole('button', { name: /add user/i })).toBeInTheDocument()
   })
 
-  it('hides the per-user toggle button when the user lacks permission', async () => {
-    localStorage.setItem('permissions', JSON.stringify([]))
+  it('hides the per-user toggle button for roles the backend would reject', async () => {
+    localStorage.setItem('user', JSON.stringify({ role: 'Doctor' }))
     mockedApi.get.mockResolvedValueOnce({ data: [userItem()] })
     renderUsers()
 
@@ -104,7 +104,7 @@ describe('Users', () => {
   })
 
   it("toggles a user's active status", async () => {
-    localStorage.setItem('permissions', JSON.stringify(['users.toggle']))
+    localStorage.setItem('user', JSON.stringify({ role: 'ClinicAdmin' }))
     mockedApi.get.mockResolvedValueOnce({ data: [userItem({ isActive: true })] })
     mockedApi.patch.mockResolvedValueOnce({ data: {} })
     const user = userEvent.setup()
@@ -118,7 +118,7 @@ describe('Users', () => {
   })
 
   it('shows an inline error toast when toggling a user fails', async () => {
-    localStorage.setItem('permissions', JSON.stringify(['users.toggle']))
+    localStorage.setItem('user', JSON.stringify({ role: 'ClinicAdmin' }))
     mockedApi.get.mockResolvedValueOnce({ data: [userItem()] })
     mockedApi.patch.mockRejectedValueOnce(new Error('server error'))
     const user = userEvent.setup()

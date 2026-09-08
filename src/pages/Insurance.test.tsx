@@ -73,6 +73,7 @@ function renderInsurance() {
 describe('Insurance', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('permissions', JSON.stringify(['insurance.manage']))
     vi.clearAllMocks()
     window.confirm = vi.fn(() => true)
   })
