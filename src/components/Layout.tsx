@@ -384,7 +384,10 @@ const T = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void }) => {
+const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments }: {
+  lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void
+  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean
+}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [, setLang] = useState(lang)
@@ -412,7 +415,7 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
     {
       key: 'clinic', labelAr: 'إدارة العيادة', labelEn: 'Clinic Management', icon: 'ti-building-hospital',
       items: [
-        { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage', superAdminOnly: false },
+        { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage', superAdminOnly: false, feature: 'multipleDepartments' as const },
         { path: '/treatment-templates', labelAr: 'قوالب الزيارة', labelEn: 'Visit Templates', icon: 'ti-clipboard-list', permission: 'treatmenttemplates.manage', superAdminOnly: false },
         { path: '/insurance', labelAr: 'التأمين الصحي', labelEn: 'Health Insurance', icon: 'ti-heart-handshake', permission: 'insurance.view', superAdminOnly: false },
       ],
@@ -420,7 +423,7 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
     {
       key: 'finance', labelAr: 'المالية', labelEn: 'Finance', icon: 'ti-cash',
       items: [
-        { path: '/invoices', labelAr: 'الفواتير', labelEn: 'Invoices', icon: 'ti-file-invoice', permission: 'payments.view', superAdminOnly: false },
+        { path: '/invoices', labelAr: 'الفواتير', labelEn: 'Invoices', icon: 'ti-file-invoice', permission: 'payments.view', superAdminOnly: false, feature: 'electronicInvoicing' as const },
         { path: '/payments', labelAr: 'المدفوعات', labelEn: 'Payments', icon: 'ti-cash', permission: 'payments.view', superAdminOnly: false },
         { path: '/settlements', labelAr: 'التسويات المالية', labelEn: 'Settlements', icon: 'ti-cash-banknote', permission: 'settlements.manage', superAdminOnly: false },
         { path: '/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: 'ti-chart-bar', permission: 'reports.view', superAdminOnly: false },
@@ -443,10 +446,15 @@ const Sidebar = ({ lang, isAr, onNavigate }: { lang: 'ar' | 'en'; isAr: boolean;
     },
   ]
 
-  const canSee = (item: { path: string; permission: string | null; superAdminOnly: boolean }) => {
+  const canSee = (item: { path: string; permission: string | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
-    return item.permission === null || hasPermission(item.permission)
+    if (!(item.permission === null || hasPermission(item.permission))) return false
+    // ✅ نخفيها بس لو تأكدنا إنها غير مشمولة بالخطة (false صراحة) — قبل ما يرجع
+    // رد /dashboard تبقى ظاهرة عشان ما تومض (تختفي وتظهر) بأول تحميل للصفحة
+    if (item.feature === 'multipleDepartments' && hasMultipleDepartments === false) return false
+    if (item.feature === 'electronicInvoicing' && hasElectronicInvoicing === false) return false
+    return true
   }
 
   const visibleGroups = menuGroups
@@ -626,7 +634,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const [lang, setLangState] = useState<'ar' | 'en'>(getStoredLang)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [subscription, setSubscription] = useState<{ planName: string } | null>(null)
+  const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
   const [notifications, setNotifications] = useState<Notification[]>([
     { id: 1, title: 'موعد جديد', message: 'تم إضافة موعد جديد مع د. أحمد السيد', time: 'منذ 5 دقائق', read: false, type: 'appointment' },
@@ -758,12 +766,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Sidebar Mobile */}
         <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
-          <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)} />
+          <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
+            hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments} />
         </div>
 
         {/* Sidebar Desktop */}
         <aside className="sidebar">
-          <Sidebar lang={lang} isAr={isAr} />
+          <Sidebar lang={lang} isAr={isAr}
+            hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments} />
         </aside>
 
         {/* Main Content */}
