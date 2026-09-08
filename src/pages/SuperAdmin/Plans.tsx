@@ -515,6 +515,8 @@ interface Plan {
   isFeatured: boolean
   features: string[]
   createdAt: string
+  hasElectronicInvoicing: boolean
+  hasMultipleDepartments: boolean
 }
 
 const defaultPlans = [
@@ -529,6 +531,8 @@ const defaultPlans = [
     maxDailyMessages: 20,
     isActive: true,
     isFeatured: false,
+    hasElectronicInvoicing: false,
+    hasMultipleDepartments: false,
     featuresText: 'جدولة المواعيد\nملاحظات الزيارة\nتقارير أساسية',
   },
   {
@@ -542,6 +546,8 @@ const defaultPlans = [
     maxDailyMessages: 50,
     isActive: true,
     isFeatured: true,
+    hasElectronicInvoicing: true,
+    hasMultipleDepartments: true,
     featuresText: 'جميع مميزات الخطة الأساسية\nفواتير إلكترونية\nأقسام متعددة\nدعم ذو أولوية',
   },
   {
@@ -555,6 +561,8 @@ const defaultPlans = [
     maxDailyMessages: 100,
     isActive: true,
     isFeatured: false,
+    hasElectronicInvoicing: true,
+    hasMultipleDepartments: true,
     featuresText: 'جميع مميزات الخطة المتقدمة\nمستخدمون وأطباء غير محدودين\nمدير حساب مخصص\nتدريب مجاني للفريق',
   },
 ]
@@ -586,6 +594,7 @@ export default function SuperAdminPlans() {
     monthlyPrice: '', yearlyPrice: '',
     maxUsers: '', maxDoctors: '', maxPatients: '', maxDailyMessages: '',
     featuresText: '', isFeatured: false,
+    hasElectronicInvoicing: false, hasMultipleDepartments: false,
   }
   const [form, setForm] = useState(emptyForm)
 
@@ -651,6 +660,8 @@ export default function SuperAdminPlans() {
       // Rejoin the features array back into one-per-line text for editing
       featuresText: (plan.features || []).join('\n'),
       isFeatured: plan.isFeatured,
+      hasElectronicInvoicing: plan.hasElectronicInvoicing,
+      hasMultipleDepartments: plan.hasMultipleDepartments,
     })
     setShowForm(true)
   }
@@ -671,6 +682,8 @@ export default function SuperAdminPlans() {
         maxDailyMessages: parseInt(form.maxDailyMessages),
         featuresText: form.featuresText,
         isFeatured: form.isFeatured,
+        hasElectronicInvoicing: form.hasElectronicInvoicing,
+        hasMultipleDepartments: form.hasMultipleDepartments,
         isActive: true,
       }
 
@@ -749,6 +762,10 @@ export default function SuperAdminPlans() {
       ? 'خطة واحدة بس تُعرض كمميّزة بأي وقت — تفعيلها هنا يلغي التمييز عن أي خطة أخرى تلقائياً'
       : 'Only one plan can be featured at a time — enabling this will automatically unfeature any other plan',
     featured: lang === 'ar' ? 'مميّزة' : 'Featured',
+    electronicInvoicingLabel: lang === 'ar' ? 'الفواتير الإلكترونية 🧾' : 'Electronic Invoicing 🧾',
+    electronicInvoicingHint: lang === 'ar' ? 'يسمح للعيادة بترحيل الفواتير لدائرة ضريبة الدخل والمبيعات (JoFotara)' : 'Lets the clinic submit invoices to the JoFotara tax authority',
+    multipleDepartmentsLabel: lang === 'ar' ? 'أقسام متعددة 🏢' : 'Multiple Departments 🏢',
+    multipleDepartmentsHint: lang === 'ar' ? 'بدونها، العيادة مقيّدة بقسم واحد فقط' : 'Without it, the clinic is limited to a single department',
     noFeatures: lang === 'ar' ? 'لم تُضف أي مميزات لهذه الخطة بعد' : 'No features added to this plan yet',
   }
 
@@ -864,6 +881,46 @@ export default function SuperAdminPlans() {
                       style={{ background: form.isFeatured ? WARNING : '#DCE5E5' }}
                     >
                       <span className="toggle-knob" style={{ [isAr ? 'right' : 'left']: form.isFeatured ? 21 : 3 } as React.CSSProperties} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Electronic invoicing toggle */}
+                <div className="form-field form-field-full">
+                  <div className="featured-toggle-row">
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, marginBottom: 3 }}>{t.electronicInvoicingLabel}</div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>{t.electronicInvoicingHint}</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.hasElectronicInvoicing}
+                      onClick={() => setForm({ ...form, hasElectronicInvoicing: !form.hasElectronicInvoicing })}
+                      className="toggle-switch"
+                      style={{ background: form.hasElectronicInvoicing ? PRIMARY : '#DCE5E5' }}
+                    >
+                      <span className="toggle-knob" style={{ [isAr ? 'right' : 'left']: form.hasElectronicInvoicing ? 21 : 3 } as React.CSSProperties} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Multiple departments toggle */}
+                <div className="form-field form-field-full">
+                  <div className="featured-toggle-row">
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, marginBottom: 3 }}>{t.multipleDepartmentsLabel}</div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>{t.multipleDepartmentsHint}</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.hasMultipleDepartments}
+                      onClick={() => setForm({ ...form, hasMultipleDepartments: !form.hasMultipleDepartments })}
+                      className="toggle-switch"
+                      style={{ background: form.hasMultipleDepartments ? PRIMARY : '#DCE5E5' }}
+                    >
+                      <span className="toggle-knob" style={{ [isAr ? 'right' : 'left']: form.hasMultipleDepartments ? 21 : 3 } as React.CSSProperties} />
                     </button>
                   </div>
                 </div>

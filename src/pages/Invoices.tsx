@@ -485,6 +485,17 @@ export default function Invoices() {
   const [submitting, setSubmitting] = useState<string | null>(null)
   const [viewer, setViewer] = useState<{ title: string; value: string } | null>(null)
   const [toastMsg, setToastMsg] = useState<{ text: string; isError: boolean } | null>(null)
+  const [hasElectronicInvoicing, setHasElectronicInvoicing] = useState(true)
+
+  // ✅ ترحيل الفواتير الإلكترونية ميزة خاصة بخطط معينة — نجيبها فقط لإخفاء زر
+  // الترحيل بالواجهة (الباك اند هو المصدر الأصلي للتحقق)
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!user.clinicId) return
+    api.get(`/subscriptions/clinic/${user.clinicId}`)
+      .then(res => setHasElectronicInvoicing(!!res.data.hasElectronicInvoicing))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!toastMsg) return
@@ -719,7 +730,7 @@ export default function Invoices() {
                             <td className="no-print" style={cell}>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button onClick={() => setViewId(inv.id)} style={btn(CARD_BG, PRIMARY, BORDER)}>🧾 {t.view}</button>
-                                {!inv.isSubmitted && (
+                                {!inv.isSubmitted && hasElectronicInvoicing && (
                                   <button onClick={() => submitInvoice(inv.id)} disabled={submitting === inv.id}
                                     style={{ ...btn('#FFF8E1', WARNING, '#E8D4A8'), opacity: submitting === inv.id ? 0.6 : 1 }}>
                                     {submitting === inv.id ? t.submitting : `📤 ${t.submit}`}

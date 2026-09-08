@@ -388,6 +388,7 @@ export default function Departments() {
   const [editingDept, setEditingDept] = useState<Department | null>(null)
   const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
   const [toastError, setToastError] = useState('')
+  const [hasMultipleDepartments, setHasMultipleDepartments] = useState(true)
 
   useEffect(() => {
     if (!toastError) return
@@ -429,6 +430,16 @@ export default function Departments() {
   }
 
   useEffect(() => { fetchDepartments() }, [])
+
+  // ✅ خطة العيادة قد تحصر عدد الأقسام بواحد — نجيب هذا فقط لتعطيل زر الإضافة
+  // بالواجهة (الباك اند هو المصدر الأصلي للتحقق، هذا فقط لتجربة استخدام أوضح)
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!user.clinicId) return
+    api.get(`/subscriptions/clinic/${user.clinicId}`)
+      .then(res => setHasMultipleDepartments(!!res.data.hasMultipleDepartments))
+      .catch(() => {})
+  }, [])
 
   const handleSave = async (data: { name: string; type: number }) => {
     if (editingDept) {
@@ -553,21 +564,31 @@ export default function Departments() {
             </p>
           </div>
 
-          {hasPermission('departments.manage') && (
-            <button
-              onClick={() => { setEditingDept(null); setModalOpen(true) }}
-              style={{
-                background: PRIMARY, color: '#FFFFFF', border: 'none',
-                borderRadius: 12, padding: '10px 20px', fontSize: 13,
-                fontWeight: 500, cursor: 'pointer', display: 'flex',
-                alignItems: 'center', gap: 8,
-                boxShadow: '0 2px 8px rgba(91,140,143,0.2)',
-              }}
-            >
-              <span style={{ fontSize: 16 }}>+</span>
-              {t.addDept}
-            </button>
-          )}
+          {hasPermission('departments.manage') && (() => {
+            const locked = !hasMultipleDepartments && departments.length >= 1
+            return (
+              <button
+                onClick={() => {
+                  if (locked) {
+                    setToastError(isAr ? 'خطتك الحالية تسمح بقسم واحد فقط — يرجى ترقية الخطة لإضافة أقسام متعددة' : 'Your current plan allows only one department — please upgrade to add more')
+                    return
+                  }
+                  setEditingDept(null); setModalOpen(true)
+                }}
+                title={locked ? (isAr ? 'يتطلب ترقية الخطة 🔒' : 'Requires a plan upgrade 🔒') : undefined}
+                style={{
+                  background: locked ? '#DCE5E5' : PRIMARY, color: locked ? TEXT_MUTED : '#FFFFFF', border: 'none',
+                  borderRadius: 12, padding: '10px 20px', fontSize: 13,
+                  fontWeight: 500, cursor: locked ? 'not-allowed' : 'pointer', display: 'flex',
+                  alignItems: 'center', gap: 8,
+                  boxShadow: locked ? 'none' : '0 2px 8px rgba(91,140,143,0.2)',
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{locked ? '🔒' : '+'}</span>
+                {t.addDept}
+              </button>
+            )
+          })()}
         </div>
 
         {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
