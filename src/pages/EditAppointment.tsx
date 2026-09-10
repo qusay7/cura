@@ -365,16 +365,22 @@ export default function EditAppointment() {
   })
   useUnsavedChangesWarning(form, !loading)
 
-  // ✅ التحقق من تضارب الأوقات
+  // ✅ التحقق من تضارب الأوقات — الحد الأدنى بين موعدين هو مدة الموعد الفعلية
+  // اللي حددتها العيادة لهذا الطبيب (schedules.slotDuration)، لا رقم ثابت
   const checkTimeConflict = async (doctorId: string | undefined, dateTime: string) => {
     if (!doctorId) return { conflict: false }
 
     try {
-      const response = await api.get(`/appointments?doctorId=${doctorId}`)
-      const appointments = response.data || []
+      const dateOnly = dateTime.slice(0, 10)
+      const [aptsRes, slotsRes] = await Promise.all([
+        api.get(`/appointments?doctorId=${doctorId}`),
+        api.get(`/schedules/available-slots?doctorId=${doctorId}&date=${dateOnly}`).catch(() => null),
+      ])
+      const appointments = aptsRes.data || []
+      const slotDuration = slotsRes?.data?.slotDuration
+      const minGap = (typeof slotDuration === 'number' && slotDuration > 0 ? slotDuration : 15) * 60 * 1000
 
       const newTime = new Date(dateTime).getTime()
-      const minGap = 20 * 60 * 1000 // 20 دقيقة
 
       for (const apt of appointments) {
         if (apt.id === id) continue // تخطي الموعد الحالي
