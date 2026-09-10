@@ -217,10 +217,13 @@ const formatAppointmentDate = (dateString: string, isArabic: boolean): string =>
 }
 
 // ─── Get local now as string ────────────────────────────────────────────────
-const getLocalNowString = (): string => {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:00`
-}
+// ✅ يهيّئ سلسلة التاريخ من التوقيت المحلي (لا UTC) — الباك اند يخزّن الموعد
+// كوقت حائط بدون منطقة زمنية، فـ toISOString() هنا يزيح الوقت بمقدار فرق
+// التوقيت المحلي بدون أي تحويل عكسي عند القراءة
+const toLocalDateTimeString = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:00`
+
+const getLocalNowString = (): string => toLocalDateTimeString(new Date())
 
 // ✅ معاينة التذكيرات
 const getReminderPreview = (customReminders: string, isAr: boolean): string => {
@@ -532,7 +535,7 @@ export default function AddAppointment() {
           const session = unlinkedSessions[i]
           const sessionDate = new Date(baseDate)
           sessionDate.setDate(sessionDate.getDate() + i * intervalDays)
-          const isoScheduledDate = sessionDate.toISOString()
+          const isoScheduledDate = toLocalDateTimeString(sessionDate)
 
           try {
             const apptRes = await api.post('/appointments', { ...payload, appointmentDate: isoScheduledDate })

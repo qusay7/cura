@@ -11,6 +11,14 @@ import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '.
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
+// ✅ يهيّئ قيمة datetime-local من التوقيت المحلي — toISOString() يرجع UTC ويزيح
+// الوقت بمقدار فرق التوقيت (مثلاً 8 صباحاً تصير 5)، لأن حقل datetime-local
+// نفسه بدون توقيت (لا UTC ولا محلي)، فلازم نعبّئه بأرقام التوقيت المحلي مباشرة
+const toLocalInputValue = (date: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 // ─── Global CSS with Comfortable Colors ────────────────────────────────────
 const globalCss = `
         
@@ -427,7 +435,7 @@ export default function EditAppointment() {
           patientId: a.patientId ?? '',
           doctorId: a.doctorId ?? '',
           appointmentDate: a.appointmentDate
-            ? new Date(a.appointmentDate).toISOString().slice(0, 16)
+            ? toLocalInputValue(new Date(a.appointmentDate))
             : '',
           type: a.type ?? '',
           price: a.price?.toString() ?? '',
@@ -520,9 +528,11 @@ export default function EditAppointment() {
       const payload = {
         patientId: form.patientId,
         doctorId: form.doctorId || null,
-        appointmentDate: form.appointmentDate
-          ? new Date(form.appointmentDate).toISOString()
-          : null,
+        // ✅ لا نمرّ بـ Date/toISOString هنا — الباك اند يخزّن الموعد كوقت حائط محلي
+        // بدون منطقة زمنية (Kind=Unspecified)، فتحويله لـ UTC هنا يزيح الوقت
+        // بمقدار فرق التوقيت المحلي (مثلاً 14:15 تصير 11:15) بدون أي تحويل عكسي
+        // عند القراءة، فيثبت الموعد مخزّناً بوقت خاطئ نهائياً
+        appointmentDate: form.appointmentDate || null,
         type: form.type || null,
         price: form.price ? parseFloat(form.price) : null,
         status: form.status || null,
@@ -554,7 +564,7 @@ export default function EditAppointment() {
     const now = new Date()
     now.setHours(now.getHours() + 1)
     now.setMinutes(0, 0, 0)
-    return now.toISOString().slice(0, 16)
+    return toLocalInputValue(now)
   }
 
   // Status options

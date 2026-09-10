@@ -186,7 +186,7 @@ describe('EditAppointment', () => {
     await waitFor(() =>
       expect(mockedApi.put).toHaveBeenCalledWith(
         '/appointments/appt-1',
-        expect.objectContaining({ appointmentDate: new Date(MOCK_SLOT_DATE).toISOString(), price: 40 })
+        expect.objectContaining({ appointmentDate: MOCK_SLOT_DATE, price: 40 })
       )
     )
   })
