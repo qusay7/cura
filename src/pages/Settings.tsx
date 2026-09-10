@@ -376,6 +376,17 @@ const T = {
     whatsappConnectBtn: 'ربط واتساب',
     whatsappReconnectBtn: 'إعادة الربط برقم جديد',
     whatsappGeneratingQr: 'جارٍ توليد الرمز...',
+    whatsappConnectedNumber: 'الرقم المتصل',
+    whatsappQuota: 'الرسائل المتبقية اليوم',
+    whatsappQuotaUnlimited: 'غير محدودة',
+    whatsappQuotaOf: 'من',
+    whatsappTriggersTitle: '⏰ متى تُرسَل الرسائل تلقائياً',
+    whatsappTriggersDesc: 'حدد الأحداث اللي تريد إرسال رسالة واتساب للمريض عندها.',
+    notifyOnCreate: 'عند إضافة موعد جديد',
+    notifyOnEdit: 'عند تعديل موعد',
+    notifyOnCancel: 'عند حذف/إلغاء موعد',
+    notifyBefore12h: 'قبل الموعد بـ 12 ساعة',
+    notifyBefore1h: 'قبل الموعد بساعة',
   },
   en: {
     title: 'Settings',
@@ -430,6 +441,17 @@ const T = {
     whatsappConnectBtn: 'Connect WhatsApp',
     whatsappReconnectBtn: 'Reconnect with a new number',
     whatsappGeneratingQr: 'Generating code...',
+    whatsappConnectedNumber: 'Connected number',
+    whatsappQuota: 'Messages remaining today',
+    whatsappQuotaUnlimited: 'Unlimited',
+    whatsappQuotaOf: 'of',
+    whatsappTriggersTitle: '⏰ When to send messages automatically',
+    whatsappTriggersDesc: 'Choose which events should trigger a WhatsApp message to the patient.',
+    notifyOnCreate: 'When a new appointment is added',
+    notifyOnEdit: 'When an appointment is edited',
+    notifyOnCancel: 'When an appointment is deleted/cancelled',
+    notifyBefore12h: '12 hours before the appointment',
+    notifyBefore1h: '1 hour before the appointment',
   },
 }
 
@@ -458,6 +480,31 @@ const FormField = ({ label, required, children, error }: {
     </div>
   )
 }
+
+// Toggle Switch Component
+const NotifyToggle = ({ label, checked, onChange }: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) => (
+  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 0', cursor: 'pointer' }}>
+    <span style={{ fontSize: 13, color: TEXT_DARK }}>{label}</span>
+    <span
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      style={{
+        width: 40, height: 22, borderRadius: 100, position: 'relative', flexShrink: 0,
+        background: checked ? PRIMARY : '#D9E2E2', transition: 'background 0.15s',
+      }}
+    >
+      <span style={{
+        position: 'absolute', top: 2, insetInlineStart: checked ? 20 : 2, width: 18, height: 18,
+        borderRadius: '50%', background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'inset-inline-start 0.15s',
+      }} />
+    </span>
+  </label>
+)
 
 // Usage Bar Component
 const UsageBar = ({ label, current, max }: {
@@ -530,6 +577,11 @@ export default function Settings() {
     ownerEmail: '',
     timeFormat: '24' as '12' | '24',
     taxNumber: '',
+    notifyOnCreate: true,
+    notifyOnEdit: true,
+    notifyOnCancel: true,
+    notifyBefore12h: true,
+    notifyBefore1h: true,
   })
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -551,6 +603,8 @@ export default function Settings() {
   const [whatsappStatus, setWhatsappStatus] = useState<string>('not_started')
   const [whatsappQr, setWhatsappQr] = useState<string | null>(null)
   const [whatsappConnecting, setWhatsappConnecting] = useState(false)
+  const [whatsappPhone, setWhatsappPhone] = useState<string | null>(null)
+  const [whatsappQuota, setWhatsappQuota] = useState<{ used: number; limit: number } | null>(null)
 
   // Inject styles
   useEffect(() => {
@@ -584,6 +638,8 @@ export default function Settings() {
         if (cancelled) return
         setWhatsappStatus(res.data.status)
         setWhatsappQr(res.data.qrDataUrl || null)
+        setWhatsappPhone(res.data.phoneNumber || null)
+        setWhatsappQuota({ used: res.data.messagesUsedToday ?? 0, limit: res.data.messagesLimit ?? -1 })
       } catch { /* تجاهل فشل الاستطلاع المؤقت */ }
     }
 
@@ -623,6 +679,11 @@ export default function Settings() {
           ownerEmail: c.ownerEmail ?? '',
           taxNumber: c.taxNumber ?? '',
           timeFormat: c.timeFormat === '12' ? '12' : '24',
+          notifyOnCreate: c.notifyOnCreate ?? true,
+          notifyOnEdit: c.notifyOnEdit ?? true,
+          notifyOnCancel: c.notifyOnCancel ?? true,
+          notifyBefore12h: c.notifyBefore12h ?? true,
+          notifyBefore1h: c.notifyBefore1h ?? true,
         })
 
         const subRes = await api.get(`/subscriptions/clinic/${user.clinicId}`)
@@ -1034,7 +1095,25 @@ export default function Settings() {
                     ? t.whatsappConnecting
                     : t.whatsappNotConnected}
               </span>
+              {whatsappStatus === 'open' && whatsappPhone && (
+                <span style={{ fontSize: 12.5, color: TEXT_MUTED }}>
+                  {t.whatsappConnectedNumber}: <span style={{ color: TEXT_DARK, fontWeight: 600, fontFamily: 'monospace' }}>+{whatsappPhone}</span>
+                </span>
+              )}
             </div>
+
+            {whatsappStatus === 'open' && whatsappQuota && (
+              <div style={{ marginBottom: 20, fontSize: 12.5, color: TEXT_MUTED }}>
+                {t.whatsappQuota}: {' '}
+                {whatsappQuota.limit === -1 ? (
+                  <span style={{ color: TEXT_DARK, fontWeight: 600 }}>{t.whatsappQuotaUnlimited}</span>
+                ) : (
+                  <span style={{ color: TEXT_DARK, fontWeight: 600 }}>
+                    {Math.max(whatsappQuota.limit - whatsappQuota.used, 0)} {t.whatsappQuotaOf} {whatsappQuota.limit}
+                  </span>
+                )}
+              </div>
+            )}
 
             {whatsappStatus === 'open' && (
               <button onClick={handleWhatsappConnect} disabled={whatsappConnecting}
@@ -1063,6 +1142,36 @@ export default function Settings() {
                 )}
               </div>
             )}
+
+            <div className="form-card" style={{ marginTop: 24 }}>
+              <h3 className="form-title">{t.whatsappTriggersTitle}</h3>
+              <p style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: -8, marginBottom: 12 }}>
+                {t.whatsappTriggersDesc}
+              </p>
+              <div style={{ borderTop: `1px solid ${BORDER}` }}>
+                <div style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <NotifyToggle label={t.notifyOnCreate} checked={clinicForm.notifyOnCreate} onChange={v => setClinicForm({ ...clinicForm, notifyOnCreate: v })} />
+                </div>
+                <div style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <NotifyToggle label={t.notifyOnEdit} checked={clinicForm.notifyOnEdit} onChange={v => setClinicForm({ ...clinicForm, notifyOnEdit: v })} />
+                </div>
+                <div style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <NotifyToggle label={t.notifyOnCancel} checked={clinicForm.notifyOnCancel} onChange={v => setClinicForm({ ...clinicForm, notifyOnCancel: v })} />
+                </div>
+                <div style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <NotifyToggle label={t.notifyBefore12h} checked={clinicForm.notifyBefore12h} onChange={v => setClinicForm({ ...clinicForm, notifyBefore12h: v })} />
+                </div>
+                <div>
+                  <NotifyToggle label={t.notifyBefore1h} checked={clinicForm.notifyBefore1h} onChange={v => setClinicForm({ ...clinicForm, notifyBefore1h: v })} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <button type="button" onClick={handleSaveClinic} disabled={saving} className="btn-primary">
+                {saving ? t.saving : t.save}
+              </button>
+            </div>
           </div>
         )}
 
