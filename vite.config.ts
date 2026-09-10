@@ -106,6 +106,14 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // ✅ الشعارات (وأي ملف ثابت آخر) تُخدَّم من wwwroot الباك اند مباشرة، لا من
+      // الفرونت اند — بدونها أي مسار نسبي مثل "/logos/x.png" يضرب سيرفر Vite
+      // نفسه (404) بدل الباك اند
+      '/logos': {
+        target: 'http://localhost:5192',
+        changeOrigin: true,
+        secure: false,
+      },
     },
 
     allowedHosts: [
@@ -118,13 +126,17 @@ export default defineConfig({
   },
 
   // Production preview
-   // Production preview
   preview: {
     host: '0.0.0.0',
     port: 4173,
     strictPort: true,
     proxy: {
       '/api': {
+        target: 'http://localhost:5192',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/logos': {
         target: 'http://localhost:5192',
         changeOrigin: true,
         secure: false,
