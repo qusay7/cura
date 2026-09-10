@@ -45,20 +45,31 @@ export const formatDate = (dateStr: string | Date, lang: 'ar' | 'en'): string =>
 }
 
 /**
+ * تفضيل عرض الوقت للعيادة الحالية — "12" (ص/م) أو "24" — محفوظ بـ localStorage
+ * عند تسجيل الدخول ومُحدَّث فوراً عند حفظه بصفحة الإعدادات
+ */
+export const getTimeFormat = (): '12' | '24' =>
+  localStorage.getItem('cura-timeFormat') === '12' ? '12' : '24'
+
+export const isHour12 = (): boolean => getTimeFormat() === '12'
+
+/**
  * تنسيق الوقت
  * @param dateStr - التاريخ (نص أو Date)
  * @param lang - اللغة ('ar' | 'en')
+ * @param hour12 - نظام 12/24 ساعة — افتراضياً حسب تفضيل العيادة
  * @returns الوقت منسق
  */
-export const formatTime = (dateStr: string | Date, lang: 'ar' | 'en'): string => {
+export const formatTime = (dateStr: string | Date, lang: 'ar' | 'en', hour12: boolean = isHour12()): string => {
   if (!dateStr) return '—'
-  
+
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
   if (isNaN(date.getTime())) return '—'
-  
+
   return date.toLocaleTimeString(lang === 'ar' ? 'ar-SA' : 'en-US', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12,
   })
 }
 
@@ -66,21 +77,39 @@ export const formatTime = (dateStr: string | Date, lang: 'ar' | 'en'): string =>
  * تنسيق التاريخ والوقت معاً
  * @param dateStr - التاريخ (نص أو Date)
  * @param lang - اللغة ('ar' | 'en')
+ * @param hour12 - نظام 12/24 ساعة — افتراضياً حسب تفضيل العيادة
  * @returns التاريخ والوقت منسقين
  */
-export const formatDateTime = (dateStr: string | Date, lang: 'ar' | 'en'): string => {
+export const formatDateTime = (dateStr: string | Date, lang: 'ar' | 'en', hour12: boolean = isHour12()): string => {
   if (!dateStr) return '—'
-  
+
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
   if (isNaN(date.getTime())) return '—'
-  
+
   return date.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12,
   })
+}
+
+/**
+ * تنسيق سلسلة وقت خام من الباك اند ("HH:mm" أو "HH:mm:ss") بدون الحاجة لكائن Date كامل —
+ * للأوقات اللي مالها تاريخ حقيقي مرتبط (دوام العيادة، خانات التقويم...)
+ * @param t - الوقت الخام، مثلاً "14:15" أو "14:15:00"
+ * @param hour12 - نظام 12/24 ساعة — افتراضياً حسب تفضيل العيادة
+ */
+export const formatTimeString = (t: string, hour12: boolean = isHour12()): string => {
+  if (!t) return ''
+  const [h, m] = t.substring(0, 5).split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return t
+  if (!hour12) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
 /**

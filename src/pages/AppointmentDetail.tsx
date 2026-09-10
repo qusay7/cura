@@ -6,6 +6,7 @@ import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -190,13 +191,13 @@ export default function AppointmentDetail() {
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return t.notRecorded
     const d = new Date(dateStr)
-    return d.toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+    return d.toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: isHour12() })
   }
 
   const formatTime = (dateStr?: string) => {
     if (!dateStr) return t.notRecorded
     const d = new Date(dateStr)
-    return d.toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: isHour12() })
   }
 
   const methodLabel = (m?: string) => m === 'cash' ? t.cash : m === 'card' ? t.card : m === 'insurance' ? t.insurance : (m || '—')

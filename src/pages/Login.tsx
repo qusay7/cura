@@ -364,6 +364,9 @@ const handleLogin = async (e: React.FormEvent) => {
     // ✅ جديد — احفظ permissions من نفس Login Response
     localStorage.setItem('permissions', JSON.stringify(data.permissions || []))
 
+    // ✅ تفضيل عرض الوقت (12/24 ساعة) الخاص بالعيادة
+    localStorage.setItem('cura-timeFormat', data.timeFormat === '12' ? '12' : '24')
+
 if (data.role?.toLowerCase() === 'doctor') {
   navigate('/daily')
 } else {

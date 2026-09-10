@@ -4,6 +4,7 @@ import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -433,7 +434,8 @@ export default function QuickVisit() {
         if (timeDiff < minGap) {
           const existingTimeFormatted = new Date(existingTime).toLocaleTimeString(lang === 'ar' ? 'ar-SA' : 'en-US', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: isHour12()
           })
           return {
             available: false,
@@ -984,7 +986,8 @@ export default function QuickVisit() {
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          hour12: isHour12()
                         })}
                       </div>
                       {visitForm.appointmentPrice && (

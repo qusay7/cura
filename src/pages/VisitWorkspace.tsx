@@ -4,6 +4,7 @@ import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -246,7 +247,7 @@ export default function VisitWorkspace() {
               👤 {appointment.patientName}
             </h2>
             <p style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 4 }}>
-              {new Date(appointment.appointmentDate).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+              {new Date(appointment.appointmentDate).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: isHour12() })}
             </p>
           </div>
 
@@ -328,7 +329,7 @@ export default function VisitWorkspace() {
                   <>
                     <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.upcomingAppointment}</label>
                     <div style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '9px 12px', fontSize: 13, fontWeight: 700, color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>
-                      📅 {new Date(upcomingAppointment.appointmentDate).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                      📅 {new Date(upcomingAppointment.appointmentDate).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: isHour12() })}
                     </div>
                   </>
                 ) : (

@@ -7,6 +7,7 @@ import { ECGAnimation } from '../components/ECGAnimation'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -207,13 +208,13 @@ const formatAppointmentDate = (dateString: string, isArabic: boolean): string =>
   const dateObj = new Date(year, month-1, day)
   const weekday = weekdayNames[dateObj.getDay()]
   const monthName = monthNames[month-1]
-  const hour12 = hours % 12 || 12
-  const ampm = hours >= 12 ? (isArabic ? 'م' : 'PM') : (isArabic ? 'ص' : 'AM')
-  const hourStr = hour12.toString().padStart(2,'0')
   const minuteStr = minutes.toString().padStart(2,'0')
+  const timeStr = isHour12()
+    ? `${(hours % 12 || 12).toString().padStart(2,'0')}:${minuteStr} ${hours >= 12 ? (isArabic ? 'م' : 'PM') : (isArabic ? 'ص' : 'AM')}`
+    : `${hours.toString().padStart(2,'0')}:${minuteStr}`
   return isArabic
-    ? `${weekday}، ${day} ${monthName}، ${hourStr}:${minuteStr} ${ampm}`
-    : `${weekday}, ${monthName} ${day}, ${hourStr}:${minuteStr} ${ampm}`
+    ? `${weekday}، ${day} ${monthName}، ${timeStr}`
+    : `${weekday}, ${monthName} ${day}, ${timeStr}`
 }
 
 // ─── Get local now as string ────────────────────────────────────────────────
@@ -746,7 +747,7 @@ export default function AddAppointment() {
                     <p style={{ fontSize:15, fontWeight:700, color:'#F59E0B', margin:'10px 0 6px' }}>{t.queueBooking}</p>
                     <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{t.queueBookingHint}</p>
                     <div style={{ marginTop:12, padding:'8px 16px', background:'#FFFBEB', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#92400E' }}>
-                      🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit' })}
+                      🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit', hour12: isHour12() })}
                     </div>
                   </div>
                 )

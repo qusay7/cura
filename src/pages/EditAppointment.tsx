@@ -7,6 +7,7 @@ import { ECGAnimation } from '../components/ECGAnimation'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -384,7 +385,7 @@ export default function EditAppointment() {
         if (timeDiff < minGap) {
           const existingTimeFormatted = new Date(existingTime).toLocaleTimeString(
             lang === 'ar' ? 'ar-SA' : 'en-US',
-            { hour: '2-digit', minute: '2-digit' }
+            { hour: '2-digit', minute: '2-digit', hour12: isHour12() }
           )
           return {
             conflict: true,
@@ -722,7 +723,7 @@ export default function EditAppointment() {
                     <p style={{ fontSize:15, fontWeight:700, color:'#F59E0B', margin:'10px 0 6px' }}>{t.queueBooking}</p>
                     <p style={{ fontSize:12, color:TEXT_MUTED, margin:0 }}>{t.queueBookingHint}</p>
                     <div style={{ marginTop:12, padding:'8px 16px', background:'#FFFBEB', borderRadius:10, display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#92400E' }}>
-                      🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit' })}
+                      🕐 {new Date().toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour:'2-digit', minute:'2-digit', hour12: isHour12() })}
                     </div>
                   </div>
                 )
@@ -750,7 +751,8 @@ export default function EditAppointment() {
                     month: 'long',
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    hour12: isHour12()
                   })}
                 </div>
               )}

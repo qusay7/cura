@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { hasPermission } from '../utils/permissions'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -929,9 +930,10 @@ export default function Queue() {
                     {entry.notes && <span style={{ fontSize: 12, color: TEXT_MUTED }}>📝 {entry.notes}</span>}
                     <span style={{ fontSize: 11, color: TEXT_MUTED }}>
   {new Date(entry.createdAt + 'Z') // ✅ أضف Z ليُعرف أنه UTC
-    .toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    .toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: isHour12()
     })}
 </span>
                   </div>

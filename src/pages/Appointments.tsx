@@ -11,6 +11,7 @@ import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { formatTimeString } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -1059,10 +1060,8 @@ export default function Appointments() {
   }
 
   const formatTime = (dateStr: string) => {
-    const [datePart, timePart] = dateStr.split('T')
-    const [y, mo, d] = datePart.split('-').map(Number)
-    const [h, mi] = (timePart||'00:00').split(':').map(Number)
-    return `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`
+    const [, timePart] = dateStr.split('T')
+    return formatTimeString(timePart || '00:00')
   }
 
   const getDoctorName = (appointment: Appointment): string => {
@@ -1110,7 +1109,7 @@ export default function Appointments() {
     const [hour, minute] = (timePart||'00:00').split(':').map(Number)
     const date = new Date(year, month-1, day, hour, minute)
     const today = new Date(); const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1)
-    const time = `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`
+    const time = formatTimeString(timePart || '00:00')
     if (date.toDateString() === today.toDateString())     return `${t.today} — ${time}`
     if (date.toDateString() === tomorrow.toDateString()) return `${t.tomorrow} — ${time}`
     return `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year} — ${time}`

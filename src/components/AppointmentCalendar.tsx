@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
+import { formatTimeString } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -277,7 +278,7 @@ export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVis
       disabled={!isAvail && !isSelected}
       title={isAbsent ? t.unavailableTitle : ''}
       style={{ padding:'8px 4px', borderRadius:10, border:`1px solid ${border}`, background:bg, color, fontSize:12, fontWeight:600, cursor, transition:'all 0.15s', fontFamily:"'Inter', monospace", position:'relative' }}>
-      {slot.time}
+      {formatTimeString(slot.time)}
       {isBooked && <span style={{ position:'absolute', top:-4, right:-4, width:8, height:8, borderRadius:'50%', background:'#DC2626', border:'1px solid #FFF' }} />}
       {isAbsent && <span style={{ position:'absolute', top:-4, right:-4, fontSize:9 }}>🚫</span>}
     </button>

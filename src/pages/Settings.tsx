@@ -337,6 +337,10 @@ const T = {
     website: 'الموقع الإلكتروني',
     taxNumber: 'الرقم الضريبي',
     description: 'وصف العيادة',
+    timeFormatLabel: 'صيغة عرض الوقت',
+    timeFormatHint: 'تتحكم بشكل عرض الساعة بكل صفحات النظام (المواعيد، الطابور، الجداول...)',
+    hour12: '12 ساعة (ص/م)',
+    hour24: '24 ساعة',
     ownerName: 'اسم المالك',
     ownerPhone: 'هاتف المالك',
     ownerEmail: 'بريد المالك',
@@ -387,6 +391,10 @@ const T = {
     website: 'Website',
     taxNumber: 'Tax Number',
     description: 'Description',
+    timeFormatLabel: 'Time display format',
+    timeFormatHint: 'Controls how the clock is shown across the whole app (appointments, queue, schedules...)',
+    hour12: '12-hour (AM/PM)',
+    hour24: '24-hour',
     ownerName: 'Owner Name',
     ownerPhone: 'Owner Phone',
     ownerEmail: 'Owner Email',
@@ -520,6 +528,7 @@ export default function Settings() {
     ownerName: '',
     ownerPhone: '',
     ownerEmail: '',
+    timeFormat: '24' as '12' | '24',
     taxNumber: '',
   })
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -613,6 +622,7 @@ export default function Settings() {
           ownerPhone: c.ownerPhone ?? '',
           ownerEmail: c.ownerEmail ?? '',
           taxNumber: c.taxNumber ?? '',
+          timeFormat: c.timeFormat === '12' ? '12' : '24',
         })
 
         const subRes = await api.get(`/subscriptions/clinic/${user.clinicId}`)
@@ -672,6 +682,9 @@ export default function Settings() {
     setSaving(true)
     try {
       await api.put(`/clinics/${user.clinicId}`, clinicForm)
+
+      // ✅ يحدّث فوراً بدون انتظار تسجيل خروج/دخول جديد — كل الصفحات تقرأ هذا المفتاح
+      localStorage.setItem('cura-timeFormat', clinicForm.timeFormat)
 
       // ✅ لو فيه صورة شعار مختارة بانتظار الرفع، نرفعها هنا كمان — عشان "حفظ" وحد
       // يكفي لكل شي، بدل ما يحتاج المستخدم يتذكر يضغط زر "رفع الشعار" منفصل
@@ -871,6 +884,28 @@ export default function Settings() {
                 </FormField>
                 <FormField label={t.description}>
                   <textarea name="description" value={clinicForm.description} onChange={handleClinicChange} className="form-textarea" rows={3} />
+                </FormField>
+                <FormField label={t.timeFormatLabel}>
+                  <div>
+                  <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '0 0 8px' }}>{t.timeFormatHint}</p>
+                  <div style={{ display: 'flex', gap: 8, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 4, width: 'fit-content' }}>
+                    {(['24', '12'] as const).map(fmt => (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => setClinicForm({ ...clinicForm, timeFormat: fmt })}
+                        style={{
+                          padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                          fontSize: 12.5, fontWeight: 600, transition: 'all 0.15s',
+                          background: clinicForm.timeFormat === fmt ? PRIMARY : 'transparent',
+                          color: clinicForm.timeFormat === fmt ? '#fff' : TEXT_MUTED,
+                        }}
+                      >
+                        {fmt === '12' ? t.hour12 : t.hour24}
+                      </button>
+                    ))}
+                  </div>
+                  </div>
                 </FormField>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
+import { formatTimeString } from "../utils/i18n";
 
 // ═══════════════════════════════════════════════
 // Types — مطابقة لـ DoctorCalendarDto من الـ API
@@ -424,7 +425,7 @@ export default function DoctorCalendar({
                     padding: "6px 12px", textAlign: "center", color: TEXT_MUTED,
                     fontVariantNumeric: "tabular-nums",
                   }}>
-                    {time}
+                    {formatTimeString(time)}
                   </td>
                   {days.map((d) => {
                     const key = d.date.slice(0, 10);
@@ -453,7 +454,7 @@ export default function DoctorCalendar({
                     return (
                       <td
                         key={key}
-                        title={`${time} — ${slot.end}`}
+                        title={`${formatTimeString(time)} — ${formatTimeString(slot.end)}`}
                         style={{
                           border: `1px solid ${BORDER}`, padding: 0, textAlign: "center",
                           whiteSpace: "nowrap", background: s.bg,

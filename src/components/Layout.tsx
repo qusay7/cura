@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import logo from '../assets/logo.png'
 import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
+import { isHour12 } from '../utils/i18n'
 
 const layoutCss = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Cairo:wght@400;500;600;700&display=swap');
@@ -650,7 +651,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const now = new Date()
     return {
       date: now.toLocaleDateString(isAr ? 'ar-SA' : undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }),
-      time: now.toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      time: now.toLocaleTimeString(isAr ? 'ar-SA' : undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: isHour12() }),
     }
   }
 

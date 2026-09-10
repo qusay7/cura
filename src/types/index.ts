@@ -7,6 +7,7 @@ export interface AuthResponse {
   role: string
   clinicId: string | null
   clinicName: string | null
+  timeFormat?: '12' | '24'
   expiresAt: string
   refreshTokenExpiresAt: string
   permissions: string[]

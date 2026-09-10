@@ -4,6 +4,7 @@ import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { getRole } from '../utils/permissions'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -127,7 +128,7 @@ export default function DoctorDaily() {
     navigate(`/visit/${id}`)
   }
 
-  const formatTime = (d: string) => new Date(d).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+  const formatTime = (d: string) => new Date(d).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: isHour12() })
 
   const stats = {
     total: appointments.length,

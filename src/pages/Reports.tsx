@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY_SOFT } from '../styles/theme'
+import { formatTimeString } from '../utils/i18n'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -337,7 +338,7 @@ const { visibleKeys, toggle } = useColumnVisibility('reports-table', columnDefs)
     const rows = [headers, ...detailData.items.map((item: any, i: number) =>
       isPatients
         ? [i+1, item.fullName, item.phone||'', item.gender||'', item.age||'', item.totalVisits, item.completedVisits, `${item.totalSpent} ${t.riyal}`, item.firstVisit||'', item.lastVisit||'']
-        : [i+1, item.patientName, item.doctorName, item.date, item.time, item.status, item.type||'', `${item.price||0} ${t.riyal}`, item.checkIn||'', item.checkOut||'', item.durationMin||'']
+        : [i+1, item.patientName, item.doctorName, item.date, formatTimeString(item.time), item.status, item.type||'', `${item.price||0} ${t.riyal}`, item.checkIn?formatTimeString(item.checkIn):'', item.checkOut?formatTimeString(item.checkOut):'', item.durationMin||'']
     )]
     exportToExcel(rows, isAr ? (isPatients?'تفاصيل-المرضى':'تفاصيل-المواعيد') : (isPatients?'patients-detail':'appointments-detail'))
   }
@@ -780,7 +781,7 @@ style={{padding:'8px 18px',borderRadius:10,fontSize:13,fontWeight:600,cursor:'po
                             </td>
                             <td style={{color:TEXT_MUTED}}>{item.doctorName}</td>
                             <td style={{fontFamily:'Inter,sans-serif'}}>{item.date}</td>
-                            <td style={{fontFamily:'Inter,sans-serif'}}>{item.time}</td>
+                            <td style={{fontFamily:'Inter,sans-serif'}}>{formatTimeString(item.time)}</td>
                             <td>
                               <span className="badge" style={{
                                 background:item.status==='completed'?SUCCESS_BG:item.status==='cancelled'?DANGER_BG:PRIMARY_SOFT,
@@ -789,8 +790,8 @@ style={{padding:'8px 18px',borderRadius:10,fontSize:13,fontWeight:600,cursor:'po
                             </td>
                             <td style={{color:TEXT_MUTED}}>{item.type||'—'}</td>
                             <td style={{color:SUCCESS,fontWeight:600}}>{item.price!=null?`${item.price} ${t.riyal}`:'—'}</td>
-                            <td style={{fontFamily:'Inter,sans-serif',color:TEXT_MUTED}}>{item.checkIn||'—'}</td>
-                            <td style={{fontFamily:'Inter,sans-serif',color:TEXT_MUTED}}>{item.checkOut||'—'}</td>
+                            <td style={{fontFamily:'Inter,sans-serif',color:TEXT_MUTED}}>{item.checkIn?formatTimeString(item.checkIn):'—'}</td>
+                            <td style={{fontFamily:'Inter,sans-serif',color:TEXT_MUTED}}>{item.checkOut?formatTimeString(item.checkOut):'—'}</td>
                             <td style={{color:item.durationMin?PRIMARY:TEXT_MUTED}}>{item.durationMin?`${item.durationMin} ${t.min}`:'—'}</td>
                           </tr>
                         ))}

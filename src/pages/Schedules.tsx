@@ -5,6 +5,7 @@ import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { hasPermission } from '../utils/permissions'
+import { formatTimeString } from '../utils/i18n'
 
 // ✅ تحسين #11: التحقق الصحيح من اللغة المحفوظة
 const getStoredLang = (): 'ar' | 'en' => {
@@ -209,12 +210,7 @@ const T = {
 }
 
 const fmtTime = (t:string) => t?.substring(0,5) || ''
-const fmtTime12 = (t:string) => {
-  if (!t) return ''
-  const [h,m] = t.substring(0,5).split(':').map(Number)
-  const ampm = h>=12?'PM':'AM'; const h12=h%12||12
-  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`
-}
+const fmtTime12 = (t:string) => formatTimeString(t)
 const fmtDate = (d:string) => {
   if (!d) return ''
   const [y,m,day] = d.split('-')
