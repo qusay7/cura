@@ -385,8 +385,20 @@ export function getStoredLang(): 'ar' | 'en' {
 }
 
 interface Notification {
-  id: number; title: string; message: string; time: string
+  id: string; title: string; message: string; createdAt: string
   read: boolean; type: 'appointment' | 'alert' | 'system'
+}
+
+// ✅ "منذ 5 دقائق" بدل وقت ثابت من السيرفر — يبقى صحيح بين كل تحديث بدون إعادة الجلب
+const timeAgo = (iso: string, isAr: boolean): string => {
+  const diffMs = Date.now() - new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return isAr ? 'الآن' : 'just now'
+  if (mins < 60) return isAr ? `منذ ${mins} ${mins === 1 ? 'دقيقة' : 'دقائق'}` : `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return isAr ? `منذ ${hours} ${hours === 1 ? 'ساعة' : 'ساعات'}` : `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return isAr ? `منذ ${days} ${days === 1 ? 'يوم' : 'أيام'}` : `${days}d ago`
 }
 
 const T = {
@@ -572,8 +584,8 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
 }
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
-const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
-  notifications: Notification[]; onMarkAsRead: (id: number) => void; onViewAll: () => void; lang: 'ar' | 'en'
+const NotificationBell = ({ notifications, onMarkAsRead, onMarkAllRead, onViewAll, lang }: {
+  notifications: Notification[]; onMarkAsRead: (id: string) => void; onMarkAllRead: () => void; onViewAll: () => void; lang: 'ar' | 'en'
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isRinging, setIsRinging] = useState(false)
@@ -605,7 +617,7 @@ const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
         <div className="notification-dropdown" style={{ [isAr ? 'left' : 'right']: 0 }}>
           <div style={{ padding: '11px 14px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F0F0' }}>
             <h4 style={{ fontSize: 14, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{t.notifications}</h4>
-            {unreadCount > 0 && <button onClick={() => notifications.forEach(n => !n.read && onMarkAsRead(n.id))} style={{ background: 'transparent', border: 'none', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}>{t.markAllRead}</button>}
+            {unreadCount > 0 && <button onClick={onMarkAllRead} style={{ background: 'transparent', border: 'none', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}>{t.markAllRead}</button>}
           </div>
           <div style={{ maxHeight: 320, overflowY: 'auto' }}>
             {notifications.length === 0 ? (
@@ -620,7 +632,7 @@ const NotificationBell = ({ notifications, onMarkAsRead, onViewAll, lang }: {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, gap: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: notif.read ? 500 : 600, color: TEXT_DARK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{notif.title}</span>
-                    <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0 }}>{notif.time}</span>
+                    <span style={{ fontSize: 10, color: TEXT_MUTED, flexShrink: 0 }}>{timeAgo(notif.createdAt, isAr)}</span>
                   </div>
                   <p style={{ fontSize: 11, color: TEXT_MUTED, margin: 0 }}>{notif.message}</p>
                 </div>
@@ -647,11 +659,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
-  const [notifications, setNotifications] = useState<Notification[]>([
-    { id: 1, title: 'موعد جديد', message: 'تم إضافة موعد جديد مع د. أحمد السيد', time: 'منذ 5 دقائق', read: false, type: 'appointment' },
-    { id: 2, title: 'تنبيه الحصة', message: 'اقتربت من الحد الأقصى لعدد المرضى (85%)', time: 'منذ ساعة', read: false, type: 'alert' },
-    { id: 3, title: 'تحديث النظام', message: 'تم تحديث النظام إلى الإصدار الأحدث', time: 'منذ 3 ساعات', read: true, type: 'system' },
-  ])
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const isAr = lang === 'ar'
@@ -686,6 +694,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     api.get('/dashboard').then(r => { if (r.data?.subscription) setSubscription(r.data.subscription) }).catch(() => {})
+  }, [])
+
+  // ✅ يجيب إشعارات جرس الواجهة الحقيقية عند التحميل، ويحدّثها كل دقيقة
+  useEffect(() => {
+    const fetchNotifications = () => {
+      api.get('/notifications').then(r => setNotifications(Array.isArray(r.data) ? r.data : [])).catch(() => {})
+    }
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 60000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => { setMobileMenuOpen(false) }, [location.pathname])
@@ -729,7 +747,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* الإشعارات */}
           <NotificationBell notifications={notifications}
-            onMarkAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
+            onMarkAsRead={(id) => {
+              setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+              api.put(`/notifications/${id}/read`).catch(() => {})
+            }}
+            onMarkAllRead={() => {
+              setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+              api.put('/notifications/read-all').catch(() => {})
+            }}
             onViewAll={() => {}} lang={lang} />
 
           {/* الباقة */}

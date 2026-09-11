@@ -6,7 +6,7 @@ import Layout from './Layout'
 import api from '../api/axios'
 
 vi.mock('../api/axios', () => ({
-  default: { get: vi.fn() },
+  default: { get: vi.fn(), put: vi.fn() },
 }))
 
 const mockedApi = vi.mocked(api, true)
@@ -29,7 +29,10 @@ describe('Layout', () => {
     // SuperAdmin bypasses the permission check entirely, so the sidebar
     // renders its full menu regardless of a seeded `permissions` array.
     localStorage.setItem('user', JSON.stringify({ role: 'SuperAdmin', fullName: 'Sara Ahmad' }))
-    mockedApi.get.mockResolvedValue({ data: {} })
+    mockedApi.get.mockImplementation((url: string) =>
+      Promise.resolve({ data: url.startsWith('/notifications') ? [] : {} })
+    )
+    mockedApi.put.mockResolvedValue({ data: {} })
   })
 
   it('navigates to /profile when the user menu is activated, as a real keyboard-operable button', async () => {
@@ -43,11 +46,18 @@ describe('Layout', () => {
   })
 
   it('marks a notification as read when its button is activated', async () => {
+    mockedApi.get.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: url.startsWith('/notifications')
+          ? [{ id: 'n1', title: 'موعد جديد', message: 'تم إضافة موعد جديد مع د. أحمد السيد', createdAt: new Date().toISOString(), read: false, type: 'appointment' }]
+          : {},
+      })
+    )
     const user = userEvent.setup()
     renderLayout()
 
     await user.click(screen.getByRole('button', { name: /notifications/i }))
-    const notifButton = screen.getByRole('button', { name: /موعد جديد/i })
+    const notifButton = await screen.findByRole('button', { name: /موعد جديد/i })
     expect(notifButton).toHaveStyle({ background: 'rgb(232, 240, 240)' })
 
     await user.click(notifButton)
