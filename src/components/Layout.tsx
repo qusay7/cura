@@ -313,13 +313,23 @@ const layoutCss = `
   .logout-top-btn { display: none; }
   .top-bar { padding: 8px 14px; min-height: 56px; }
   .main-content { padding: 14px 12px 32px; }
+
+  /* ✅ الجرس مو دايماً بحافة الشاشة — تثبيت القائمة بموضع الشاشة نفسها (لا بالأب
+     النسبي) يمنعها تطلع خارج الإطار بغض النظر عن مكان الجرس بالرأس */
+  .notification-dropdown {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    top: 60px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
 }
 
 /* Very small < 400 */
 @media (max-width: 400px) {
   .top-bar { padding: 8px 10px; gap: 6px; }
   .main-content { padding: 10px 10px 28px; }
-  .notification-dropdown { width: calc(100vw - 16px); }
 }
 
 @media (min-width: 769px) {

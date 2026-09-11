@@ -302,11 +302,23 @@ const globalCss = `
 @media(max-width: 768px) {
   .tabs-container {
     width: 100%;
+    gap: 4px;
+    padding: 4px;
   }
   .tab-btn {
     flex: 1;
+    /* ✅ بدونها flex:1 ما يمنع الفيض — العنصر ياخذ عرض محتواه الأدنى كحد أدنى
+       (min-width:auto الافتراضي)، فلو 4 تبويبات أعرض من حصتها المتساوية، آخر
+       تبويب (واتساب) ينطلع كامل خارج الشاشة بدل ما ينضغط */
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
     justify-content: center;
-    padding: 8px 16px;
+    padding: 6px 2px;
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.2;
+    text-align: center;
   }
   .form-grid {
     grid-template-columns: 1fr;
