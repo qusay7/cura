@@ -209,7 +209,12 @@ export default function DoctorDaily() {
                 {appointments.map(a => (
                   <div key={a.id} className="daily-card"
                     style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', cursor: 'pointer' }}
-                    onClick={() => navigate(`/appointments/${a.id}`)}>
+                    onClick={() => {
+                      // ✅ زيارة بدأت (سجّل دخول) بس ما انتهت بعد — افتحها مباشرة على شاشة
+                      // الزيارة لحفظها، بدل صفحة تفاصيل الموعد العامة اللي ما تسمح بالحفظ
+                      if (a.checkInTime && !a.checkOutTime) navigate(`/visit/${a.id}`)
+                      else navigate(`/appointments/${a.id}`)
+                    }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                       <div style={{ textAlign: 'center', minWidth: 56 }}>
                         <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: 0, fontFamily: "'Inter',sans-serif" }}>{formatTime(a.appointmentDate)}</p>
