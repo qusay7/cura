@@ -299,6 +299,14 @@ export default function VisitWorkspace() {
           )}
 
           <div style={{ opacity: appointment?.checkInTime ? 1 : 0.5, pointerEvents: appointment?.checkInTime ? 'auto' : 'none' }}>
+            {appointment?.type && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>🏷️ {t.bookingType}</label>
+                <div style={{ padding: '9px 12px', background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontWeight: 600, color: TEXT_DARK }}>
+                  {appointment.type}
+                </div>
+              </div>
+            )}
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>🔄 {t.visitType}</label>
               <SearchableSelect isRtl={isAr} value={templateId} onChange={handleTemplateChange}
