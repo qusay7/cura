@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
-import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
+import PatientAttachmentsTab, { type PatientAttachmentsTabHandle } from '../components/PatientAttachmentsTab'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
 
@@ -86,6 +86,7 @@ export default function VisitWorkspace() {
   const [nextVisitAutoFilled, setNextVisitAutoFilled] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const attachmentsRef = useRef<PatientAttachmentsTabHandle>(null)
 
   useEffect(() => {
     const id = 'cura-visit-css'
@@ -210,8 +211,20 @@ export default function VisitWorkspace() {
         const res = await api.post('/visitnotes', payload)
         setExistingNoteId(res.data.id)
       }
+
+      // ✅ زر حفظ واحد يغطي الزيارة والمرفق المختار معاً — لو فيه ملف بانتظار
+      // الرفع بتبويب المرفقات، نرفعه هنا مباشرة بدل ما يحتاج الطبيب يضغط زرّين
+      if (attachmentsRef.current?.hasPendingFile()) {
+        const uploaded = await attachmentsRef.current.uploadPending()
+        if (!uploaded) {
+          setError(isAr ? 'تم حفظ الزيارة، لكن تعذّر رفع المرفق' : 'Visit saved, but the attachment failed to upload')
+          return
+        }
+      }
+
       setSuccess(t.saved)
-      setTimeout(() => setSuccess(''), 3000)
+      // ✅ تأخير بسيط عشان رسالة النجاح تظهر لحظة قبل الرجوع، بدل تحويل فوري بلا تأكيد
+      setTimeout(() => navigate('/daily'), 1200)
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
     } finally {
@@ -376,7 +389,7 @@ export default function VisitWorkspace() {
 
         {/* ✅ مرفقات هذي الزيارة — نفس مكوّن ملف المريض، بس مربوط بهذا الموعد بالذات */}
         <div style={{ marginBottom: 20, opacity: appointment?.checkInTime ? 1 : 0.5, pointerEvents: appointment?.checkInTime ? 'auto' : 'none' }}>
-          <PatientAttachmentsTab patientId={appointment.patientId} lang={lang} appointmentId={appointmentId} />
+          <PatientAttachmentsTab ref={attachmentsRef} patientId={appointment.patientId} lang={lang} appointmentId={appointmentId} hideOwnSaveButton />
         </div>
 
         {/* السجل المرضي السابق */}

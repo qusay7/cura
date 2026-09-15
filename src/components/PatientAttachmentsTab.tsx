@@ -1,6 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import api from '../api/axios'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+
+// ✅ يسمح لصفحة الزيارة تستخدم زر حفظ واحد يغطي الزيارة والمرفق المختار معاً،
+// بدل ما يحتاج الطبيب يضغط زرّين منفصلين
+export interface PatientAttachmentsTabHandle {
+  hasPendingFile: () => boolean
+  uploadPending: () => Promise<boolean>
+}
 
 const PRIMARY = '#5B8C8F'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -49,7 +56,7 @@ const fmtSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function PatientAttachmentsTab({ patientId, lang, appointmentId }: { patientId: string; lang: 'ar' | 'en'; appointmentId?: string }) {
+const PatientAttachmentsTab = forwardRef<PatientAttachmentsTabHandle, { patientId: string; lang: 'ar' | 'en'; appointmentId?: string; hideOwnSaveButton?: boolean }>(({ patientId, lang, appointmentId, hideOwnSaveButton }, ref) => {
   const t = T[lang]
   const isAr = lang === 'ar'
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -88,8 +95,8 @@ export default function PatientAttachmentsTab({ patientId, lang, appointmentId }
     if (file) { setPendingFile(file); setCategory('other'); setNotes(''); setError('') }
   }
 
-  const handleUpload = async () => {
-    if (!pendingFile) return
+  const handleUpload = async (): Promise<boolean> => {
+    if (!pendingFile) return true
     setUploading(true); setError(''); setSuccess('')
     try {
       const formData = new FormData()
@@ -107,12 +114,19 @@ export default function PatientAttachmentsTab({ patientId, lang, appointmentId }
       if (fileInputRef.current) fileInputRef.current.value = ''
       fetchAttachments()
       setTimeout(() => setSuccess(''), 3000)
+      return true
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data || (isAr ? 'فشل الرفع' : 'Upload failed'))
+      return false
     } finally {
       setUploading(false)
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    hasPendingFile: () => !!pendingFile,
+    uploadPending: handleUpload,
+  }))
 
   const handleView = async (item: AttachmentItem) => {
     try {
@@ -198,16 +212,22 @@ export default function PatientAttachmentsTab({ patientId, lang, appointmentId }
                 style={{ width: '100%', padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG }} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleUpload} disabled={uploading}
-              style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '8px 18px', fontSize: 12.5, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.6 : 1 }}>
-              {uploading ? t.uploading : `✅ ${t.save}`}
-            </button>
-            <button onClick={() => { setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }} disabled={uploading}
-              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '8px 16px', fontSize: 12, color: TEXT_MUTED, cursor: 'pointer' }}>
-              {t.cancel}
-            </button>
-          </div>
+          {hideOwnSaveButton ? (
+            <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: 0 }}>
+              💡 {isAr ? 'سيُرفع مع الملف عند حفظ الزيارة' : 'Will upload together when you save the visit'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleUpload} disabled={uploading}
+                style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '8px 18px', fontSize: 12.5, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.6 : 1 }}>
+                {uploading ? t.uploading : `✅ ${t.save}`}
+              </button>
+              <button onClick={() => { setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }} disabled={uploading}
+                style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 9, padding: '8px 16px', fontSize: 12, color: TEXT_MUTED, cursor: 'pointer' }}>
+                {t.cancel}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -273,4 +293,8 @@ export default function PatientAttachmentsTab({ patientId, lang, appointmentId }
       )}
     </div>
   )
-}
+})
+
+PatientAttachmentsTab.displayName = 'PatientAttachmentsTab'
+
+export default PatientAttachmentsTab
