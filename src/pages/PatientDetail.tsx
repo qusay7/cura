@@ -58,7 +58,7 @@ const T = {
     loadingMessage: 'جاري تحميل بيانات المريض',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات', yearsOld: 'سنة',
     // Tabs
-    tabInfo: '📋 البيانات', tabInsurance: '🏥 التأمين', tabAttachments: '📎 المرفقات',
+    tabInfo: '📋 البيانات', tabInsurance: '🏥 التأمين', tabAttachments: '📎 المرفقات', tabHistory: '🩺 سجل الزيارات',
     print: 'طباعة',
     exportPdf: 'تصدير PDF',
     exportExcel: 'تصدير Excel',
@@ -79,7 +79,7 @@ const T = {
     loadingMessage: 'Loading Patient Data',
     loadingSub: 'Please wait while we load patient information', yearsOld: 'years',
     // Tabs
-    tabInfo: '📋 Info', tabInsurance: '🏥 Insurance', tabAttachments: '📎 Attachments',
+    tabInfo: '📋 Info', tabInsurance: '🏥 Insurance', tabAttachments: '📎 Attachments', tabHistory: '🩺 Visit History',
      print: 'Print',
     exportPdf: 'Export PDF',
     exportExcel: 'Export Excel',
@@ -359,6 +359,9 @@ export default function PatientDetail() {
           </button>
           <button className={`ptab-btn${activeTab==='attachments'?' active':''}`} onClick={()=>setActiveTab('attachments')}>
             {t.tabAttachments}
+          </button>
+          <button className="ptab-btn" onClick={()=>navigate(`/patients/${id}/visit-notes`)}>
+            {t.tabHistory}
           </button>
         </div>
 
