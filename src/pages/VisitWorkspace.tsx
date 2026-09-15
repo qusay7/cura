@@ -20,7 +20,7 @@ const SUCCESS_BG = '#E8F5E9'
 const T = {
   ar: {
     back: 'رجوع', loading: 'جاري التحميل...',
-    currentVisit: '🩺 الزيارة الحالية', visitType: 'نوع الزيارة',
+    currentVisit: '🩺 الزيارة الحالية', visitType: 'قالب خطة العلاج (اختياري)', bookingType: 'نوع الزيارة المحدّد بالحجز',
     diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات المطلوبة',
     notes: 'ملاحظات إضافية', nextVisit: 'موعد الزيارة القادمة (اختياري)',
     save: 'حفظ الزيارة', saving: 'جارٍ الحفظ...', saved: 'تم حفظ الزيارة بنجاح ✅',
@@ -34,7 +34,7 @@ const T = {
   },
   en: {
     back: 'Back', loading: 'Loading...',
-    currentVisit: '🩺 Current Visit', visitType: 'Visit Type',
+    currentVisit: '🩺 Current Visit', visitType: 'Treatment Plan Template (optional)', bookingType: 'Visit type set at booking',
     diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Requested Tests',
     notes: 'Additional Notes', nextVisit: 'Next Visit Date (optional)',
     save: 'Save Visit', saving: 'Saving...', saved: 'Visit saved successfully ✅',
@@ -248,6 +248,11 @@ export default function VisitWorkspace() {
             </h2>
             <p style={{ fontSize: 12.5, color: TEXT_MUTED, marginTop: 4 }}>
               {new Date(appointment.appointmentDate).toLocaleString(isAr ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeStyle: 'short', hour12: isHour12() })}
+              {appointment.type && (
+                <span style={{ marginInlineStart: 8, color: PRIMARY, fontWeight: 600 }}>
+                  · {t.bookingType}: {appointment.type}
+                </span>
+              )}
             </p>
           </div>
 
