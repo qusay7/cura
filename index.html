@@ -13,9 +13,10 @@
     default-src 'self';
     script-src 'self' 'wasm-unsafe-eval';
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
-    img-src 'self' data: https:;
+    img-src 'self' data: https: blob:;
     font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:;
     connect-src 'self' http://localhost:5192 https://cdn.jsdelivr.net;
+    frame-src 'self' blob:;
     base-uri 'self';
     form-action 'self';
 "
