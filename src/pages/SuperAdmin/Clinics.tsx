@@ -435,20 +435,20 @@ export default function SuperAdminClinics() {
         {error && (
           <div className="alert-error" role="alert">
             <span style={{ whiteSpace: 'pre-line' }}>⚠️ {error}</span>
-            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
+            <button onClick={() => setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
           </div>
         )}
         {success && (
           <div className="alert-success">
             <span style={{ whiteSpace: 'pre-line' }}>✅ {success}</span>
-            <button onClick={() => setSuccess('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
+            <button onClick={() => setSuccess('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
           </div>
         )}
         {generatedCreds && (
           <div className="alert-success" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <span>✅ {isAr ? 'تم إنشاء العيادة والمدير والاشتراك والأدوار بنجاح!' : 'Clinic, admin, subscription and roles created!'}</span>
-              <button onClick={() => setGeneratedCreds(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
+              <button onClick={() => setGeneratedCreds(null)} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontFamily: "'Inter',monospace", fontSize: 13, background: '#FFFFFF', border: '1px solid #DCE5E5', borderRadius: 10, padding: '10px 14px' }}>
               <span>👤 {generatedCreds.username}</span>

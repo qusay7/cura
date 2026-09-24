@@ -154,7 +154,7 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
               🩺 {isEdit ? t.titleEdit : t.title}
             </div>
           </div>
-          <button onClick={onClose} aria-label={isAr ? 'إغلاق' : 'Close'} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} title={isAr ? 'إغلاق' : 'Close'} aria-label={isAr ? 'إغلاق' : 'Close'} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>✕</button>
         </div>
 
         {/* Body */}

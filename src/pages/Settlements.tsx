@@ -242,7 +242,9 @@ function PatientDuesTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
         <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
       </div>
-      <ExportBar t={t} lang={isAr ? 'ar' : 'en'} endpoint="/settlements/patients-dues/export" />
+      {hasPermission('reports.export') && (
+        <ExportBar t={t} lang={isAr ? 'ar' : 'en'} endpoint="/settlements/patients-dues/export" />
+      )}
       <DataTable
         empty={t.noData}
         columns={visibleColumnDefs.map(c => c.label)}
@@ -549,7 +551,9 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
                 <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
               </div>
-              <ExportBar t={t} lang={lang} endpoint={`/settlements/doctor/${partyId}/pending/export?from=${periodStart}&to=${periodEnd}`} />
+              {hasPermission('reports.export') && (
+                <ExportBar t={t} lang={lang} endpoint={`/settlements/doctor/${partyId}/pending/export?from=${periodStart}&to=${periodEnd}`} />
+              )}
               <DataTable
                 empty={t.noPending}
                 columns={columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label)}
@@ -841,7 +845,9 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
                     <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
                   </div>
-                  <ExportBar t={t} lang={lang} endpoint={`/settlements/insurance/${companyId}/claims/export?status=${status}&from=${periodStart}&to=${periodEnd}`} />
+                  {hasPermission('reports.export') && (
+                    <ExportBar t={t} lang={lang} endpoint={`/settlements/insurance/${companyId}/claims/export?status=${status}&from=${periodStart}&to=${periodEnd}`} />
+                  )}
                   <DataTable
                     empty={t.noClaimsForStatus}
                     columns={columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label)}
@@ -1008,7 +1014,9 @@ function HistoryTab({ t, isAr }: { t: typeof T['ar']; isAr: boolean }) {
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 8 }}>
             <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
           </div>
-          <ExportBar t={t} lang={isAr ? 'ar' : 'en'} endpoint={`/settlements/export${filter ? `?type=${filter}` : ''}`} />
+          {hasPermission('reports.export') && (
+            <ExportBar t={t} lang={isAr ? 'ar' : 'en'} endpoint={`/settlements/export${filter ? `?type=${filter}` : ''}`} />
+          )}
           <DataTable
             empty={t.noData}
             columns={columnDefs.filter(c => visibleKeys.has(c.key)).map(c => c.label)}

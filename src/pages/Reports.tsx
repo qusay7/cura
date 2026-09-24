@@ -4,6 +4,7 @@ import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY_SOFT } from '../styles/theme'
 import { formatTimeString } from '../utils/i18n'
+import { hasPermission } from '../utils/permissions'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -24,7 +25,6 @@ const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو
 const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600&display=swap');
 @keyframes fade-up { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
 .rep-shell { animation:fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .rep-shell * { box-sizing:border-box; }
@@ -429,12 +429,14 @@ const { visibleKeys, toggle } = useColumnVisibility('reports-table', columnDefs)
               <p style={{ fontSize:13, color:TEXT_MUTED, margin:'6px 0 0' }}>{t.subtitle}</p>
             </div>
             {/* Export Buttons */}
+            {hasPermission('reports.export') && (
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               <button className="export-btn" onClick={handlePrint}>🖨️ {t.exportPDF}</button>
               <button className="export-btn" onClick={exportOverview}>📊 {t.exportExcel}</button>
               {tab===1 && <button className="export-btn" onClick={exportDoctors}>👨‍⚕️ {t.exportExcel}</button>}
               {tab===0 && <button className="export-btn" onClick={exportPatients}>👥 {t.exportExcel}</button>}
             </div>
+            )}
           </div>
         </div>
 
@@ -554,7 +556,7 @@ const { visibleKeys, toggle } = useColumnVisibility('reports-table', columnDefs)
               </Card>
             </div>
 
-            <Card title={`🏆 ${t.topPatients}`} action={<button className="export-btn no-print" onClick={exportPatients}>📥 CSV</button>}>
+            <Card title={`🏆 ${t.topPatients}`} action={hasPermission('reports.export') ? <button className="export-btn no-print" onClick={exportPatients}>📥 CSV</button> : undefined}>
               <div style={{ overflowX:'auto' }}>
                 <table className="tbl">
                   <thead><tr>
@@ -582,7 +584,7 @@ const { visibleKeys, toggle } = useColumnVisibility('reports-table', columnDefs)
 
         {/* ════════ TAB 1 — Doctors ════════ */}
         {tab===1 && data && (
-          <Card title={`👨‍⚕️ ${t.topDoctors}`} action={<button className="export-btn no-print" onClick={exportDoctors}>📥 CSV</button>}>
+          <Card title={`👨‍⚕️ ${t.topDoctors}`} action={hasPermission('reports.export') ? <button className="export-btn no-print" onClick={exportDoctors}>📥 CSV</button> : undefined}>
             <div style={{ overflowX:'auto' }}>
               <table className="tbl">
                 <thead><tr>
@@ -688,7 +690,7 @@ style={{padding:'8px 18px',borderRadius:10,fontSize:13,fontWeight:600,cursor:'po
             </div>
 
             <Card title={`📋 ${isAr?(dtMode==='patients'?'تفاصيل المرضى':'تفاصيل المواعيد'):(dtMode==='patients'?'Patients Detail':'Appointments Detail')}`}
-              action={<button className="export-btn no-print" onClick={exportDetail}>📥 CSV</button>}>
+              action={hasPermission('reports.export') ? <button className="export-btn no-print" onClick={exportDetail}>📥 CSV</button> : undefined}>
 
               {/* Filters */}
               <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:16,paddingBottom:16,borderBottom:`1px solid ${BORDER}`}}>

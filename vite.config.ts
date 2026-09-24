@@ -16,6 +16,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
 
+      // بدونها لا يُسجَّل service worker ولا manifest أثناء "vite dev"،
+      // فلا يُطلق المتصفح beforeinstallprompt إطلاقاً — يمنع اختبار PWAInstallPrompt محلياً
+      devOptions: {
+        enabled: true,
+      },
+
       includeAssets: [
         'favicon.ico',
         'apple-touch-icon.png',

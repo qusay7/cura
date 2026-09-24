@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
-import { getRole } from '../utils/permissions'
+import { getRole, hasPermission } from '../utils/permissions'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
 
@@ -228,13 +228,13 @@ export default function DoctorDaily() {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} onClick={e => e.stopPropagation()}>
                       <StatusPill status={a.status} checkInTime={a.checkInTime} checkOutTime={a.checkOutTime} t={t} />
-                      {!a.checkInTime && a.status !== 'completed' && (
+                      {hasPermission('appointments.edit') && !a.checkInTime && a.status !== 'completed' && (
                         <button onClick={() => goToVisit(a.id)}
                           style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           🚪 {t.checkIn}
                         </button>
                       )}
-                      {a.checkInTime && !a.checkOutTime && (
+                      {hasPermission('appointments.edit') && a.checkInTime && !a.checkOutTime && (
                         <button onClick={() => navigate(`/appointments`)}
                           style={{ background: WARNING_BG, color: '#92400E', border: 'none', borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           🏁 {t.checkOut}

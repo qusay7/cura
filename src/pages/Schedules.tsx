@@ -27,8 +27,7 @@ const AMBER        = '#F59E0B'
 const AMBER_BG     = '#FFF8E1'
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600&display=swap');
-@keyframes fade-up   { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+@keyframes fade-up{ from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
 @keyframes slide-in  { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
 
 .sch-shell { animation:fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
@@ -784,7 +783,7 @@ export default function Schedules() {
         {alert && (
           <div className={`alert ${alert.type}`}>
             <span>{alert.type==='ok'?'✓ ':''}{alert.msg}</span>
-            <button onClick={()=>setAlert(null)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'inherit' }}>✕</button>
+            <button onClick={()=>setAlert(null)} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:'inherit' }}>✕</button>
           </div>
         )}
 
@@ -857,7 +856,9 @@ export default function Schedules() {
             ) : (
               <>
                 <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:12 }}>
-                  <ExportBar endpoint="/schedules/clinic/export" lang={lang} fileName="clinic-schedule" />
+                  {hasPermission('reports.export') && (
+                    <ExportBar endpoint="/schedules/clinic/export" lang={lang} fileName="clinic-schedule" />
+                  )}
                   <ColumnToggleButton columns={clinicColumnDefs} visibleKeys={clinicVisible} onToggle={toggleClinic} isRtl={isAr} />
                 </div>
                 <div className="sch-cards">
@@ -870,7 +871,7 @@ export default function Schedules() {
                             {fmtTime(s.openTime)==='00:00'&&fmtTime(s.closeTime)==='23:59' ? `🕐 ${t.h24}` : `${fmtTime12(s.openTime)} — ${fmtTime12(s.closeTime)}`}
                           </p>
                         </div>
-                        {hasPermission('schedules.clinic.delete') && <button className="btn-del no-print" onClick={()=>delClinic(s.id)}>✕</button>}
+                        {hasPermission('schedules.clinic.delete') && <button className="btn-del no-print" onClick={()=>delClinic(s.id)} title={isAr?'حذف':'Delete'} aria-label={isAr?'حذف':'Delete'}>✕</button>}
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {clinicVisible.has('openTime') && <span className="badge" style={{ background:PRIMARY_SOFT, color:PRIMARY }}>🕗 {fmtTime12(s.openTime)}</span>}
@@ -989,7 +990,9 @@ export default function Schedules() {
                 ) : (
                   <>
                     <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:12 }}>
-                      <ExportBar endpoint={`/schedules/doctor/${selectedDoctor}/export`} lang={lang} fileName="doctor-schedule" />
+                      {hasPermission('reports.export') && (
+                        <ExportBar endpoint={`/schedules/doctor/${selectedDoctor}/export`} lang={lang} fileName="doctor-schedule" />
+                      )}
                       <ColumnToggleButton columns={doctorColumnDefs} visibleKeys={doctorVisible} onToggle={toggleDoctor} isRtl={isAr} />
                     </div>
                     <div className="sch-cards">
@@ -1005,7 +1008,7 @@ export default function Schedules() {
                                     {isEditing ? t.cancel : `✏️ ${t.edit}`}
                                   </button>
                                 )}
-                                {hasPermission('schedules.doctor.delete') && <button className="btn-del" onClick={()=>delDoctor(s.id)}>✕</button>}
+                                {hasPermission('schedules.doctor.delete') && <button className="btn-del" onClick={()=>delDoctor(s.id)} title={isAr?'حذف':'Delete'} aria-label={isAr?'حذف':'Delete'}>✕</button>}
                               </div>
                             </div>
                             {isEditing ? (
@@ -1182,7 +1185,9 @@ export default function Schedules() {
 
             {/* قائمة الإجازات */}
             <div className="no-print" style={{ display:'flex', justifyContent:'flex-end', gap:8, marginBottom:12 }}>
-              <ExportBar endpoint="/absences/export" lang={lang} fileName="absence-schedule" />
+              {hasPermission('reports.export') && (
+                <ExportBar endpoint="/absences/export" lang={lang} fileName="absence-schedule" />
+              )}
               <ColumnToggleButton columns={absenceColumnDefs} visibleKeys={absenceVisible} onToggle={toggleAbsence} isRtl={isAr} />
             </div>
 
@@ -1214,7 +1219,7 @@ export default function Schedules() {
                             )}
                           </div>
                         </div>
-                        {hasPermission('schedules.absence.delete') && <button className="btn-del no-print" onClick={()=>delAbsence(a.id)}>✕</button>}
+                        {hasPermission('schedules.absence.delete') && <button className="btn-del no-print" onClick={()=>delAbsence(a.id)} title={isAr?'حذف':'Delete'} aria-label={isAr?'حذف':'Delete'}>✕</button>}
                       </div>
 
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>

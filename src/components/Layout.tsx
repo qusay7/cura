@@ -4,9 +4,52 @@ import logo from '../assets/logo.png'
 import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
 import { isHour12 } from '../utils/i18n'
+import OnboardingTour, { type TourStep } from './OnboardingTour'
+
+// ✅ جولة تعريفية قصيرة — تظهر تلقائياً مرة واحدة فقط لكل مستخدم عند أول دخوله
+// للوحة التحكم، ويمكن إعادة تشغيلها يدوياً من زر "جولة تعريفية" بأسفل القائمة
+const TOUR_STEPS: TourStep[] = [
+  {
+    target: null,
+    titleAr: 'مرحباً بك في CURA 👋', titleEn: 'Welcome to CURA 👋',
+    descAr: 'جولة سريعة من 6 خطوات تعرّفك على أهم أجزاء النظام. يمكنك تخطّيها في أي وقت.',
+    descEn: "A quick 6-step tour of the system's key areas. You can skip it anytime.",
+  },
+  {
+    target: '[data-tour="tour-group-home"]',
+    titleAr: 'الرئيسية', titleEn: 'Home',
+    descAr: 'لوحة تحكم سريعة تعرض أرقام اليوم: المرضى، المواعيد، والإيرادات دفعة واحدة.',
+    descEn: "A quick dashboard showing today's numbers: patients, appointments, and revenue at a glance.",
+  },
+  {
+    target: '[data-tour="tour-group-clinical"]',
+    titleAr: 'المرضى والمواعيد', titleEn: 'Patients & Appointments',
+    descAr: 'من هنا تدير سجلات المرضى، تحجز المواعيد، وتتابع جدول العيادة اليومي.',
+    descEn: 'Manage patient records, book appointments, and follow the daily clinic schedule from here.',
+  },
+  {
+    target: '[data-tour="tour-group-finance"]',
+    titleAr: 'المالية', titleEn: 'Finance',
+    descAr: 'الفواتير والمدفوعات والتقارير المالية لعيادتك، كلها في مكان واحد.',
+    descEn: "Your clinic's invoices, payments, and financial reports — all in one place.",
+  },
+  {
+    target: '[data-tour="tour-notif-bell"]',
+    titleAr: 'الإشعارات', titleEn: 'Notifications',
+    descAr: 'أي تنبيه مهم — موعد جديد، تذكير — يظهر هنا فوراً.',
+    descEn: 'Anything important — a new appointment, a reminder — shows up here right away.',
+  },
+  {
+    target: '[data-tour="tour-user-menu"]',
+    titleAr: 'حسابك', titleEn: 'Your Account',
+    descAr: 'من هنا تصل لملفك الشخصي. وزر تسجيل الخروج وتبديل اللغة موجودان أسفل القائمة الجانبية.',
+    descEn: 'Access your profile from here. Sign out and the language switch are at the bottom of the sidebar.',
+  },
+]
+
+const TOUR_SEEN_KEY = (email: string) => `cura-tour-seen-${email || 'guest'}`
 
 const layoutCss = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Cairo:wght@400;500;600;700&display=swap');
 
 @keyframes fade-in { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} }
 @keyframes slide-overlay { from { opacity:0;} to { opacity:1;} }
@@ -18,9 +61,18 @@ const layoutCss = `
 .layout-shell {
   min-height: 100dvh;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   background: #F5F7F8;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── العمود الأيمن/الأيسر (بحسب اللغة): Top Bar + المحتوى فوق بعض،
+   بينما القائمة الجانبية بجانبه على طول الشاشة كاملة ── */
+.content-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 /* ── Top Bar ── */
@@ -174,22 +226,16 @@ const layoutCss = `
   animation: notification-slide 0.3s ease;
 }
 
-/* ── Sidebar ── */
-.main-wrapper {
-  display: flex;
-  flex: 1;
-}
-
+/* ── Sidebar — على طول الشاشة كاملة، وليس بعد نهاية Top Bar ── */
 .sidebar {
   width: 250px;
-  min-height: calc(100dvh - 62px);
+  height: 100dvh;
   background: #FFFFFF;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   position: sticky;
-  top: 62px;
-  height: calc(100dvh - 62px);
+  top: 0;
   overflow-y: auto;
   transition: all 0.3s ease;
 }
@@ -407,9 +453,14 @@ const T = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments }: {
+const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, onStartTour, enableTourTargets }: {
   lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void
   hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean
+  onStartTour?: () => void
+  // ✅ القائمة تُرسم مرتين (نسخة الموبايل المخفية + نسخة سطح المكتب) — نضع
+  // data-tour على نسخة سطح المكتب فقط، وإلا كان querySelector يلتقط نسخة
+  // الموبايل المخفية (أسبق بترتيب DOM) فتظهر الجولة خارج الشاشة تماماً
+  enableTourTargets?: boolean
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -518,7 +569,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
           const hasActive = group.items.some(i => i.path === location.pathname)
           return (
             <div key={group.key} style={{ marginBottom: 2 }}>
-              <button className="nav-group-btn" onClick={() => toggleGroup(group.key)}
+              <button className="nav-group-btn" data-tour={enableTourTargets ? `tour-group-${group.key}` : undefined} onClick={() => toggleGroup(group.key)}
                 style={{ textAlign: isAr ? 'right' : 'left', color: hasActive ? PRIMARY : TEXT_DARK }}>
                 <i className={`ti ${group.icon}`} style={{ fontSize: 17, flexShrink: 0 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isAr ? group.labelAr : group.labelEn}</span>
@@ -545,6 +596,14 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
 
       {/* Footer */}
       <div style={{ padding: '12px 10px 16px', borderTop: '1px solid rgba(91,140,143,0.08)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* إعادة تشغيل الجولة التعريفية */}
+        {onStartTour && (
+          <button type="button" onClick={onStartTour}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', border: `1px solid rgba(91,140,143,0.25)`, background: 'rgba(91,140,143,0.05)', color: PRIMARY, borderRadius: 12, padding: '8px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <i className="ti ti-compass" style={{ fontSize: 14 }} />
+            {isAr ? 'جولة تعريفية' : 'Take a tour'}
+          </button>
+        )}
         {/* Lang Toggle */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <div className="lang-toggle">
@@ -606,7 +665,8 @@ const NotificationBell = ({ notifications, onMarkAsRead, onMarkAllRead, onViewAl
 
   return (
     <div className="notif-container" style={{ position: 'relative' }}>
-      <button className="notification-btn" onClick={() => setIsOpen(!isOpen)}
+      <button className="notification-btn" data-tour="tour-notif-bell" onClick={() => setIsOpen(!isOpen)}
+        title={t.notifications}
         aria-label={unreadCount > 0 ? `${t.notifications} (${unreadCount} ${isAr ? 'غير مقروءة' : 'unread'})` : t.notifications}
         aria-expanded={isOpen} aria-haspopup="true"
         style={{ animation: isRinging ? 'bell-ring 0.5s ease-in-out' : 'none' }}>
@@ -660,10 +720,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [showTour, setShowTour] = useState(false)
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const isAr = lang === 'ar'
   const t = T[lang]
+
+  // ✅ تظهر الجولة تلقائياً مرة واحدة فقط لكل مستخدم، وفقط عند دخوله على لوحة التحكم
+  useEffect(() => {
+    if (location.pathname !== '/dashboard') return
+    try {
+      if (!localStorage.getItem(TOUR_SEEN_KEY(user.email))) setShowTour(true)
+    } catch { /* localStorage غير متاح — تجاهل الجولة بأمان */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
+
+  const finishTour = () => {
+    setShowTour(false)
+    try { localStorage.setItem(TOUR_SEEN_KEY(user.email), '1') } catch { /* تجاهل */ }
+  }
 
   const getLocalDateTime = () => {
     const now = new Date()
@@ -732,6 +807,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="layout-shell" dir={isAr ? 'rtl' : 'ltr'} style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif" }}>
 
+      {/* Sidebar Overlay (موبايل) */}
+      {mobileMenuOpen && <div className="sidebar-overlay" onClick={() => setMobileMenuOpen(false)} />}
+
+      {/* Sidebar Mobile */}
+      <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
+        <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
+          hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
+          onStartTour={() => { setMobileMenuOpen(false); setShowTour(true) }} />
+      </div>
+
+      {/* Sidebar Desktop — على طول الشاشة كاملة */}
+      <aside className="sidebar">
+        <Sidebar lang={lang} isAr={isAr}
+          hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
+          onStartTour={() => setShowTour(true)} enableTourTargets />
+      </aside>
+
+      {/* ── العمود: Top Bar + المحتوى ── */}
+      <div className="content-column">
+
       {/* ── Top Bar ── */}
       <div className="top-bar">
 
@@ -769,7 +864,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
 
           {/* المستخدم */}
-          <button type="button" className="user-menu" onClick={() => navigate('/profile')}>
+          <button type="button" className="user-menu" data-tour="tour-user-menu" onClick={() => navigate('/profile')}>
             <div className="user-avatar">{(user.fullName || 'U')[0].toUpperCase()}</div>
             <div className="user-info">
               <p className="user-name">{user.fullName || '---'}</p>
@@ -794,29 +889,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* ── Main Wrapper ── */}
-      <div className="main-wrapper">
+      {/* Main Content */}
+      <main className="main-content">
+        {children}
+      </main>
 
-        {/* Sidebar Overlay (موبايل) */}
-        {mobileMenuOpen && <div className="sidebar-overlay" onClick={() => setMobileMenuOpen(false)} />}
-
-        {/* Sidebar Mobile */}
-        <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
-          <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
-            hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments} />
-        </div>
-
-        {/* Sidebar Desktop */}
-        <aside className="sidebar">
-          <Sidebar lang={lang} isAr={isAr}
-            hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments} />
-        </aside>
-
-        {/* Main Content */}
-        <main className="main-content">
-          {children}
-        </main>
       </div>
+
+      {showTour && <OnboardingTour steps={TOUR_STEPS} isAr={isAr} onFinish={finishTour} />}
     </div>
   )
 }

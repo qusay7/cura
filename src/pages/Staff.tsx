@@ -215,6 +215,19 @@ export default function Staff() {
 
   const t    = T[lang]
   const isAr = lang === 'ar'
+  // ✅ الراتب بيانات حسّاسة — لا تظهر إلا لمن يملك صلاحية مخصّصة، بمعزل عن staff.view العامة
+  const canViewSalary = hasPermission('staff.viewsalary')
+  const exportColumnLabels = () => columnDefs.filter(c => c.key !== 'salary' || canViewSalary).map(c => c.label)
+  const buildExportRow = (s: any) => {
+    const row = [
+      s.fullName, s.phone || '—', s.email || '—',
+      (isAr ? s.roleNameAr : s.roleNameEn) || s.roleName || '—',
+      s.departmentName || '—', contractLabel(s.contractType) || '—',
+    ]
+    if (canViewSalary) row.push(s.salary ? `${s.salary} ${t.riyal}` : '—')
+    row.push(s.yearsInClinic || '—', s.jobTitle || '—')
+    return row
+  }
 // ✅ إعدادات الأعمدة
 const columnDefs: ColumnDef[] = [
   { key: 'fullName', label: t.fullName, locked: true },
@@ -451,64 +464,48 @@ const [departments, setDepartments] = useState<Department[]>([])
         </div>
         {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
 <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap', alignItems:'center' }} className="no-print">
-  <button onClick={() => window.print()}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-    🖨️ {t.print || 'Print'}
-  </button>
-  <button onClick={() => {
-    const rows = filtered.map(s => [
-      s.fullName,
-      s.phone || '—',
-      s.email || '—',
-      (isAr ? s.roleNameAr : s.roleNameEn) || s.roleName || '—',
-      s.departmentName || '—',
-      contractLabel(s.contractType) || '—',
-      s.salary ? `${s.salary} ${t.riyal}` : '—',
-      s.yearsInClinic || '—',
-      s.jobTitle || '—',
-    ])
-    api.post('/export/pdf', {
-      title: t.title,
-      columns: columnDefs.map(c => c.label),
-      rows,
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'staff.pdf'; a.click()
-      URL.revokeObjectURL(url)
-      }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📄 {t.exportPdf || 'Export PDF'}
-  </button>
-  <button onClick={() => {
-    const rows = filtered.map(s => [
-      s.fullName,
-      s.phone || '—',
-      s.email || '—',
-      (isAr ? s.roleNameAr : s.roleNameEn) || s.roleName || '—',
-      s.departmentName || '—',
-      contractLabel(s.contractType) || '—',
-      s.salary ? `${s.salary} ${t.riyal}` : '—',
-      s.yearsInClinic || '—',
-      s.jobTitle || '—',
-    ])
-    api.post('/export/excel', {
-      title: t.title,
-      columns: columnDefs.map(c => c.label),
-      rows,
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'staff.xlsx'; a.click()
-      URL.revokeObjectURL(url)
-   }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📊 {t.exportExcel || 'Export Excel'}
-  </button>
+  {hasPermission('reports.export') && (
+    <>
+      <button onClick={() => window.print()}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+        🖨️ {t.print || 'Print'}
+      </button>
+      <button onClick={() => {
+        const rows = filtered.map(buildExportRow)
+        api.post('/export/pdf', {
+          title: t.title,
+          columns: exportColumnLabels(),
+          rows,
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'staff.pdf'; a.click()
+          URL.revokeObjectURL(url)
+          }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
+      }}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📄 {t.exportPdf || 'Export PDF'}
+      </button>
+      <button onClick={() => {
+        const rows = filtered.map(buildExportRow)
+        api.post('/export/excel', {
+          title: t.title,
+          columns: exportColumnLabels(),
+          rows,
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'staff.xlsx'; a.click()
+          URL.revokeObjectURL(url)
+       }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
+      }}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📊 {t.exportExcel || 'Export Excel'}
+      </button>
+    </>
+  )}
   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
 </div>
 
@@ -572,7 +569,13 @@ const [departments, setDepartments] = useState<Department[]>([])
         ) : filtered.length === 0 ? (
           <div style={{ textAlign:'center', padding:60, color:TEXT_MUTED }}>
             <span style={{ fontSize:48, opacity:0.4 }}>👥</span>
-            <p style={{ fontSize:14, marginTop:12 }}>{t.noData}</p>
+            <p style={{ fontSize:14, marginTop:12, marginBottom: hasPermission('staff.manage') ? 16 : 0 }}>{t.noData}</p>
+            {hasPermission('staff.manage') && (
+              <button onClick={openAdd}
+                style={{ background:PRIMARY, color:'#FFFFFF', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                + {t.add}
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16 }}>
@@ -729,7 +732,7 @@ const [departments, setDepartments] = useState<Department[]>([])
                   ))}
                   {fld(t.joinDate, <input type="date" className="form-inp" value={form.joinDate} onChange={e=>setForm({...form,joinDate:e.target.value})} style={{fontFamily:'Inter,sans-serif'}} />)}
                   {fld(t.endDate, <input type="date" className="form-inp" value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})} style={{fontFamily:'Inter,sans-serif'}} />)}
-                  {fld(`${t.salary} (${t.riyal})`, <input type="number" className="form-inp" value={form.salary} onChange={e=>setForm({...form,salary:e.target.value})} style={{fontFamily:'Inter,sans-serif'}} />)}
+                  {canViewSalary && fld(`${t.salary} (${t.riyal})`, <input type="number" className="form-inp" value={form.salary} onChange={e=>setForm({...form,salary:e.target.value})} style={{fontFamily:'Inter,sans-serif'}} />)}
                   {fld(t.workingHours, <input className="form-inp" value={form.workingHours} onChange={e=>setForm({...form,workingHours:e.target.value})} placeholder={isAr?'مثال: 8-16':'e.g. 8am-4pm'} />)}
                   {fld(t.specialization, <input className="form-inp" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} />)}
                   <div style={{ gridColumn:'1/-1' }}>
@@ -877,7 +880,7 @@ const [departments, setDepartments] = useState<Department[]>([])
                     {selected.fullNameEn && <p style={{ fontSize:11, color:TEXT_MUTED, margin:'2px 0 0', fontFamily:'Inter,sans-serif' }}>{selected.fullNameEn}</p>}
                   </div>
                 </div>
-                <button onClick={()=>setSelected(null)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:TEXT_MUTED }}>✕</button>
+                <button onClick={()=>setSelected(null)} title={isAr?'إغلاق':'Close'} aria-label={isAr?'إغلاق':'Close'} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:TEXT_MUTED }}>✕</button>
               </div>
 
               {/* بيانات مجمّعة */}
@@ -899,7 +902,7 @@ const [departments, setDepartments] = useState<Department[]>([])
                 [t.contractType, contractLabel(selected.contractType)||'—'],
                 [t.department, selected.departmentName||'—'],
                 [t.joinDate,   selected.joinDate||'—'],
-                [t.salary,     selected.salary ? `${selected.salary} ${t.riyal}` : '—'],
+                ...(canViewSalary ? [[t.salary, selected.salary ? `${selected.salary} ${t.riyal}` : '—']] : []),
                 [t.workingHours, selected.workingHours||'—'],
                 [t.yearsInClinic, selected.yearsInClinic ? `${selected.yearsInClinic} ${isAr?'سنة':'yr'}` : '—'],
                 [t.qualifications, selected.qualifications||'—'],
@@ -913,65 +916,49 @@ const [departments, setDepartments] = useState<Department[]>([])
 
           {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
 <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }} className="no-print">
-  <button onClick={() => window.print()}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-    🖨️
-  </button>
-  <button onClick={() => {
-    const rowData = [
-      selected.fullName,
-      selected.phone || '—',
-      selected.email || '—',
-      (isAr ? selected.roleNameAr : selected.roleNameEn) || selected.roleName || '—',
-      selected.departmentName || '—',
-      contractLabel(selected.contractType) || '—',
-      selected.salary ? `${selected.salary} ${t.riyal}` : '—',
-      selected.yearsInClinic || '—',
-      selected.jobTitle || '—',
-    ]
-    api.post('/export/pdf', {
-      title: `${t.title} - ${selected.fullName}`,
-      columns: columnDefs.map(c => c.label),
-      rows: [rowData],
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = `staff-${selected.fullName}.pdf`; a.click()
-      URL.revokeObjectURL(url)
-    }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📄
-  </button>
-  <button onClick={() => {
-    const rowData = [
-      selected.fullName,
-      selected.phone || '—',
-      selected.email || '—',
-      (isAr ? selected.roleNameAr : selected.roleNameEn) || selected.roleName || '—',
-      selected.departmentName || '—',
-      contractLabel(selected.contractType) || '—',
-      selected.salary ? `${selected.salary} ${t.riyal}` : '—',
-      selected.yearsInClinic || '—',
-      selected.jobTitle || '—',
-    ]
-    api.post('/export/excel', {
-      title: `${t.title} - ${selected.fullName}`,
-      columns: columnDefs.map(c => c.label),
-      rows: [rowData],
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = `staff-${selected.fullName}.xlsx`; a.click()
-      URL.revokeObjectURL(url)
-    }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📊
-  </button>
-  
+  {hasPermission('reports.export') && (
+    <>
+      <button onClick={() => window.print()} title={isAr?'طباعة':'Print'} aria-label={isAr?'طباعة':'Print'}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+        🖨️
+      </button>
+      <button onClick={() => {
+        api.post('/export/pdf', {
+          title: `${t.title} - ${selected.fullName}`,
+          columns: exportColumnLabels(),
+          rows: [buildExportRow(selected)],
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = `staff-${selected.fullName}.pdf`; a.click()
+          URL.revokeObjectURL(url)
+        }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
+      }}
+        title={isAr?'تصدير PDF':'Export PDF'} aria-label={isAr?'تصدير PDF':'Export PDF'}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📄
+      </button>
+      <button onClick={() => {
+        api.post('/export/excel', {
+          title: `${t.title} - ${selected.fullName}`,
+          columns: exportColumnLabels(),
+          rows: [buildExportRow(selected)],
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = `staff-${selected.fullName}.xlsx`; a.click()
+          URL.revokeObjectURL(url)
+        }).catch(() => showAlrt('err', isAr ? 'فشل التصدير' : 'Export failed'))
+      }}
+        title={isAr?'تصدير Excel':'Export Excel'} aria-label={isAr?'تصدير Excel':'Export Excel'}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px', fontSize: 11, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📊
+      </button>
+    </>
+  )}
+
   {/* ✅ زر الأعمدة */}
   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
 </div>

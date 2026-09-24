@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import {
   Calendar, FolderOpen, Stethoscope, ListOrdered, CreditCard,
-  BarChart3, Building2, Globe, Lock, Cloud, Wrench, Menu, X, Loader2,
+  BarChart3, Building2, Globe, Lock, Cloud, Wrench, Menu, X, Loader2, Quote, ChevronDown,
 } from 'lucide-react'
+
+// اقلب هذا إلى true فقط بعد تعبئة t.testimonials.items باقتباسات حقيقية من عيادات فعلية
+const SHOW_TESTIMONIALS = false
 
 interface ApiPlan {
   id: string
@@ -39,7 +42,6 @@ const C = {
 }
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@300;400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; font-size: 16px; }
@@ -273,6 +275,17 @@ const T = {
         { Icon:Globe,        title:'واجهة ثنائية اللغة', desc:'دعم كامل للغتين العربية والإنجليزية مع اتجاه RTL مدمج من اليوم الأول.' },
       ],
     },
+    // ⚠️ محتوى مؤقت (placeholder) — استبدله باقتباسات وأسماء عيادات حقيقية قبل النشر الفعلي
+    testimonials:{
+      eyebrow:'آراء العملاء',
+      title:'عيادات تثق بـ Cura',
+      sub:'[قسم مؤقت للتعبئة — سيُستبدل بآراء حقيقية من عيادات تستخدم Cura فعلياً]',
+      items:[
+        { quote:'[اكتب هنا رأي حقيقي لعميل عن تجربته مع Cura]', name:'[اسم المسؤول]', role:'[المسمى الوظيفي]', clinic:'[اسم العيادة]' },
+        { quote:'[اكتب هنا رأي حقيقي لعميل عن تجربته مع Cura]', name:'[اسم المسؤول]', role:'[المسمى الوظيفي]', clinic:'[اسم العيادة]' },
+        { quote:'[اكتب هنا رأي حقيقي لعميل عن تجربته مع Cura]', name:'[اسم المسؤول]', role:'[المسمى الوظيفي]', clinic:'[اسم العيادة]' },
+      ],
+    },
     pricing:{
       eyebrow:'الأسعار',
       title:'أسعار شفّافة بلا رسوم مخفية',
@@ -283,6 +296,19 @@ const T = {
       loading:'جاري تحميل الخطط...',
       error:'تعذّر تحميل الخطط حالياً، يرجى المحاولة لاحقاً',
       empty:'لا توجد خطط متاحة حالياً',
+    },
+    faq:{
+      eyebrow:'الأسئلة المتكررة',
+      title:'كل ما تحتاج معرفته',
+      sub:'إن لم تجد إجابتك هنا، راسلنا مباشرة عبر واتساب وسنساعدك',
+      items:[
+        { q:'هل بيانات مرضى عيادتي محمية؟', a:'نعم — كل الاتصال مشفّر (HTTPS)، ولكل مستخدم في عيادتك صلاحيات محددة بدقة حسب دوره (طبيب، استقبال، محاسب...)، وبيانات كل عيادة معزولة تماماً عن بيانات العيادات الأخرى على المنصة.' },
+        { q:'هل يدعم Cura الفوترة الإلكترونية الأردنية؟', a:'نعم، تتوفر ميزة ربط الفواتير مع منظومة الفوترة الإلكترونية الأردنية، ويمكن تفعيلها ضمن خطتك.' },
+        { q:'هل يعمل النظام على الموبايل؟', a:'نعم، Cura يعمل من متصفح أي جهاز، ويمكن أيضاً تثبيته كتطبيق على شاشة الموبايل الرئيسية دون الحاجة لمتجر تطبيقات.' },
+        { q:'هل يمكن لعيادتي أن تحتوي على أكثر من قسم أو طبيب؟', a:'بالتأكيد — يدعم النظام تعدد الأقسام الطبية، كل قسم بفريقه وصلاحياته الخاصة، بدون حد على عدد الأطباء ضمن خطتك.' },
+        { q:'هل يجب أن أثبّت أي برنامج؟', a:'لا، Cura نظام سحابي يعمل بالكامل من المتصفح — لا تنزيل ولا تثبيت مطلوب على أجهزة العيادة.' },
+        { q:'كيف أبدأ استخدام Cura لعيادتي؟', a:'تواصل معنا عبر واتساب، وسيقوم فريقنا بإعداد حساب تجربة مجانية لعيادتك وإرشادك خلال الإعداد الأولي.' },
+      ],
     },
     cta:{
       title:'جاهز لتحويل تجربة مرضاك؟',
@@ -339,6 +365,17 @@ const T = {
         { Icon:Globe,       title:'Dual-Language Support',    desc:'Full Arabic and English support with native RTL layout built in from day one.' },
       ],
     },
+    // ⚠️ Placeholder content — replace with real quotes and clinic names before going live
+    testimonials:{
+      eyebrow:'Customer Voices',
+      title:'Clinics that trust Cura',
+      sub:'[Placeholder section — will be replaced with real feedback from clinics actually using Cura]',
+      items:[
+        { quote:'[Write a real customer quote about their experience with Cura here]', name:'[Contact name]', role:'[Job title]', clinic:'[Clinic name]' },
+        { quote:'[Write a real customer quote about their experience with Cura here]', name:'[Contact name]', role:'[Job title]', clinic:'[Clinic name]' },
+        { quote:'[Write a real customer quote about their experience with Cura here]', name:'[Contact name]', role:'[Job title]', clinic:'[Clinic name]' },
+      ],
+    },
     pricing:{
       eyebrow:'Pricing',
       title:'Transparent pricing, no hidden fees',
@@ -349,6 +386,19 @@ const T = {
       loading:'Loading plans...',
       error:'Could not load plans right now, please try again later',
       empty:'No plans available right now',
+    },
+    faq:{
+      eyebrow:'FAQ',
+      title:'Everything you need to know',
+      sub:"Can't find your answer? Message us directly on WhatsApp and we'll help",
+      items:[
+        { q:'Is my clinic\'s patient data secure?', a:'Yes — every connection is encrypted (HTTPS), each user in your clinic gets permissions scoped precisely to their role (doctor, receptionist, accountant...), and every clinic\'s data is fully isolated from every other clinic on the platform.' },
+        { q:'Does Cura support Jordan\'s national e-invoicing?', a:'Yes, invoices can be linked to the Jordanian e-invoicing system, and this can be enabled as part of your plan.' },
+        { q:'Does it work on mobile?', a:'Yes, Cura runs in any browser and can also be installed as an app on your home screen — no app store needed.' },
+        { q:'Can my clinic have multiple departments or doctors?', a:'Absolutely — the system supports independent medical departments, each with its own team and permissions, with no limit on the number of doctors under your plan.' },
+        { q:'Do I need to install any software?', a:'No, Cura is fully cloud-based and runs from the browser — nothing to download or install on clinic devices.' },
+        { q:'How do I get started with Cura?', a:"Reach out to us on WhatsApp and our team will set up a free trial for your clinic and guide you through initial setup." },
+      ],
     },
     cta:{
       title:'Ready to transform your patient experience?',
@@ -374,6 +424,7 @@ export default function LandingPage() {
   const [plans, setPlans] = useState<ApiPlan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [plansError, setPlansError] = useState(false)
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   useEffect(() => {
     const id = 'cura-lp-css'
@@ -721,6 +772,47 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ══════════════════════ TESTIMONIALS ══════════════════════
+          مخفي مؤقتاً — لا يوجد بعد اقتباسات حقيقية من عيادات فعلية.
+          اقتباسات وهمية على موقع تسويقي عام تخدع الزوار، فأبقيناه مخفياً
+          بدل نشر محتوى مفتَرى. فعّل SHOW_TESTIMONIALS متى جهزت آراء حقيقية.
+      ══════════════════════════════════════════════════════════ */}
+      {SHOW_TESTIMONIALS && (
+      <section id="testimonials" style={{ padding:'100px 40px' }}>
+        <div style={{ maxWidth:1200, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:60 }}>
+            <div className="fu tag" style={{ background:C.tealSoft, border:`1px solid ${C.border}`, color:C.teal, marginBottom:18 }}>
+              ✦ {t.testimonials.eyebrow}
+            </div>
+            <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(28px,4vw,46px)', color:C.dark, marginBottom:16, letterSpacing:'-0.3px', lineHeight:1.2 }}>
+              {t.testimonials.title}
+            </h2>
+            <p style={{ fontSize:13.5, color:C.amber, maxWidth:560, margin:'0 auto', lineHeight:1.7, fontWeight:600 }}>{t.testimonials.sub}</p>
+          </div>
+
+          <div className="feat-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }}>
+            {t.testimonials.items.map((item,i) => (
+              <div key={i} className="feat-card fu" style={{ animationDelay:`${i*0.05}s`, display:'flex', flexDirection:'column' }}>
+                <Quote size={26} color={C.tealLight} strokeWidth={1.5} style={{ marginBottom:14 }} />
+                <p style={{ fontSize:14, color:C.dark, lineHeight:1.8, marginBottom:20, fontStyle:'italic', flex:1 }}>
+                  {item.quote}
+                </p>
+                <div style={{ display:'flex', alignItems:'center', gap:12, borderTop:`1px solid ${C.border}`, paddingTop:16 }}>
+                  <div style={{ width:40, height:40, borderRadius:'50%', background:C.tealSoft, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color:C.teal, flexShrink:0 }}>
+                    ?
+                  </div>
+                  <div style={{ minWidth:0 }}>
+                    <p style={{ fontSize:13, fontWeight:700, color:C.dark, margin:0 }}>{item.name}</p>
+                    <p style={{ fontSize:11.5, color:C.muted, margin:'2px 0 0' }}>{item.role} · {item.clinic}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      )}
+
       {/* ══════════════════════ PRICING ══════════════════════ */}
       <section id="pricing" style={{ padding:'100px 40px', background:C.white }}>
         <div style={{ maxWidth:1200, margin:'0 auto' }}>
@@ -847,6 +939,51 @@ export default function LandingPage() {
               ? '✓ بطاقة ائتمان غير مطلوبة  ·  ✓ إلغاء في أي وقت  ·  ✓ دعم مجاني للإعداد'
               : '✓ No credit card required  ·  ✓ Cancel anytime  ·  ✓ Free onboarding support'}
           </p>
+        </div>
+      </section>
+
+      {/* ══════════════════════ FAQ ══════════════════════ */}
+      <section id="faq" style={{ padding:'100px 40px', background:C.white }}>
+        <div style={{ maxWidth:760, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:48 }}>
+            <div className="fu tag" style={{ background:C.tealSoft, border:`1px solid ${C.border}`, color:C.teal, marginBottom:18 }}>
+              ✦ {t.faq.eyebrow}
+            </div>
+            <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(28px,4vw,46px)', color:C.dark, marginBottom:16, letterSpacing:'-0.3px', lineHeight:1.2 }}>
+              {t.faq.title}
+            </h2>
+            <p style={{ fontSize:15, color:C.muted, lineHeight:1.75 }}>{t.faq.sub}</p>
+          </div>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {t.faq.items.map((item, i) => {
+              const isOpen = openFaq === i
+              return (
+                <div key={i} className="fu" style={{
+                  animationDelay:`${i*0.04}s`,
+                  background:C.cream, border:`1px solid ${isOpen ? C.tealLight : C.border}`,
+                  borderRadius:16, overflow:'hidden', transition:'border-color 0.2s ease',
+                }}>
+                  <button type="button" onClick={() => setOpenFaq(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                    style={{
+                      width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', gap:14,
+                      padding:'18px 22px', background:'transparent', border:'none', cursor:'pointer',
+                      fontSize:15, fontWeight:600, color:C.dark, textAlign:isAr?'right':'left', fontFamily:'inherit',
+                    }}>
+                    <span>{item.q}</span>
+                    <ChevronDown size={18} color={C.teal} strokeWidth={2}
+                      style={{ flexShrink:0, transition:'transform 0.25s ease', transform:isOpen?'rotate(180deg)':'rotate(0deg)' }} />
+                  </button>
+                  {isOpen && (
+                    <p className="fi" style={{ margin:0, padding:'0 22px 20px', fontSize:14, color:C.muted, lineHeight:1.8 }}>
+                      {item.a}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
 

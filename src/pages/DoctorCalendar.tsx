@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
 import { formatTimeString } from "../utils/i18n";
+import { hasPermission } from "../utils/permissions";
 
 // ═══════════════════════════════════════════════
 // Types — مطابقة لـ DoctorCalendarDto من الـ API
@@ -342,13 +343,17 @@ export default function DoctorCalendar({
 
                 <div style={{ display: "flex", gap: 6 }}>
           <button style={btnStyle} onClick={() => navigate(`/daily${doctorId ? `?doctorId=${doctorId}` : ""}`)}>{t.dailySchedule}</button>
-          <button style={btnStyle} onClick={() => window.print()}>🖨️ {t.print}</button>
-          <button style={btnStyle} disabled={exporting} onClick={() => handleExport("excel")}>
-            {exporting ? t.exporting : `📊 ${t.excel}`}
-          </button>
-          <button style={btnStyle} disabled={exporting} onClick={() => handleExport("pdf")}>
-            {exporting ? t.exporting : `📄 ${t.pdf}`}
-          </button>
+          {hasPermission('reports.export') && (
+            <>
+              <button style={btnStyle} onClick={() => window.print()}>🖨️ {t.print}</button>
+              <button style={btnStyle} disabled={exporting} onClick={() => handleExport("excel")}>
+                {exporting ? t.exporting : `📊 ${t.excel}`}
+              </button>
+              <button style={btnStyle} disabled={exporting} onClick={() => handleExport("pdf")}>
+                {exporting ? t.exporting : `📄 ${t.pdf}`}
+              </button>
+            </>
+          )}
         </div>
 
         <span style={{ fontSize: 13, color: TEXT_MUTED }}>{fmtRange(from, to, locale)}</span>
@@ -449,7 +454,7 @@ export default function DoctorCalendar({
                       absent: `🔴 ${t.absent}`,
                       past: "⚪ —",
                     };
-                    const clickable = slot.status === "available" || slot.status === "booked";
+                    const clickable = (slot.status === "available" && hasPermission('appointments.create')) || slot.status === "booked";
 
                     return (
                       <td

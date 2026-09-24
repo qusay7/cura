@@ -292,18 +292,22 @@ export default function TreatmentTemplates() {
 
         {/* ✅ Print, Export, Columns buttons */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }} className="no-print">
-          <button onClick={() => window.print()}
-            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-            🖨️ {t.print}
-          </button>
-          <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
-            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
-            {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
-          </button>
-          <button onClick={() => handleExport('excel')} disabled={downloading !== null}
-            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
-            {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
-          </button>
+          {hasPermission('reports.export') && (
+            <>
+              <button onClick={() => window.print()}
+                style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+                🖨️ {t.print}
+              </button>
+              <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+                style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+                {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+              </button>
+              <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+                style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+                {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+              </button>
+            </>
+          )}
           <div style={{ marginLeft: 'auto' }}>
             <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
           </div>
@@ -443,7 +447,13 @@ export default function TreatmentTemplates() {
         ) : templates.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', background: CARD_BG, borderRadius: 20, border: `1px solid ${BORDER}` }}>
             <div style={{ fontSize: 48, opacity: 0.4, marginBottom: 12 }}>📋</div>
-            <p style={{ fontSize: 14, color: TEXT_MUTED }}>{t.noTemplates}</p>
+            <p style={{ fontSize: 14, color: TEXT_MUTED, marginBottom: hasPermission('treatmenttemplates.manage') ? 16 : 0 }}>{t.noTemplates}</p>
+            {hasPermission('treatmenttemplates.manage') && (
+              <button onClick={openAdd}
+                style={{ background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {t.addTemplate}
+              </button>
+            )}
           </div>
         ) : (
           <div className="templates-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>

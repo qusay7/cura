@@ -546,7 +546,9 @@ export default function Patients() {
 
         {/* ── Patients Table ── */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }} className="no-print">
-          <ExportBar endpoint="/patients/export" lang={lang} fileName="patients" />
+          {hasPermission('reports.export') && (
+            <ExportBar endpoint="/patients/export" lang={lang} fileName="patients" />
+          )}
           <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
         </div>
         <div className="patients-table-container" style={{
@@ -589,7 +591,7 @@ export default function Patients() {
                       }}>
                         {t.noPatients}
                       </p>
-                      {search && (
+                      {search ? (
                         <button
                           onClick={() => setSearch('')}
                           style={{
@@ -603,6 +605,17 @@ export default function Patients() {
                           }}
                         >
                           {isAr ? 'مسح البحث' : 'Clear search'}
+                        </button>
+                      ) : hasPermission('patients.create') && (
+                        <button
+                          onClick={() => navigate('/patients/add')}
+                          style={{
+                            background: PRIMARY, color: '#FFFFFF', border: 'none',
+                            borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600,
+                            cursor: 'pointer', marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
+                          }}
+                        >
+                          <span>+</span> {t.addPatient}
                         </button>
                       )}
                     </td>

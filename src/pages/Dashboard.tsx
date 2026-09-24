@@ -432,24 +432,31 @@ useEffect(() => {
 
         {/* Stats Grid */}
         <div className="stats-grid">
-          <StatCard icon="👥" value={data?.totalPatients || 0} label={t.patients}
-            btnLabel={t.addPatient} showBtn={hasPermission('patients.create')}
-            onClick={() => navigate('/patients')} onBtnClick={() => navigate('/patients/add')} />
-         
+          {hasPermission('patients.view') && (
+            <StatCard icon="👥" value={data?.totalPatients || 0} label={t.patients}
+              btnLabel={t.addPatient} showBtn={hasPermission('patients.create')}
+              onClick={() => navigate('/patients')} onBtnClick={() => navigate('/patients/add')} />
+          )}
+
           {hasPermission('staff.view') && (
             <StatCard icon="👔" value={data?.totalDoctors || 0} label={t.staff}  // ✅ استخدم totalDoctors بدل totalStaff مؤقتاً
   btnLabel={t.addStaff} showBtn={true}
   onClick={() => navigate('/staff')} onBtnClick={() => navigate('/staff')} />
            )}
-          <StatCard icon="📅" value={data?.todayAppointments || 0} label={t.todayAppts}
-            btnLabel={t.quickVisit} showBtn={hasPermission('appointments.create')}
-            onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/quick-visit')} />
-          <StatCard icon="⏰" value={data?.upcomingAppointments || 0} label={t.upcomingAppts}
-            btnLabel={t.bookAppointment} showBtn={hasPermission('appointments.create')}
-            onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/appointments/add')} />
+          {hasPermission('appointments.view') && (
+            <StatCard icon="📅" value={data?.todayAppointments || 0} label={t.todayAppts}
+              btnLabel={t.quickVisit} showBtn={hasPermission('appointments.create')}
+              onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/quick-visit')} />
+          )}
+          {hasPermission('appointments.view') && (
+            <StatCard icon="⏰" value={data?.upcomingAppointments || 0} label={t.upcomingAppts}
+              btnLabel={t.bookAppointment} showBtn={hasPermission('appointments.create')}
+              onClick={() => navigate('/appointments')} onBtnClick={() => navigate('/appointments/add')} />
+          )}
         </div>
 
         {/* Doctors Today */}
+        {hasPermission('appointments.view') && (
         <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20, marginBottom: 24 }}>
           <div className="section-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${PRIMARY_SOFT}`, gap: 8 }}>
             <div style={{ fontSize: 16, fontWeight: 600, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -485,9 +492,10 @@ useEffect(() => {
             </div>
           )}
         </div>
+        )}
 
         {/* Subscription */}
-        {sub && (
+        {sub && hasPermission('subscription.view') && (
           <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
             <div className="sub-header-inner" style={{ padding: '16px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: TEXT_DARK, display: 'flex', alignItems: 'center', gap: 8 }}>

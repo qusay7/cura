@@ -3,9 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- ⚡ خطوط Google — كانت كل صفحة تستدعي @import منفصل (تقريباً نفس الخطوط
+         بأوزان متفاوتة) داخل <style> تُحقن بالجافاسكربت، مما يؤخّر اكتشاف
+         الخطوط لحين تنفيذ JS. رابط واحد موحّد هنا يُكتشف فوراً مع تحميل الصفحة. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Cairo:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@300;400;500;600;700&display=swap">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.46.0/dist/tabler-icons.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
+
     <!-- 🔐 Content Security Policy -->
 <meta
   http-equiv="Content-Security-Policy"
@@ -37,8 +45,25 @@
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <title>CURA — نظام إدارة العيادات</title>
-    <meta name="description" content="نظام إدارة العيادات الذكي — المواعيد والمرضى والأطباء في مكان واحد" />
+    <title>CURA — نظام إدارة العيادات الذكي في الأردن والعالم العربي</title>
+    <meta name="description" content="منصة Cura لإدارة العيادات: حجز المواعيد، ملفات المرضى، الفواتير والفوترة الإلكترونية، وتقارير الإيرادات في نظام واحد سهل الاستخدام. جرّبها مجاناً لعيادتك." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://cura100.com/" />
+
+    <!-- 🔎 Open Graph — لمعاينة أفضل عند مشاركة الرابط بواتساب/فيسبوك/لينكدإن -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CURA" />
+    <meta property="og:url" content="https://cura100.com/" />
+    <meta property="og:title" content="CURA — نظام إدارة العيادات الذكي" />
+    <meta property="og:description" content="منصة متكاملة لإدارة العيادات: المواعيد، ملفات المرضى، الفواتير والتقارير — في مكان واحد." />
+    <meta property="og:image" content="https://cura100.com/icons/icon-512x512.png" />
+    <meta property="og:locale" content="ar_JO" />
+
+    <!-- 🔎 Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CURA — نظام إدارة العيادات الذكي" />
+    <meta name="twitter:description" content="منصة متكاملة لإدارة العيادات: المواعيد، ملفات المرضى، الفواتير والتقارير — في مكان واحد." />
+    <meta name="twitter:image" content="https://cura100.com/icons/icon-512x512.png" />
   </head>
   <body>
     <div id="root"></div>

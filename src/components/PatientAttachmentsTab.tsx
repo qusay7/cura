@@ -280,7 +280,7 @@ const PatientAttachmentsTab = forwardRef<PatientAttachmentsTabHandle, { patientI
             tabIndex={-1} onClick={e => e.stopPropagation()}
             style={{ maxWidth: '90vw', maxHeight: '90vh', background: '#FFF', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: 10, display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={closePreview} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
+              <button onClick={closePreview} title={lang === 'ar' ? 'إغلاق' : 'Close'} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
                 style={{ background: '#F1F4F4', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14 }}>✕</button>
             </div>
             {items.find(i => i.id === previewId)?.isImage ? (

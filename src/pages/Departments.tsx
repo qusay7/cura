@@ -593,18 +593,22 @@ export default function Departments() {
 
         {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }} className="no-print">
-          <button onClick={() => window.print()}
-            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-            🖨️ {t.print}
-          </button>
-          <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
-            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
-            {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
-          </button>
-          <button onClick={() => handleExport('excel')} disabled={downloading !== null}
-            style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
-            {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
-          </button>
+          {hasPermission('reports.export') && (
+            <>
+              <button onClick={() => window.print()}
+                style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+                🖨️ {t.print}
+              </button>
+              <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+                style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+                {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+              </button>
+              <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+                style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+                {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+              </button>
+            </>
+          )}
           <div style={{ marginLeft: 'auto' }}>
             <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
           </div>

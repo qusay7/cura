@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { hasPermission } from '../utils/permissions'
 
 /* =========================================================
    Language
@@ -58,6 +59,7 @@ const T = {
       Doctor: 'طبيب',
       Receptionist: 'موظف استقبال',
       ClinicAdmin: 'مدير عيادة',
+      ClinicStaff: 'موظف العيادة',
       Admin: 'مدير',
       SuperAdmin: 'مدير النظام',
       Accountant: 'محاسب',
@@ -73,10 +75,12 @@ const T = {
   schedules: 'جدوال الدوام',
   users: 'المستخدمون',
   settings: 'الإعدادات',
+  subscription: 'الباقة',
   reports: 'التقارير',
   departments: 'الأقسام',
   insurance: 'التأمين',
   payments: 'المدفوعات',
+  invoices: 'الفواتير',
   settlements: 'التسويات',
   queue: 'قائمة الانتظار',
   visits: 'الزيارات',
@@ -130,7 +134,9 @@ const T = {
 
       'settings.view': 'عرض الإعدادات',
       'settings.edit': 'تعديل الإعدادات',
-      
+
+      'subscription.view': 'عرض الباقة الحالية',
+
 
       'reports.view': 'عرض التقارير',
       'reports.create': 'إنشاء تقرير',
@@ -145,6 +151,9 @@ const T = {
       'payments.view': 'عرض المدفوعات',
       'payments.create': 'إضافة دفعة',
       'payments.edit': 'تعديل دفعة',
+      'payments.manage': 'إدارة المدفوعات',
+
+      'invoices.manage': 'إدارة الفواتير',
 
       'settlements.view': 'عرض التسويات',
       'settlements.manage': 'إدارة التسويات',
@@ -160,6 +169,8 @@ const T = {
       'staff.create': 'إضافة موظف',
       'staff.edit': 'تعديل موظف',
       'staff.delete': 'حذف موظف',
+      'staff.manage': 'إدارة فريق العمل',
+      'staff.viewsalary': 'عرض الراتب',
 
       'treatments.view': 'عرض العلاجات',
       'treatments.create': 'إضافة علاج',
@@ -211,6 +222,7 @@ const T = {
       Doctor: 'Doctor',
       Receptionist: 'Receptionist',
       ClinicAdmin: 'Clinic Admin',
+      ClinicStaff: 'Clinic Staff',
       Admin: 'Administrator',
       SuperAdmin: 'Super Admin',
       Accountant: 'Accountant',
@@ -226,10 +238,12 @@ const T = {
       schedules: 'Schedules',
       users: 'Users',
       settings: 'Settings',
+      subscription: 'Subscription',
       reports: 'Reports',
       departments: 'Departments',
       insurance: 'Insurance',
       payments: 'Payments',
+      invoices: 'Invoices',
       settlements: 'Settlements',
       queue: 'Queue',
       visits: 'Visits',
@@ -284,6 +298,8 @@ const T = {
       'settings.view': 'View Settings',
       'settings.edit': 'Edit Settings',
 
+      'subscription.view': 'View Current Plan',
+
       'reports.view': 'View Reports',
       'reports.create': 'Create Report',
       'reports.export': 'Export Reports',
@@ -297,6 +313,9 @@ const T = {
       'payments.view': 'View Payments',
       'payments.create': 'Add Payment',
       'payments.edit': 'Edit Payment',
+      'payments.manage': 'Manage Payments',
+
+      'invoices.manage': 'Manage Invoices',
 
       'settlements.view': 'View Settlements',
       'settlements.manage': 'Manage Settlements',
@@ -312,6 +331,8 @@ const T = {
       'staff.create': 'Add Staff',
       'staff.edit': 'Edit Staff',
       'staff.delete': 'Delete Staff',
+      'staff.manage': 'Manage Staff',
+      'staff.viewsalary': 'View Salary',
 
       'treatments.view': 'View Treatments',
       'treatments.create': 'Add Treatment',
@@ -372,6 +393,17 @@ export default function ClinicPermissions() {
   const [loading, setLoading] = useState(true)
 
   const [toastError, setToastError] = useState('')
+
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
+
+  const toggleModule = (module: string) => {
+    setExpandedModules(prev => {
+      const next = new Set(prev)
+      if (next.has(module)) next.delete(module)
+      else next.add(module)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!toastError) return
@@ -560,6 +592,8 @@ export default function ClinicPermissions() {
   const togglePermission = (
     permName: string
   ) => {
+    if (!hasPermission('settings.edit')) return
+
     setLocalPerms(prev =>
       prev.includes(permName)
         ? prev.filter(
@@ -579,7 +613,7 @@ export default function ClinicPermissions() {
   ========================================================= */
 
   const handleSave = async () => {
-    if (!selectedRole) {
+    if (!selectedRole || !hasPermission('settings.edit')) {
       return
     }
 
@@ -626,7 +660,7 @@ export default function ClinicPermissions() {
   ========================================================= */
 
   const handleReset = async () => {
-    if (!selectedRole) {
+    if (!selectedRole || !hasPermission('settings.edit')) {
       return
     }
 
@@ -902,7 +936,7 @@ export default function ClinicPermissions() {
                 {t.noRoles}
               </p>
             ) : (
-              roles.map(role => {
+              roles.filter(role => role.roleName !== 'Administration employee').map(role => {
                 const permissionCount =
                   selectedRole ===
                   role.roleId
@@ -1239,7 +1273,7 @@ export default function ClinicPermissions() {
                     handleReset
                   }
                   disabled={
-                    !selectedRole
+                    !selectedRole || !hasPermission('settings.edit')
                   }
                   style={{
                     padding:
@@ -1286,7 +1320,8 @@ export default function ClinicPermissions() {
                   }
                   disabled={
                     saving ||
-                    !selectedRole
+                    !selectedRole ||
+                    !hasPermission('settings.edit')
                   }
                   style={{
                     padding:
@@ -1400,6 +1435,10 @@ export default function ClinicPermissions() {
                             permission.name
                           )
                       )
+                    const grantedCount = perms.filter(
+                      permission => localPerms.includes(permission.name)
+                    ).length
+                    const isExpanded = expandedModules.has(module)
 
                     return (
                       <div
@@ -1421,9 +1460,13 @@ export default function ClinicPermissions() {
                         }}
                       >
 
-                        {/* Module Header */}
+                        {/* Module Header — اسم الشاشة فقط، اضغط لفتح صلاحياتها للتعديل */}
 
                         <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => toggleModule(module)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleModule(module) } }}
                           style={{
                             padding:
                               '12px 16px',
@@ -1432,7 +1475,7 @@ export default function ClinicPermissions() {
                               PRIMARY_SOFT,
 
                             borderBottom:
-                              `1px solid ${BORDER}`,
+                              isExpanded ? `1px solid ${BORDER}` : 'none',
 
                             display:
                               'flex',
@@ -1444,6 +1487,8 @@ export default function ClinicPermissions() {
                               'space-between',
 
                             gap: 10,
+
+                            cursor: 'pointer',
                           }}
                         >
                           <span
@@ -1456,18 +1501,39 @@ export default function ClinicPermissions() {
 
                               color:
                                 TEXT_DARK,
+
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
                             }}
                           >
+                            <span style={{
+                              display: 'inline-flex',
+                              transition: 'transform 0.2s ease',
+                              transform: isExpanded ? 'rotate(90deg)' : (isAr ? 'rotate(180deg)' : 'rotate(0deg)'),
+                              fontSize: 11,
+                              color: TEXT_MUTED,
+                            }}>▶</span>
                             {getModuleName(
                               module
                             )}
+                            <span style={{
+                              fontSize: 11,
+                              color: TEXT_MUTED,
+                              fontWeight: 500,
+                            }}>
+                              ({grantedCount}/{perms.length})
+                            </span>
                           </span>
 
                           {/* Select / Deselect All */}
 
                           <button
                             type="button"
-                            onClick={() => {
+                            disabled={!hasPermission('settings.edit')}
+                            onClick={e => {
+                              e.stopPropagation()
+                              if (!hasPermission('settings.edit')) return
                               if (
                                 allSelected
                               ) {
@@ -1541,8 +1607,9 @@ export default function ClinicPermissions() {
                           </button>
                         </div>
 
-                        {/* Permissions */}
+                        {/* Permissions — لا تُعرض إلا عند فتح الشاشة للتعديل */}
 
+                        {isExpanded && (
                         <div
                           style={{
                             display:
@@ -1699,6 +1766,7 @@ export default function ClinicPermissions() {
                             }
                           )}
                         </div>
+                        )}
                       </div>
                     )
                   }

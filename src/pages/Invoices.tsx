@@ -108,7 +108,7 @@ function TextViewer({ title, value, lang, onClose }: { title: string; value: str
               style={btn(PRIMARY_SOFT, PRIMARY, BORDER)}>
               {copied ? `✅ ${t.copied}` : `📋 ${t.copy}`}
             </button>
-            <button onClick={onClose} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
+            <button onClick={onClose} title={lang === 'ar' ? 'إغلاق' : 'Close'} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
           </div>
         </div>
         {value.startsWith('data:image') ? (
@@ -180,10 +180,14 @@ function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: '
             <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '4px 0 0' }}>{user.clinicName || ''}</p>
           </div>
                    <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => download('pdf', true)} style={btn(CARD_BG, TEXT_MUTED, BORDER)}>🖨️ {t.print}</button>
-            <button onClick={() => download('pdf')} style={btn(PRIMARY, '#FFF')}>📄 PDF</button>
-            <button onClick={() => download('excel')} style={btn('#E8F5E9', SUCCESS, '#A7D8B4')}>📊 Excel</button>
-            <button onClick={onClose} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
+            {hasPermission('reports.export') && (
+              <>
+                <button onClick={() => download('pdf', true)} style={btn(CARD_BG, TEXT_MUTED, BORDER)}>🖨️ {t.print}</button>
+                <button onClick={() => download('pdf')} style={btn(PRIMARY, '#FFF')}>📄 PDF</button>
+                <button onClick={() => download('excel')} style={btn('#E8F5E9', SUCCESS, '#A7D8B4')}>📊 Excel</button>
+              </>
+            )}
+            <button onClick={onClose} title={lang === 'ar' ? 'إغلاق' : 'Close'} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'} style={btn('#F1F4F4', TEXT_MUTED)}>✕</button>
           </div>
         </div>
 
@@ -635,7 +639,9 @@ export default function Invoices() {
 
           {/* ✅ شريط التصدير والأعمدة — نفس صفحة المواعيد */}
           <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
-            <ExportBar endpoint={`/invoices/export${exportQuery}`} lang={lang} fileName="invoices" />
+            {hasPermission('reports.export') && (
+              <ExportBar endpoint={`/invoices/export${exportQuery}`} lang={lang} fileName="invoices" />
+            )}
             <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
           </div>
 

@@ -349,54 +349,58 @@ export default function Users() {
         </div>
 
          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 8, flexWrap: 'wrap' }} className="no-print">
-  <button onClick={() => window.print()}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-    🖨️ {t.print}
-  </button>
-  <button onClick={() => {
-    const data = filteredUsers.map(u => ({
-      name: u.fullName,
-      email: u.email,
-      role: getRoleLabel(u.role),
-      status: u.isActive ? t.active : t.inactive,
-    }))
-    api.post('/export/pdf', {
-      title: t.title,
-      columns: [t.name, t.email, t.role, t.status],
-      rows: data.map(d => [d.name, d.email, d.role, d.status]),
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'users.pdf'; a.click()
-      URL.revokeObjectURL(url)
-    })
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📄 {isAr ? 'تصدير PDF' : 'Export PDF'}
-  </button>
-  <button onClick={() => {
-    const data = filteredUsers.map(u => ({
-      name: u.fullName,
-      email: u.email,
-      role: getRoleLabel(u.role),
-      status: u.isActive ? t.active : t.inactive,
-    }))
-    api.post('/export/excel', {
-      title: t.title,
-      columns: [t.name, t.email, t.role, t.status],
-      rows: data.map(d => [d.name, d.email, d.role, d.status]),
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'users.xlsx'; a.click()
-      URL.revokeObjectURL(url)
-    })
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📊 {isAr ? 'تصدير Excel' : 'Export Excel'}
-  </button>
+  {hasPermission('reports.export') && (
+    <>
+      <button onClick={() => window.print()}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+        🖨️ {t.print}
+      </button>
+      <button onClick={() => {
+        const data = filteredUsers.map(u => ({
+          name: u.fullName,
+          email: u.email,
+          role: getRoleLabel(u.role),
+          status: u.isActive ? t.active : t.inactive,
+        }))
+        api.post('/export/pdf', {
+          title: t.title,
+          columns: [t.name, t.email, t.role, t.status],
+          rows: data.map(d => [d.name, d.email, d.role, d.status]),
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'users.pdf'; a.click()
+          URL.revokeObjectURL(url)
+        })
+      }}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📄 {isAr ? 'تصدير PDF' : 'Export PDF'}
+      </button>
+      <button onClick={() => {
+        const data = filteredUsers.map(u => ({
+          name: u.fullName,
+          email: u.email,
+          role: getRoleLabel(u.role),
+          status: u.isActive ? t.active : t.inactive,
+        }))
+        api.post('/export/excel', {
+          title: t.title,
+          columns: [t.name, t.email, t.role, t.status],
+          rows: data.map(d => [d.name, d.email, d.role, d.status]),
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'users.xlsx'; a.click()
+          URL.revokeObjectURL(url)
+        })
+      }}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📊 {isAr ? 'تصدير Excel' : 'Export Excel'}
+      </button>
+    </>
+  )}
   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
 </div>
 
@@ -424,7 +428,13 @@ export default function Users() {
                   <tr>
                     <td colSpan={columnDefs.filter(c => visibleKeys.has(c.key)).length} style={{ padding: '48px 24px', textAlign: 'center' }}>
                       <span style={{ fontSize: 48, opacity: 0.5 }}>👥</span>
-                      <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 12 }}>{t.noUsers}</p>
+                      <p style={{ fontSize: 14, color: TEXT_MUTED, marginTop: 12, marginBottom: hasPermission('users.create') ? 12 : 0 }}>{t.noUsers}</p>
+                      {hasPermission('users.create') && (
+                        <button onClick={() => navigate('/users/add')}
+                          style={{ background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          + {t.addUser}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ) : filteredUsers.map(u => {
@@ -479,7 +489,7 @@ export default function Users() {
                     ),
                     actions: (
                       <div className="no-print" style={{ display: 'flex', gap: 8 }}>
-                        {['SuperAdmin', 'ClinicStaff', 'ClinicAdmin'].includes(user.role) && (
+                        {hasPermission('users.toggle') && ['SuperAdmin', 'ClinicStaff', 'ClinicAdmin'].includes(user.role) && (
                           <button
                             onClick={() => handleToggle(u.id)}
                             disabled={toggling === u.id}

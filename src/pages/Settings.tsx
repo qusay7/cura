@@ -661,6 +661,7 @@ export default function Settings() {
   }, [activeTab])
 
   const handleWhatsappConnect = async () => {
+    if (!hasPermission('settings.edit')) return
     setWhatsappConnecting(true)
     try {
       const res = await api.post('/whatsapp/connect')
@@ -723,7 +724,7 @@ export default function Settings() {
   }
 
   const handleLogoUpload = async () => {
-    if (!logoFile || !user.clinicId) return
+    if (!logoFile || !user.clinicId || !hasPermission('settings.edit')) return
     setUploadingLogo(true); setError(''); setSuccess('')
     try {
       const formData = new FormData()
@@ -750,6 +751,7 @@ export default function Settings() {
 
   const handleSaveClinic = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!hasPermission('settings.edit')) return
     setError('')
     setSuccess('')
     setSaving(true)
@@ -880,13 +882,13 @@ export default function Settings() {
         {error && (
           <div className="alert-error">
             <span>⚠️ {error}</span>
-            <button onClick={() => setError('')} className="btn-icon">✕</button>
+            <button onClick={() => setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} className="btn-icon">✕</button>
           </div>
         )}
         {success && (
           <div className="alert-success">
             <span>✅ {success}</span>
-            <button onClick={() => setSuccess('')} className="btn-icon">✕</button>
+            <button onClick={() => setSuccess('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} className="btn-icon">✕</button>
           </div>
         )}
 
@@ -919,7 +921,7 @@ export default function Settings() {
                   </label>
                   {logoFile && (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <button type="button" onClick={handleLogoUpload} disabled={uploadingLogo} className="btn-primary" style={{ padding: '8px 16px', fontSize: 12.5 }}>
+                      <button type="button" onClick={handleLogoUpload} disabled={uploadingLogo || !hasPermission('settings.edit')} className="btn-primary" style={{ padding: '8px 16px', fontSize: 12.5 }}>
                         {uploadingLogo ? T[lang].saving : (isAr ? 'رفع الشعار' : 'Upload Logo')}
                       </button>
                       <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null) }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, fontSize: 12, cursor: 'pointer' }}>
@@ -1180,7 +1182,7 @@ export default function Settings() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-              <button type="button" onClick={handleSaveClinic} disabled={saving} className="btn-primary">
+              <button type="button" onClick={handleSaveClinic} disabled={saving || !hasPermission('settings.edit')} className="btn-primary">
                 {saving ? t.saving : t.save}
               </button>
             </div>

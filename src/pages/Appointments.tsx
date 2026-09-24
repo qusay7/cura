@@ -300,7 +300,7 @@ const FilterBar = ({
           />
           <span style={{ position:'absolute', bottom:'9px', left:12, fontSize:14, color:TEXT_MUTED }}>🔍</span>
           {searchPatient && (
-            <button onClick={()=>onSearchPatientChange('')} 
+            <button onClick={()=>onSearchPatientChange('')} title={isAr?'مسح البحث':'Clear search'} aria-label={isAr?'مسح البحث':'Clear search'}
               style={{ position:'absolute', bottom:'8px', right:10, background:'none', border:'none', cursor:'pointer', fontSize:12, color:TEXT_MUTED, padding:4 }}>
               ✕
             </button>
@@ -334,7 +334,7 @@ const FilterBar = ({
           />
           <span style={{ position:'absolute', bottom:'9px', left:12, fontSize:14, color:TEXT_MUTED }}>🔍</span>
           {searchDoctor && (
-            <button onClick={()=>onSearchDoctorChange('')} 
+            <button onClick={()=>onSearchDoctorChange('')} title={isAr?'مسح البحث':'Clear search'} aria-label={isAr?'مسح البحث':'Clear search'}
               style={{ position:'absolute', bottom:'8px', right:10, background:'none', border:'none', cursor:'pointer', fontSize:12, color:TEXT_MUTED, padding:4 }}>
               ✕
             </button>
@@ -458,13 +458,13 @@ const FilterBar = ({
           {searchPatient && (
             <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY, display:'flex', alignItems:'center', gap:4 }}>
               👤 {searchPatient}
-              <button onClick={()=>onSearchPatientChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:PRIMARY, padding:0, fontSize:12 }}>✕</button>
+              <button onClick={()=>onSearchPatientChange('')} title={isAr?'إزالة فلتر المريض':'Clear patient filter'} aria-label={isAr?'إزالة فلتر المريض':'Clear patient filter'} style={{ background:'none', border:'none', cursor:'pointer', color:PRIMARY, padding:0, fontSize:12 }}>✕</button>
             </span>
           )}
           {searchDoctor && (
             <span style={{ background:PRIMARY_SOFT, padding:'4px 12px', borderRadius:100, fontSize:11, color:PRIMARY, display:'flex', alignItems:'center', gap:4 }}>
               👨‍⚕️ {searchDoctor}
-              <button onClick={()=>onSearchDoctorChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:PRIMARY, padding:0, fontSize:12 }}>✕</button>
+              <button onClick={()=>onSearchDoctorChange('')} title={isAr?'إزالة فلتر الطبيب':'Clear doctor filter'} aria-label={isAr?'إزالة فلتر الطبيب':'Clear doctor filter'} style={{ background:'none', border:'none', cursor:'pointer', color:PRIMARY, padding:0, fontSize:12 }}>✕</button>
             </span>
           )}
           {searchDateFrom && (
@@ -1200,10 +1200,15 @@ export default function Appointments() {
                       <td colSpan={columnDefs.filter(c => visibleKeys.has(c.key)).length} style={{ padding:'48px 24px', textAlign:'center' }}>
                         <span style={{ fontSize:48, opacity:0.5 }}>📅</span>
                         <p style={{ fontSize:14, color:TEXT_MUTED, marginTop:12 }}>{t.noAppointments}</p>
-                        {hasActiveFilters && (
+                        {hasActiveFilters ? (
                           <button onClick={()=>{setFilter('all');setStatusFilter('all_status');setSearchPatient('');setSearchDoctor('');setSearchDateFrom(null);setSearchDateTo(null)}}
                             style={{ background:'none', border:'none', color:PRIMARY, fontSize:12, cursor:'pointer', marginTop:8, textDecoration:'underline' }}>
                             {t.clearAllFilters}
+                          </button>
+                        ) : hasPermission('appointments.create') && (
+                          <button onClick={()=>navigate('/appointments/add')}
+                            style={{ background:PRIMARY, color:'#FFFFFF', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:600, cursor:'pointer', marginTop:12 }}>
+                            + {t.addAppointment}
                           </button>
                         )}
                       </td>
@@ -1312,7 +1317,7 @@ export default function Appointments() {
                           <div style={{ display:'flex', gap:5, flexWrap:'wrap', alignItems:'center' }}>
 
                             {/* ✅ CheckIn — للمواعيد المجدولة أو المؤكدة التي لم يتم دخولها */}
-                            {['scheduled','confirmed'].includes(appointment.status) && !hasCheckedIn && (
+                            {hasPermission('appointments.edit') && ['scheduled','confirmed'].includes(appointment.status) && !hasCheckedIn && (
                               <button className="action-btn" onClick={e=>handleCheckIn(appointment.id,e)}
                                 disabled={changingStatus===appointment.id}
                                 style={{ background:'#E8F5E9', color:'#22C55E', borderColor:'#86EFAC' }}>
@@ -1321,7 +1326,7 @@ export default function Appointments() {
                             )}
 
                             {/* ✅ CheckOut — للمواعيد التي تم دخولها ولم يتم خروجها */}
-                            {hasCheckedIn && !hasCheckedOut && appointment.status !== 'completed' && (
+                            {hasPermission('payments.manage') && hasCheckedIn && !hasCheckedOut && appointment.status !== 'completed' && (
                               <button className="action-btn" onClick={e=>openPaymentModal(appointment.id,'checkout',e)}
                                 disabled={changingStatus===appointment.id}
                                 style={{ background:PRIMARY_SOFT, color:PRIMARY, borderColor:BORDER }}>
@@ -1330,7 +1335,7 @@ export default function Appointments() {
                             )}
 
                             {/* ✅ موعد مكتمل وغير مدفوع — تسجيل دفعة لاحقاً */}
-                            {appointment.status === 'completed' && (appointment as any).isPaid === false && (
+                            {hasPermission('payments.manage') && appointment.status === 'completed' && (appointment as any).isPaid === false && (
                               <button className="action-btn" onClick={e=>openPaymentModal(appointment.id,'payLater',e)}
                                 style={{ background:'#FFF8E1', color:'#B8892A', borderColor:'#E8D4A8' }}>
                                 💰 {isAr ? 'تسجيل دفعة' : 'Register Payment'}
@@ -1338,7 +1343,7 @@ export default function Appointments() {
                             )}
 
                             {/* تأكيد / إلغاء للمجدول */}
-                            {appointment.status==='scheduled' && !hasCheckedIn && (
+                            {hasPermission('appointments.edit') && appointment.status==='scheduled' && !hasCheckedIn && (
                               <>
                                 <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'confirmed',e)} disabled={changingStatus===appointment.id} style={{ background:'#E8F5E9', color:'#22C55E', borderColor:'#86EFAC' }}>✓ {t.confirm}</button>
                                 <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'cancelled',e)} disabled={changingStatus===appointment.id} style={{ background:'#FFF5F5', color:'#EF4444', borderColor:'#FCA5A5' }}>✕ {t.cancel}</button>
@@ -1346,7 +1351,7 @@ export default function Appointments() {
                             )}
 
                             {/* مكتمل / إلغاء للمؤكد */}
-                            {appointment.status==='confirmed' && !hasCheckedIn && (
+                            {hasPermission('appointments.edit') && appointment.status==='confirmed' && !hasCheckedIn && (
                               <>
                                 <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'completed',e)} disabled={changingStatus===appointment.id} style={{ background:PRIMARY_SOFT, color:PRIMARY, borderColor:BORDER }}>✔ {t.complete}</button>
                                 <button className="action-btn" onClick={e=>handleStatusChange(appointment.id,'cancelled',e)} disabled={changingStatus===appointment.id} style={{ background:'#FFF5F5', color:'#EF4444', borderColor:'#FCA5A5' }}>✕ {t.cancel}</button>
@@ -1385,7 +1390,9 @@ export default function Appointments() {
               { icon:'✔️', label:t.completedLabel, value:filteredAppointments.filter(a=>a.status==='completed').length, bg:'#E8F5E9', color:'#22C55E', border:'#86EFAC' },
               { icon:'⏰', label:t.remainingLabel, value:filteredAppointments.filter(a=>a.status==='scheduled'||a.status==='confirmed').length, bg:'#FFF8E1', color:'#F59E0B', border:'#FCD34D' },
               { icon:'✕',  label:t.cancelledLabel, value:filteredAppointments.filter(a=>a.status==='cancelled').length, bg:'#FFF5F5', color:'#EF4444', border:'#FCA5A5' },
-              { icon:'💰', label:t.revenueLabel, value:`${filteredAppointments.filter(a=>a.status==='completed').reduce((sum,a)=>sum+(Number(a.price)||0),0).toFixed(2)} ${t.riyal}`, bg:'#E8F0F0', color:PRIMARY, border:BORDER },
+              ...(hasPermission('payments.view') ? [
+                { icon:'💰', label:t.revenueLabel, value:`${filteredAppointments.filter(a=>a.status==='completed').reduce((sum,a)=>sum+(Number(a.price)||0),0).toFixed(2)} ${t.riyal}`, bg:'#E8F0F0', color:PRIMARY, border:BORDER },
+              ] : []),
             ].map((stat,i) => (
               <div key={i} style={{ flex:1, minWidth:120, display:'flex', flexDirection:'column', alignItems:'center', padding:'16px 12px', borderRadius:16, background:stat.bg, border:`1px solid ${stat.border}` }}>
                 <span style={{ fontSize:22, marginBottom:6 }}>{stat.icon}</span>

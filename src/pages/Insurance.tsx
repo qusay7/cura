@@ -321,18 +321,22 @@ export default function Insurance() {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}} className="no-print">
               <h3 style={{fontSize:16,fontWeight:700,color:TEXT_DARK,margin:0}}>🏢 {t.companies}</h3>
               <div style={{display:'flex',gap:8}}>
-                  <button onClick={() => window.print()}
-                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-                    🖨️ {t.print}
-                  </button>
-                  <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
-                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
-                    {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
-                  </button>
-                  <button onClick={() => handleExport('excel')} disabled={downloading !== null}
-                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
-                    {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
-                  </button>
+                  {hasPermission('reports.export') && (
+                    <>
+                      <button onClick={() => window.print()}
+                        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+                        🖨️ {t.print}
+                      </button>
+                      <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+                        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+                        {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+                      </button>
+                      <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+                        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+                        {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+                      </button>
+                    </>
+                  )}
                   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
                 </div>
               {hasPermission('insurance.manage') && (
@@ -426,7 +430,15 @@ export default function Insurance() {
                     </tr>
                   ))}
                   {companies.length===0 && (
-                    <tr><td colSpan={7} style={{textAlign:'center',color:TEXT_MUTED,padding:40}}>{t.noData}</td></tr>
+                    <tr><td colSpan={7} style={{textAlign:'center',color:TEXT_MUTED,padding:40}}>
+                      <p style={{margin:0,marginBottom:hasPermission('insurance.manage')?12:0}}>{t.noData}</p>
+                      {hasPermission('insurance.manage') && (
+                        <button onClick={()=>{setShowCF(true);setEditId(null);setCf({name:'',nameEn:'',phone:'',email:'',contact:'',coverage:80,isActive:true})}}
+                          style={{background:PRIMARY,color:'#FFFFFF',border:'none',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+                          + {t.addCompany}
+                        </button>
+                      )}
+                    </td></tr>
                   )}
                 </tbody>
               </table>
@@ -452,18 +464,22 @@ export default function Insurance() {
                   </select>
                 </div>
                 <div style={{display:'flex',gap:8}}>
-                  <button onClick={() => window.print()}
-                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-                    🖨️ {t.print}
-                  </button>
-                  <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
-                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
-                    {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
-                  </button>
-                  <button onClick={() => handleExport('excel')} disabled={downloading !== null}
-                    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
-                    {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
-                  </button>
+                  {hasPermission('reports.export') && (
+                    <>
+                      <button onClick={() => window.print()}
+                        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+                        🖨️ {t.print}
+                      </button>
+                      <button onClick={() => handleExport('pdf')} disabled={downloading !== null}
+                        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'excel' ? 0.5 : 1 }}>
+                        {downloading === 'pdf' ? '⏳' : '📄'} {t.exportPdf}
+                      </button>
+                      <button onClick={() => handleExport('excel')} disabled={downloading !== null}
+                        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading === 'pdf' ? 0.5 : 1 }}>
+                        {downloading === 'excel' ? '⏳' : '📊'} {t.exportExcel}
+                      </button>
+                    </>
+                  )}
                   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
                 </div>
               </div>

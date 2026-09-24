@@ -1,48 +1,64 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Patients from './pages/Patients'
-import Doctors from './pages/Doctors'
-import Appointments from './pages/Appointments'
-import AddPatient from './pages/AddPatient'
-import AddDoctor from './pages/AddDoctor'
-import AddAppointment from './pages/AddAppointment'
-import PatientDetail from './pages/PatientDetail'
-import EditPatient from './pages/EditPatient'
-import EditDoctor from './pages/EditDoctor'
-import EditAppointment from './pages/EditAppointment'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
-import QuickVisit from './pages/QuickVisit'
-import Schedules from './pages/Schedules'
-import Settings from './pages/Settings'
-import AddUser from './pages/AddUser'
-import Users from './pages/Users'
-import Departments from './pages/Departments'
-import TreatmentTemplates from './pages/TreatmentTemplates'
-import ClinicPermissions from './pages/ClinicPermissions'
-import Reports from './pages/Reports'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
-import SuperAdminClinics from './pages/SuperAdmin/Clinics'
-import SuperAdminPlans from './pages/SuperAdmin/Plans'
-import Queue from './pages/Queue'
-import AppointmentDetail from './pages/AppointmentDetail'
-import PatientVisitNotes from './pages/PatientVisitNotes'
-import LandingPage from './pages/LandingPage'
-import Insurance from './pages/Insurance'
-import Payments from './pages/Payments'
-import Staff from './pages/Staff'
-import Settlements from './pages/Settlements'
-import DoctorDaily from './pages/DoctorDaily'
-import VisitWorkspace from './pages/VisitWorkspace'
-import Invoices from './pages/Invoices'
-import DoctorCalendar from './pages/DoctorCalendar'
+import { LoadingScreen } from './components/LoadingScreen'
+
+// ✅ Code splitting — كل صفحة أصبحت ملفاً منفصلاً يُحمَّل فقط عند زيارتها فعلياً،
+// بدل تحميل كود كل صفحات النظام (30+ صفحة) دفعة واحدة حتى لزائر لم يسجّل دخول بعد
+const Login               = lazy(() => import('./pages/Login'))
+const Dashboard           = lazy(() => import('./pages/Dashboard'))
+const Patients            = lazy(() => import('./pages/Patients'))
+const Doctors             = lazy(() => import('./pages/Doctors'))
+const Appointments        = lazy(() => import('./pages/Appointments'))
+const AddPatient          = lazy(() => import('./pages/AddPatient'))
+const AddDoctor           = lazy(() => import('./pages/AddDoctor'))
+const AddAppointment      = lazy(() => import('./pages/AddAppointment'))
+const PatientDetail       = lazy(() => import('./pages/PatientDetail'))
+const EditPatient         = lazy(() => import('./pages/EditPatient'))
+const EditDoctor          = lazy(() => import('./pages/EditDoctor'))
+const EditAppointment     = lazy(() => import('./pages/EditAppointment'))
+const QuickVisit          = lazy(() => import('./pages/QuickVisit'))
+const Schedules           = lazy(() => import('./pages/Schedules'))
+const Settings            = lazy(() => import('./pages/Settings'))
+const AddUser             = lazy(() => import('./pages/AddUser'))
+const Users               = lazy(() => import('./pages/Users'))
+const Departments         = lazy(() => import('./pages/Departments'))
+const TreatmentTemplates  = lazy(() => import('./pages/TreatmentTemplates'))
+const ClinicPermissions   = lazy(() => import('./pages/ClinicPermissions'))
+const Reports             = lazy(() => import('./pages/Reports'))
+const SuperAdminClinics   = lazy(() => import('./pages/SuperAdmin/Clinics'))
+const SuperAdminPlans     = lazy(() => import('./pages/SuperAdmin/Plans'))
+const Queue               = lazy(() => import('./pages/Queue'))
+const AppointmentDetail   = lazy(() => import('./pages/AppointmentDetail'))
+const PatientVisitNotes   = lazy(() => import('./pages/PatientVisitNotes'))
+const LandingPage         = lazy(() => import('./pages/LandingPage'))
+const Insurance           = lazy(() => import('./pages/Insurance'))
+const Payments            = lazy(() => import('./pages/Payments'))
+const Staff               = lazy(() => import('./pages/Staff'))
+const Settlements         = lazy(() => import('./pages/Settlements'))
+const DoctorDaily         = lazy(() => import('./pages/DoctorDaily'))
+const VisitWorkspace      = lazy(() => import('./pages/VisitWorkspace'))
+const Invoices            = lazy(() => import('./pages/Invoices'))
+const DoctorCalendar      = lazy(() => import('./pages/DoctorCalendar'))
 // ✅ يزامن <html lang>/dir مع اللغة الفعلية — كانت تتغيّر ترجمة النصوص فقط
 // بدون خصائص المستند نفسها، فتقرأ تقنيات المساعدة (قارئ الشاشة) لغة خاطئة
 const applyDocumentLang = (lang: 'ar' | 'en') => {
   document.documentElement.lang = lang
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
+}
+
+// ✅ الـ PWA يفتح دومًا على start_url ("/"). إذا كانت عيادة محفوظة ولا يوجد
+// تسجيل دخول فعّال، اذهب مباشرة لواجهة تسجيل الدخول الخاصة بها بدل الصفحة الرئيسية
+function RootRoute() {
+  const hasToken = !!localStorage.getItem('_auth_tokens')
+  const savedSubdomain = localStorage.getItem('clinicSubdomain')
+
+  if (!hasToken && savedSubdomain) {
+    return <Navigate to={`/login/${savedSubdomain}`} replace />
+  }
+  return <LandingPage />
 }
 
 function App() {
@@ -57,8 +73,9 @@ function App() {
 
   return (
     <>
+      <Suspense fallback={<LoadingScreen fullScreen />}>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<RootRoute />} />
         {/* ── عام ── */}
        <Route path="/login/:subdomain?" element={<Login />} />
 
@@ -266,9 +283,9 @@ function App() {
             } />
 
         {/* ── Redirects ── */}
-        <Route path="/" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      </Suspense>
       {/* ✅ PWA Install Prompt */}
       <PWAInstallPrompt />
     </>

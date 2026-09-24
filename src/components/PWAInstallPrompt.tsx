@@ -13,13 +13,32 @@ export default function PWAInstallPrompt() {
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e)
-      // أظهر الـ prompt بعد 3 ثواني
-      setTimeout(() => setShowPrompt(true), 3000)
     }
 
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
+
+  // لا تُظهر عرض التثبيت إلا بعد معرفة عيادة المستخدم (أي بعد إدخال
+  // اسم/رابط العيادة)، حتى يُحفظ هذا الرابط ويُستخدم عند إعادة فتح التطبيق
+  useEffect(() => {
+    if (!deferredPrompt) return
+    let timer: ReturnType<typeof setTimeout>
+
+    if (localStorage.getItem('clinicSubdomain')) {
+      timer = setTimeout(() => setShowPrompt(true), 3000)
+      return () => clearTimeout(timer)
+    }
+
+    const onClinicResolved = () => {
+      timer = setTimeout(() => setShowPrompt(true), 1000)
+    }
+    window.addEventListener('cura-clinic-resolved', onClinicResolved)
+    return () => {
+      window.removeEventListener('cura-clinic-resolved', onClinicResolved)
+      clearTimeout(timer)
+    }
+  }, [deferredPrompt])
 
   const handleInstall = async () => {
     if (!deferredPrompt) return

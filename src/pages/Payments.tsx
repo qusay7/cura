@@ -3,6 +3,7 @@ import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import React, { useEffect, useState } from 'react'
 import { PRIMARY_SOFT } from '../styles/theme'
+import { hasPermission } from '../utils/permissions'
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
@@ -264,64 +265,68 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
 
       {/* ✅ أزرار الطباعة والتصدير والأعمدة */}
    <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center' }} className="no-print">
-   <button onClick={() => window.print()}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-    🖨️ {t.print}
-   </button>
-   <button onClick={() => {
-    const rows = data?.payments?.map((p: any) => [
-      p.patientName,
-      fmt(p.totalAmount),
-      fmt(p.insuranceAmount),
-      fmt(p.patientAmount),
-      fmt(p.amountPaid),
-      fmt(p.patientBalance),
-      methodLabel(p.paymentMethod),
-      p.claimStatus || '—',
-      p.createdAt,
-    ]) || []
-    api.post('/export/pdf', {
-      title: t.title,
-      columns: [t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date],
-      rows,
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'payments.pdf'; a.click()
-      URL.revokeObjectURL(url)
-    }).catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📄 {t.exportPdf}
-  </button>
-  <button onClick={() => {
-    const rows = data?.payments?.map((p: any) => [
-      p.patientName,
-      fmt(p.totalAmount),
-      fmt(p.insuranceAmount),
-      fmt(p.patientAmount),
-      fmt(p.amountPaid),
-      fmt(p.patientBalance),
-      methodLabel(p.paymentMethod),
-      p.claimStatus || '—',
-      p.createdAt,
-    ]) || []
-    api.post('/export/excel', {
-      title: t.title,
-      columns: [t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date],
-      rows,
-      isRtl: isAr,
-    }, { responseType: 'blob' }).then(r => {
-      const url = URL.createObjectURL(r.data)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'payments.xlsx'; a.click()
-      URL.revokeObjectURL(url)
-    }).catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
-  }}
-    style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
-    📊 {t.exportExcel}
-  </button>
+   {hasPermission('reports.export') && (
+     <>
+       <button onClick={() => window.print()}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
+        🖨️ {t.print}
+       </button>
+       <button onClick={() => {
+        const rows = data?.payments?.map((p: any) => [
+          p.patientName,
+          fmt(p.totalAmount),
+          fmt(p.insuranceAmount),
+          fmt(p.patientAmount),
+          fmt(p.amountPaid),
+          fmt(p.patientBalance),
+          methodLabel(p.paymentMethod),
+          p.claimStatus || '—',
+          p.createdAt,
+        ]) || []
+        api.post('/export/pdf', {
+          title: t.title,
+          columns: [t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date],
+          rows,
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'payments.pdf'; a.click()
+          URL.revokeObjectURL(url)
+        }).catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
+      }}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📄 {t.exportPdf}
+      </button>
+      <button onClick={() => {
+        const rows = data?.payments?.map((p: any) => [
+          p.patientName,
+          fmt(p.totalAmount),
+          fmt(p.insuranceAmount),
+          fmt(p.patientAmount),
+          fmt(p.amountPaid),
+          fmt(p.patientBalance),
+          methodLabel(p.paymentMethod),
+          p.claimStatus || '—',
+          p.createdAt,
+        ]) || []
+        api.post('/export/excel', {
+          title: t.title,
+          columns: [t.patient, t.total, t.insAmount, t.patAmount, t.amountPaid, t.balance, t.method, t.claimStatus, t.date],
+          rows,
+          isRtl: isAr,
+        }, { responseType: 'blob' }).then(r => {
+          const url = URL.createObjectURL(r.data)
+          const a = document.createElement('a')
+          a.href = url; a.download = 'payments.xlsx'; a.click()
+          URL.revokeObjectURL(url)
+        }).catch(() => setToastError(isAr ? 'فشل التصدير' : 'Export failed'))
+      }}
+        style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, color: TEXT_DARK, cursor: 'pointer' }}>
+        📊 {t.exportExcel}
+      </button>
+     </>
+   )}
   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
 </div>
 

@@ -85,7 +85,6 @@ const translations = {
 type Lang = keyof typeof translations
 
 const globalCss = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap');
 
 @keyframes fade-in    { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
 @keyframes slide-left { from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);} }
@@ -313,6 +312,11 @@ export default function Login() {
       // Point 1: once confirmed, make the URL reflect the clinic so the
       // address bar itself becomes the shareable/bookmarkable link.
       navigate(`/login/${sub}`, { replace: true })
+      // Save the clinic link as soon as it's known (not only after a full
+      // login) so relaunching an installed PWA can jump straight back to
+      // this clinic's sign-in, and the install prompt knows a clinic is set.
+      localStorage.setItem('clinicSubdomain', sub)
+      window.dispatchEvent(new CustomEvent('cura-clinic-resolved'))
     } catch {
       setSubdomainError(t.subdomainNotFound)
       setShakeForm(true); setTimeout(() => setShakeForm(false), 400)
@@ -491,6 +495,7 @@ if (data.role?.toLowerCase() === 'doctor') {
                   {clinicInfo.isAdmin ? <ShieldIcon color={GOLD} /> : <span style={{ fontSize:14 }}>🏥</span>}
                   <span style={{ fontSize:13, fontWeight:700, color: isAdminMode ? '#8A6A22' : TD }}>{clinicInfo.name}</span>
                   <button onClick={() => { setStep('subdomain'); setClinicInfo(null); setError(''); navigate('/login', { replace:true }) }}
+                    title={isAr?'تغيير العيادة':'Change clinic'} aria-label={isAr?'تغيير العيادة':'Change clinic'}
                     style={{ background:'none', border:'none', color:TM, cursor:'pointer', fontSize:11, padding:'0 2px' }}>✕</button>
                 </div>
               )}
@@ -634,7 +639,7 @@ if (data.role?.toLowerCase() === 'doctor') {
                 {error && (
                   <div style={{ background:EB, border:`1px solid ${ET}40`, borderRadius:10, padding:'10px 12px', fontSize:12, color:ET, marginBottom:14, display:'flex', alignItems:'center', gap:8, animation:'fade-in 0.3s ease' }}>
                     <span>⚠️</span><span style={{ flex:1 }}>{error}</span>
-                    <button onClick={()=>setError('')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:ET }}>✕</button>
+                    <button onClick={()=>setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:ET }}>✕</button>
                   </div>
                 )}
 

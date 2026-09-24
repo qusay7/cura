@@ -306,7 +306,7 @@ export default function PatientVisitNotes() {
             tabIndex={-1} onClick={e=>e.stopPropagation()}
             style={{ maxWidth:'90vw', maxHeight:'90vh', background:'#FFF', borderRadius:12, overflow:'hidden', display:'flex', flexDirection:'column' }}>
             <div style={{ padding:10, display:'flex', justifyContent:'flex-end' }}>
-              <button onClick={closePreview} aria-label={t.close}
+              <button onClick={closePreview} title={t.close} aria-label={t.close}
                 style={{ background:'#F1F4F4', border:'none', borderRadius:8, width:30, height:30, cursor:'pointer', fontSize:14 }}>✕</button>
             </div>
             {previewItem.isImage ? (

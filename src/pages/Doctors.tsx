@@ -556,7 +556,9 @@ export default function Doctors() {
 
         {/* ── Doctors Grid ── */}
         <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <ExportBar endpoint="/doctors/export" lang={lang} fileName="doctors" />
+          {hasPermission('reports.export') && (
+            <ExportBar endpoint="/doctors/export" lang={lang} fileName="doctors" />
+          )}
         </div>
         {filteredDoctors.length === 0 ? (
           <div style={{
@@ -574,7 +576,7 @@ export default function Doctors() {
             }}>
               {t.noDoctors}
             </p>
-            {search && (
+            {search ? (
               <button
                 onClick={() => setSearch('')}
                 style={{
@@ -588,6 +590,17 @@ export default function Doctors() {
                 }}
               >
                 {isAr ? 'مسح البحث' : 'Clear search'}
+              </button>
+            ) : hasPermission('doctors.create') && (
+              <button
+                onClick={() => navigate('/doctors/add')}
+                style={{
+                  background: PRIMARY, color: '#FFFFFF', border: 'none',
+                  borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <span>+</span> {t.addDoctor}
               </button>
             )}
           </div>
