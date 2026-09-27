@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY_SOFT } from '../styles/theme'
-import { formatTimeString } from '../utils/i18n'
+import { formatTimeString, getCurrencySymbol } from '../utils/i18n'
 import { hasPermission } from '../utils/permissions'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -256,7 +256,7 @@ export default function Reports() {
   const [dtStatus, setDtStatus]       = useState('')
   const [dtMode, setDtMode]           = useState<'appointments'|'patients'>('appointments')
 
-  const t    = T[lang]
+  const t    = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const isAr = lang === 'ar'
 // ✅ إعدادات الأعمدة
 const columnDefs: ColumnDef[] = [

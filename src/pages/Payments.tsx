@@ -4,6 +4,7 @@ import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../comp
 import React, { useEffect, useState } from 'react'
 import { PRIMARY_SOFT } from '../styles/theme'
 import { hasPermission } from '../utils/permissions'
+import { getCurrencySymbol } from '../utils/i18n'
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
@@ -90,7 +91,7 @@ export default function Payments() {
     return () => clearTimeout(timer)
   }, [toastError])
 
-const t    = T[lang]
+const t    = { ...T[lang], riyal: getCurrencySymbol(lang) }
 const isAr = lang === 'ar'
 
 // ✅ إعدادات الأعمدة

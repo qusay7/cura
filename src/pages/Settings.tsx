@@ -2,6 +2,7 @@ import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../styles/theme'
 import { hasPermission } from '../utils/permissions'
+import { COUNTRIES, getCountryByCode } from '../utils/i18n'
 
 // ✅ غيّر getImageUrl مع debugging:
 const getImageUrl = (path?: string | null) => {
@@ -353,6 +354,9 @@ const T = {
     timeFormatHint: 'تتحكم بشكل عرض الساعة بكل صفحات النظام (المواعيد، الطابور، الجداول...)',
     hour12: '12 ساعة (ص/م)',
     hour24: '24 ساعة',
+    countryLabel: 'البلد',
+    countryHint: 'تتحكم بعملة عرض الأسعار بكل النظام، وبإظهار زر ترحيل الفوترة الإلكترونية (خاص بالأردن)',
+    currencyLabel: 'العملة',
     ownerName: 'اسم المالك',
     ownerPhone: 'هاتف المالك',
     ownerEmail: 'بريد المالك',
@@ -418,6 +422,9 @@ const T = {
     timeFormatHint: 'Controls how the clock is shown across the whole app (appointments, queue, schedules...)',
     hour12: '12-hour (AM/PM)',
     hour24: '24-hour',
+    countryLabel: 'Country',
+    countryHint: 'Controls the currency used for prices across the whole app, and whether the electronic-invoicing submit button (Jordan only) is shown',
+    currencyLabel: 'Currency',
     ownerName: 'Owner Name',
     ownerPhone: 'Owner Phone',
     ownerEmail: 'Owner Email',
@@ -588,6 +595,7 @@ export default function Settings() {
     ownerPhone: '',
     ownerEmail: '',
     timeFormat: '24' as '12' | '24',
+    country: 'JO',
     taxNumber: '',
     notifyOnCreate: true,
     notifyOnEdit: true,
@@ -692,6 +700,7 @@ export default function Settings() {
           ownerEmail: c.ownerEmail ?? '',
           taxNumber: c.taxNumber ?? '',
           timeFormat: c.timeFormat === '12' ? '12' : '24',
+          country: c.country ?? 'JO',
           notifyOnCreate: c.notifyOnCreate ?? true,
           notifyOnEdit: c.notifyOnEdit ?? true,
           notifyOnCancel: c.notifyOnCancel ?? true,
@@ -712,7 +721,7 @@ export default function Settings() {
     }
   }
 
-  const handleClinicChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleClinicChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setClinicForm({ ...clinicForm, [e.target.name]: e.target.value })
   }
 
@@ -760,6 +769,10 @@ export default function Settings() {
 
       // ✅ يحدّث فوراً بدون انتظار تسجيل خروج/دخول جديد — كل الصفحات تقرأ هذا المفتاح
       localStorage.setItem('cura-timeFormat', clinicForm.timeFormat)
+
+      // ✅ نفس المبدأ: البلد والعملة يتحدّثان فوراً بكل الصفحات بدون إعادة تسجيل دخول
+      localStorage.setItem('cura-country', clinicForm.country)
+      localStorage.setItem('cura-currency', getCountryByCode(clinicForm.country).currencyCode)
 
       // ✅ لو فيه صورة شعار مختارة بانتظار الرفع، نرفعها هنا كمان — عشان "حفظ" وحد
       // يكفي لكل شي، بدل ما يحتاج المستخدم يتذكر يضغط زر "رفع الشعار" منفصل
@@ -980,6 +993,19 @@ export default function Settings() {
                       </button>
                     ))}
                   </div>
+                  </div>
+                </FormField>
+                <FormField label={t.countryLabel}>
+                  <div>
+                    <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '0 0 8px' }}>{t.countryHint}</p>
+                    <select name="country" value={clinicForm.country} onChange={handleClinicChange} className="form-input">
+                      {COUNTRIES.map(c => (
+                        <option key={c.code} value={c.code}>{isAr ? c.nameAr : c.nameEn}</option>
+                      ))}
+                    </select>
+                    <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '8px 0 0' }}>
+                      {t.currencyLabel}: {isAr ? getCountryByCode(clinicForm.country).symbolAr : getCountryByCode(clinicForm.country).symbolEn}
+                    </p>
                   </div>
                 </FormField>
               </div>

@@ -7,6 +7,7 @@ import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { PRIMARY_SOFT } from '../styles/theme'
+import { getCurrencySymbol, getStoredCountryCode } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -125,7 +126,7 @@ function TextViewer({ title, value, lang, onClose }: { title: string; value: str
 
 // ─── نافذة الفاتورة (عرض وطباعة) ────────────────────────────────────────────
 function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: 'ar' | 'en'; onClose: () => void }) {
-  const t = T[lang]
+  const t = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const [loading, setLoading] = useState(true)
   const [inv, setInv] = useState<any>(null)
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
@@ -277,7 +278,7 @@ function InvoiceModal({ invoiceId, lang, onClose }: { invoiceId: string; lang: '
 
 // ─── نافذة إنشاء فاتورة من دفعة ─────────────────────────────────────────────
 function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onClose: () => void; onCreated: () => void }) {
-  const t = T[lang]
+  const t = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -739,7 +740,7 @@ export default function Invoices() {
                             <td className="no-print" style={cell}>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button onClick={() => setViewId(inv.id)} style={btn(CARD_BG, PRIMARY, BORDER)}>🧾 {t.view}</button>
-                                {!inv.isSubmitted && hasElectronicInvoicing && hasPermission('invoices.manage') && (
+                                {!inv.isSubmitted && hasElectronicInvoicing && getStoredCountryCode() === 'JO' && hasPermission('invoices.manage') && (
                                   <button onClick={() => submitInvoice(inv.id)} disabled={submitting === inv.id}
                                     style={{ ...btn('#FFF8E1', WARNING, '#E8D4A8'), opacity: submitting === inv.id ? 0.6 : 1 }}>
                                     {submitting === inv.id ? t.submitting : `📤 ${t.submit}`}

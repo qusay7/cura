@@ -11,7 +11,7 @@ import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
-import { formatTimeString } from '../utils/i18n'
+import { formatTimeString, getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -190,7 +190,7 @@ const FilterBar = ({
   searchDateTo: Date|null; onSearchDateToChange: (v:Date|null)=>void;
   lang: 'ar'|'en';
 }) => {
-  const t = T[lang]; const isAr = lang==='ar'; const hasDateFilter = searchDateFrom||searchDateTo
+  const t = { ...T[lang], riyal: getCurrencySymbol(lang) }; const isAr = lang==='ar'; const hasDateFilter = searchDateFrom||searchDateTo
   
   const periodFilters = [
     { value:'all',      label:t.filterAll,     icon:'📋' },
@@ -1086,7 +1086,7 @@ export default function Appointments() {
     return filtered
   }
 
-  const t = T[lang]; const isAr = lang === 'ar'
+  const t = { ...T[lang], riyal: getCurrencySymbol(lang) }; const isAr = lang === 'ar'
   const filteredAppointments = getFilteredAppointments()
   const hasActiveFilters = searchPatient || searchDoctor || searchDateFrom || searchDateTo || statusFilter !== 'all_status'
 

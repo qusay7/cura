@@ -6,7 +6,7 @@ import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
-import { isHour12 } from '../utils/i18n'
+import { isHour12, getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -133,7 +133,7 @@ export default function AppointmentDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const t = T[lang]
+  const t = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const isAr = lang === 'ar'
 
   // ✅ إظهار/إخفاء الحقول

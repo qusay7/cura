@@ -1,25 +1,53 @@
 // src/utils/i18n.ts
 
-// إعدادات العملة
-export const CURRENCY = {
-  code: 'JOD',
-  symbol: 'د.أ',
-  nameAr: 'دينار أردني',
-  nameEn: 'Jordanian Dinar'
+// ─── بلد وعملة العيادة ────────────────────────────────────────────────────────
+// ✅ كل عيادة تختار بلدها من الإعدادات، والعملة تُشتَق من البلد تلقائياً —
+// لا قيمة ثابتة "دينار أردني" بعد الآن بكل النظام
+export interface CountryOption {
+  code: string
+  nameAr: string
+  nameEn: string
+  currencyCode: string
+  symbolAr: string
+  symbolEn: string
 }
 
+export const COUNTRIES: CountryOption[] = [
+  { code: 'JO', nameAr: 'الأردن',   nameEn: 'Jordan',               currencyCode: 'JOD', symbolAr: 'د.أ',  symbolEn: 'JD'  },
+  { code: 'PS', nameAr: 'فلسطين',   nameEn: 'Palestine',            currencyCode: 'ILS', symbolAr: 'شيكل', symbolEn: 'ILS' },
+  { code: 'SA', nameAr: 'السعودية', nameEn: 'Saudi Arabia',         currencyCode: 'SAR', symbolAr: 'ر.س',  symbolEn: 'SAR' },
+  { code: 'SY', nameAr: 'سوريا',    nameEn: 'Syria',                currencyCode: 'SYP', symbolAr: 'ل.س',  symbolEn: 'SYP' },
+  { code: 'LB', nameAr: 'لبنان',    nameEn: 'Lebanon',              currencyCode: 'LBP', symbolAr: 'ل.ل',  symbolEn: 'LBP' },
+  { code: 'AE', nameAr: 'الإمارات', nameEn: 'United Arab Emirates', currencyCode: 'AED', symbolAr: 'د.إ',  symbolEn: 'AED' },
+]
+
+const DEFAULT_COUNTRY_CODE = 'JO'
+
+export const getCountryByCode = (code?: string | null): CountryOption =>
+  COUNTRIES.find(c => c.code === code) || COUNTRIES.find(c => c.code === DEFAULT_COUNTRY_CODE)!
+
 /**
- * تنسيق السعر حسب اللغة
+ * رمز بلد العيادة الحالية — محفوظ بـ localStorage عند تسجيل الدخول (مثل تفضيل
+ * الوقت)، ومُحدَّث فوراً عند حفظه بصفحة الإعدادات، بدون الحاجة لإعادة تحميل
+ */
+export const getStoredCountryCode = (): string =>
+  localStorage.getItem('cura-country') || DEFAULT_COUNTRY_CODE
+
+export const getClinicCurrency = (): CountryOption => getCountryByCode(getStoredCountryCode())
+
+/**
+ * تنسيق السعر حسب اللغة وعملة العيادة الحالية
  * @param price - السعر (رقم)
  * @param lang - اللغة ('ar' | 'en')
  * @returns السعر منسق مع العملة
  */
 export const formatPrice = (price: number, lang: 'ar' | 'en'): string => {
   if (price === undefined || price === null) return '—'
-  
+
+  const currency = getClinicCurrency()
   return new Intl.NumberFormat(lang === 'ar' ? 'ar-JO' : 'en-JO', {
     style: 'currency',
-    currency: CURRENCY.code,
+    currency: currency.currencyCode,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2
   }).format(price)
@@ -113,12 +141,13 @@ export const formatTimeString = (t: string, hour12: boolean = isHour12()): strin
 }
 
 /**
- * الحصول على رمز العملة
+ * الحصول على رمز عملة العيادة الحالية
  * @param lang - اللغة ('ar' | 'en')
  * @returns رمز العملة
  */
 export const getCurrencySymbol = (lang: 'ar' | 'en'): string => {
-  return lang === 'ar' ? CURRENCY.symbol : CURRENCY.code
+  const currency = getClinicCurrency()
+  return lang === 'ar' ? currency.symbolAr : currency.symbolEn
 }
 
 /**

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -113,7 +114,7 @@ export default function PatientVisitNotes() {
     fetchData()
   }, [patientId])
 
-  const t = T[lang]
+  const t = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const isAr = lang === 'ar'
 
   const formatDate = (dateStr: string) => {

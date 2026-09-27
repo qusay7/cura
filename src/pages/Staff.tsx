@@ -7,6 +7,7 @@ import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY_SOFT } from '../styles/theme'
+import { getCurrencySymbol } from '../utils/i18n'
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
 const PRIMARY      = '#5B8C8F'
@@ -213,7 +214,7 @@ export default function Staff() {
   // Detail Modal
   const [selected, setSelected] = useState<any>(null)
 
-  const t    = T[lang]
+  const t    = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const isAr = lang === 'ar'
   // ✅ الراتب بيانات حسّاسة — لا تظهر إلا لمن يملك صلاحية مخصّصة، بمعزل عن staff.view العامة
   const canViewSalary = hasPermission('staff.viewsalary')

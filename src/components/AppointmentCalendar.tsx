@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
-import { formatTimeString } from '../utils/i18n'
+import { formatTimeString, getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -74,7 +74,7 @@ const BORDER = '#DCE5E5'
 export default function AppointmentCalendar({ doctorId, onSelectSlot, isFirstVisit = true, initialDateTime, lang }: Props) {
   const resolvedLang = lang ?? getStoredLang()
   const isAr = resolvedLang === 'ar'
-  const t = T[resolvedLang]
+  const t = { ...T[resolvedLang], currency: getCurrencySymbol(resolvedLang) }
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (!initialDateTime) return new Date()
     const d = new Date(initialDateTime.replace(' ', 'T'))

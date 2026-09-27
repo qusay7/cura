@@ -4,6 +4,7 @@ import api from '../api/axios'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 import type { ColumnDef } from '../components/ColumnToggle'
 import { hasPermission } from '../utils/permissions'
+import { getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -141,7 +142,7 @@ export default function Insurance() {
   const [rejReason, setRejReason]   = useState('')
   const [statusNotes, setStatusNotes] = useState('')
 
-  const t    = T[lang]
+  const t    = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const isAr = lang === 'ar'
 
   useEffect(() => {

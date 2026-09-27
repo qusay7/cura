@@ -4,7 +4,7 @@ import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
-import { isHour12 } from '../utils/i18n'
+import { isHour12, getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -992,7 +992,7 @@ export default function QuickVisit() {
                       </div>
                       {visitForm.appointmentPrice && (
                         <div style={{ fontSize: '12px', color: PRIMARY, marginTop: '4px', fontWeight: 500 }}>
-                          💰 {visitForm.appointmentPrice} {isAr ? 'د.أ' : 'JD'}
+                          💰 {visitForm.appointmentPrice} {getCurrencySymbol(isAr ? 'ar' : 'en')}
                         </div>
                       )}
                     </div>

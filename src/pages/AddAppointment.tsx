@@ -7,7 +7,7 @@ import { ECGAnimation } from '../components/ECGAnimation'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
-import { isHour12 } from '../utils/i18n'
+import { isHour12, getCurrencySymbol } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -820,7 +820,7 @@ export default function AddAppointment() {
                         ? (isAr ? 'سعر خاص لهذا الطبيب:' : "Doctor's special price:")
                         : t.suggestedFromTemplate}
                     </span>
-                    <span style={{ fontWeight:700, color:PRIMARY }}>{form.appointmentPrice} {isAr?'د.أ':'JD'}</span>
+                    <span style={{ fontWeight:700, color:PRIMARY }}>{form.appointmentPrice} {getCurrencySymbol(isAr?'ar':'en')}</span>
                   </div>
                 )
               })()}
@@ -886,19 +886,19 @@ export default function AddAppointment() {
                         <div style={{ textAlign: 'center', background: '#FFF', borderRadius: 10, padding: '10px 6px' }}>
                           <p style={{ fontSize: 11, color: '#6B8A8C', margin: '0 0 4px' }}>{isAr ? 'إجمالي الزيارة' : 'Total'}</p>
                           <p style={{ fontSize: 16, fontWeight: 700, color: '#2C3E3F', margin: 0, fontFamily: "'Inter',monospace" }}>
-                            {total} {isAr ? 'د.أ' : 'JD'}
+                            {total} {getCurrencySymbol(isAr ? 'ar' : 'en')}
                           </p>
                         </div>
                         <div style={{ textAlign: 'center', background: '#FFF', borderRadius: 10, padding: '10px 6px' }}>
                           <p style={{ fontSize: 11, color: '#6B8A8C', margin: '0 0 4px' }}>{isAr ? 'يدفع التأمين' : 'Insurance pays'}</p>
                           <p style={{ fontSize: 16, fontWeight: 700, color: '#16A34A', margin: 0, fontFamily: "'Inter',monospace" }}>
-                            {insAmount.toFixed(2)} {isAr ? 'د.أ' : 'JD'}
+                            {insAmount.toFixed(2)} {getCurrencySymbol(isAr ? 'ar' : 'en')}
                           </p>
                         </div>
                         <div style={{ textAlign: 'center', background: '#FFFBEB', borderRadius: 10, padding: '10px 6px', border: '1px solid #FCD34D' }}>
                           <p style={{ fontSize: 11, color: '#6B8A8C', margin: '0 0 4px' }}>{isAr ? 'يدفع المريض' : 'Patient pays'}</p>
                           <p style={{ fontSize: 16, fontWeight: 700, color: '#F59E0B', margin: 0, fontFamily: "'Inter',monospace" }}>
-                            {patAmount.toFixed(2)} {isAr ? 'د.أ' : 'JD'}
+                            {patAmount.toFixed(2)} {getCurrencySymbol(isAr ? 'ar' : 'en')}
                           </p>
                         </div>
                       </div>
@@ -910,8 +910,8 @@ export default function AddAppointment() {
                   ) : (
                     <p style={{ fontSize: 12, color: '#6B8A8C', margin: 0 }}>
                       {isAr
-                        ? `⚠️ هذا الموعد مستثنى من التأمين — يدفع المريض كامل المبلغ (${total} د.أ)`
-                        : `⚠️ This visit is excluded from insurance — patient pays the full amount (${total} JD)`}
+                        ? `⚠️ هذا الموعد مستثنى من التأمين — يدفع المريض كامل المبلغ (${total} ${getCurrencySymbol('ar')})`
+                        : `⚠️ This visit is excluded from insurance — patient pays the full amount (${total} ${getCurrencySymbol('en')})`}
                     </p>
                   )}
 

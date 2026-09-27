@@ -8,6 +8,8 @@ export interface AuthResponse {
   clinicId: string | null
   clinicName: string | null
   timeFormat?: '12' | '24'
+  country?: string | null
+  currency?: string | null
   expiresAt: string
   refreshTokenExpiresAt: string
   permissions: string[]

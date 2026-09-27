@@ -371,6 +371,11 @@ const handleLogin = async (e: React.FormEvent) => {
     // ✅ تفضيل عرض الوقت (12/24 ساعة) الخاص بالعيادة
     localStorage.setItem('cura-timeFormat', data.timeFormat === '12' ? '12' : '24')
 
+    // ✅ بلد العيادة وعملتها — تُقرأ فوراً من كل صفحة (utils/i18n.ts) بدون
+    // الحاجة لطلب شبكة إضافي، مثل تفضيل الوقت تماماً
+    if (data.country) localStorage.setItem('cura-country', data.country)
+    if (data.currency) localStorage.setItem('cura-currency', data.currency)
+
 if (data.role?.toLowerCase() === 'doctor') {
   navigate('/daily')
 } else {
