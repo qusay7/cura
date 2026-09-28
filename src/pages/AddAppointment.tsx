@@ -531,6 +531,10 @@ export default function AddAppointment() {
         const baseDate = new Date(appointmentDate.replace(' ', 'T'))
         let bookedCount = 0
         let failedCount = 0
+        // ✅ نجمع كل الجلسات المحجوزة هون ونرسل رسالة واحدة مجمّعة بالنهاية
+        // (كل نداء إنشاء موعد تحت بـ skipNotification) بدل ما يوصل المريض
+        // رسالة منفردة لكل جلسة دفعة وحدة
+        const bookedSessions: { appointmentId: string; sessionNumber: number; appointmentDate: string }[] = []
 
         for (let i = 0; i < unlinkedSessions.length; i++) {
           const session = unlinkedSessions[i]
@@ -539,7 +543,7 @@ export default function AddAppointment() {
           const isoScheduledDate = toLocalDateTimeString(sessionDate)
 
           try {
-            const apptRes = await api.post('/appointments', { ...payload, appointmentDate: isoScheduledDate })
+            const apptRes = await api.post('/appointments', { ...payload, appointmentDate: isoScheduledDate, skipNotification: true })
             const newAppointmentId = apptRes.data.id
 
             await api.put(`/treatmentplans/${plan.id}/sessions/${session.id}`, {
@@ -547,6 +551,7 @@ export default function AddAppointment() {
               appointmentId: newAppointmentId,
               scheduledDate: isoScheduledDate,
             })
+            bookedSessions.push({ appointmentId: newAppointmentId, sessionNumber: session.sessionNumber, appointmentDate: isoScheduledDate })
             bookedCount++
           } catch {
             failedCount++
@@ -558,6 +563,14 @@ export default function AddAppointment() {
           setLoading(false)
           return
         }
+
+        try {
+          await api.post('/appointments/notify-multi-session', {
+            patientId: form.patientId,
+            templateName: isAr ? selectedTemplate?.name : (selectedTemplate?.nameEn || selectedTemplate?.name),
+            sessions: bookedSessions,
+          })
+        } catch { }
 
         if (failedCount > 0) {
           setSuccess(isAr
@@ -800,8 +813,8 @@ export default function AddAppointment() {
                 </div>
                 <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '6px 0 0' }}>
                   💡 {isAr
-                    ? `هيتحجز ${selectedTemplate?.defaultSessionsCount} مواعيد تلقائياً، كل وحدة بعد اللي قبلها بـ${sessionIntervalValue} ${sessionIntervalUnit === 'day' ? 'يوم' : sessionIntervalUnit === 'week' ? 'أسبوع' : 'شهر'} — تقدر تعدّل أي موعد لحاله بعدين`
-                    : `${selectedTemplate?.defaultSessionsCount} appointments will be booked automatically, each ${sessionIntervalValue} ${sessionIntervalUnit}(s) apart — you can edit any of them individually later`}
+                    ? `هيتحجز ${selectedTemplate?.defaultSessionsCount} مواعيد تلقائياً (كل وحدة بعد اللي قبلها بـ${sessionIntervalValue} ${sessionIntervalUnit === 'day' ? 'يوم' : sessionIntervalUnit === 'week' ? 'أسبوع' : 'شهر'})، وبتوصل المريض رسالة واتساب واحدة فيها كل المواعيد — تقدر تعدّل أي موعد لحاله بعدين، هذي تواريخ مبدئية بس`
+                    : `${selectedTemplate?.defaultSessionsCount} appointments will be booked automatically (each ${sessionIntervalValue} ${sessionIntervalUnit}(s) apart), and the patient gets one WhatsApp message listing all of them — you can edit any appointment individually later, these are just initial dates`}
                 </p>
               </FormField>
             )}
