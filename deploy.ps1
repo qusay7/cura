@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════════════════
-# نشر الفرونت اند: إيقاف الـ service، سحب آخر كود، تثبيت الحزم، بناء،
-# وإعادة التشغيل — مع توقف فوري عند أول خطأ
-# الاستخدام: افتح PowerShell بمجلد الفرونت اند على السيرفر وشغّل: .\deploy.ps1
+# Frontend deploy: stop service, pull latest, install deps, build, restart,
+# health-check. Stops immediately on any failure.
+# Usage: open PowerShell in this folder on the server and run: .\deploy.ps1
 # ══════════════════════════════════════════════════════════════════════════
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -10,36 +10,36 @@ $healthUrl = 'http://localhost:4173'
 
 function Step($msg) { Write-Host "`n== $msg ==" -ForegroundColor Cyan }
 
-Step "إيقاف الـ service"
+Step "Stopping service"
 Stop-Service $serviceName -Force -ErrorAction SilentlyContinue
 
-Step "سحب آخر كود من main"
+Step "Pulling latest code from main"
 Set-Location $root
 git pull origin main
 
-Step "تثبيت الحزم (لو تغيّرت)"
+Step "Installing packages (if changed)"
 npm install
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "`n❌ فشل npm install — توقفنا هون." -ForegroundColor Red
+    Write-Host "`nnpm install FAILED - stopping here." -ForegroundColor Red
     exit 1
 }
 
-Step "بناء المشروع"
+Step "Building"
 npm run build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "`n❌ فشل البناء — توقفنا هون عمداً." -ForegroundColor Red
+    Write-Host "`nBUILD FAILED - stopping here on purpose." -ForegroundColor Red
     exit 1
 }
 
-Step "تشغيل الـ service"
+Step "Starting service"
 Start-Service $serviceName
 Start-Sleep -Seconds 2
 
-Step "فحص الصحة"
+Step "Health check"
 try {
     $resp = Invoke-WebRequest -Uri $healthUrl -TimeoutSec 8 -UseBasicParsing
-    Write-Host "✅ الفرونت اند شغال (HTTP $($resp.StatusCode))" -ForegroundColor Green
+    Write-Host "OK - frontend is up (HTTP $($resp.StatusCode))" -ForegroundColor Green
 } catch {
-    Write-Host "❌ الفرونت اند ما رد على $healthUrl — افحصه يدوياً." -ForegroundColor Red
+    Write-Host "FAILED - frontend did not respond at $healthUrl. Check it manually." -ForegroundColor Red
     exit 1
 }
