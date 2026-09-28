@@ -256,6 +256,7 @@ export default function Login() {
   // and "/login/admin" is reserved for the SuperAdmin entry (point 2).
   const { subdomain: subdomainParam } = useParams<{ subdomain?: string }>()
 
+  const [apiCommit, setApiCommit] = useState('')
   const [lang, setLang]         = useState<Lang>('en')
   const [step, setStep]         = useState<'subdomain'|'login'>('subdomain')
   const [subdomain, setSubdomain] = useState('')
@@ -278,6 +279,11 @@ export default function Login() {
 
   const t    = translations[lang]
   const isAr = lang === 'ar'
+
+  // ✅ نجيب commit الباك اند كمان عشان نتأكد الفرونت والباك متوافقين بنفس النشرة
+  useEffect(() => {
+    api.get('/version').then(res => setApiCommit(res.data?.commit || '')).catch(() => {})
+  }, [])
 
   useEffect(() => {
     const id = 'cura-login-css'
@@ -681,6 +687,12 @@ if (data.role?.toLowerCase() === 'doctor') {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ✅ رقم النسخة (commit hash) — عشان نعرف بالضبط شو الكود المنشور فعلياً
+          بأي بيئة، من صفحة تسجيل الدخول مباشرة بدون حاجة لتسجيل دخول */}
+      <div style={{ position:'fixed', insetInlineEnd:8, insetBlockEnd:6, fontSize:9.5, color:'#B7C6C7', fontFamily:"'Inter',monospace", userSelect:'none', zIndex:1 }}>
+        web {__APP_VERSION__}{apiCommit && ` · api ${apiCommit}`}
       </div>
     </div>
   )

@@ -2,8 +2,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'child_process'
+
+// ✅ نأخذ رقم النسخة من الـ commit الحقيقي وقت البناء — مش رقم يدوي بينسى تحديثه،
+// هيك بنعرف بالضبط شو الكود المنشور فعلياً بأي بيئة (تفادياً لالتباس صار سابقاً)
+const commitHash = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim() }
+  catch { return 'unknown' }
+})()
+const buildTime = new Date().toISOString()
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(commitHash),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
