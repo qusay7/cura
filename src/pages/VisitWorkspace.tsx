@@ -34,6 +34,7 @@ const T = {
     goToCheckout: 'إنهاء الزيارة (الخروج)', patient: 'المريض', collapse: 'طي', expand: 'عرض التفاصيل',
     vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'سكر الدم (mg/dL)', heartRate: 'نبضات القلب (bpm)', respiratoryRate: 'معدل التنفس (نفس/د)',
+    lastVitals: 'قياس الزيارة السابقة',
   },
   en: {
     back: 'Back', loading: 'Loading...',
@@ -50,6 +51,7 @@ const T = {
     goToCheckout: 'Finish Visit (Check Out)', patient: 'Patient', collapse: 'Collapse', expand: 'View Details',
     vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'Blood Sugar (mg/dL)', heartRate: 'Heart Rate (bpm)', respiratoryRate: 'Respiratory Rate (breaths/min)',
+    lastVitals: 'Previous Visit Reading',
   },
 }
 
@@ -262,6 +264,10 @@ export default function VisitWorkspace() {
 
   if (!appointment) return null
 
+  // ✅ أقرب زيارة سابقة فيها قياس علامات حيوية مسجّل — لعرضها كمرجع سريع
+  // فوق حقول القياس الجديد (الترتيب أصلاً تنازلي بالأحدث أول من الباك اند)
+  const lastVitalsVisit = history.find(h => h.bloodPressure || h.bloodSugar != null || h.heartRate != null || h.respiratoryRate != null)
+
   return (
     <div className="visit-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -350,6 +356,19 @@ export default function VisitWorkspace() {
 
             <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.vitals}</label>
+
+              {lastVitalsVisit && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 12, fontSize: 11.5, color: TEXT_DARK }}>
+                  <span style={{ fontWeight: 700, color: PRIMARY, whiteSpace: 'nowrap' }}>
+                    ℹ️ {t.lastVitals} ({new Date(lastVitalsVisit.appointmentDate || lastVitalsVisit.createdAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}):
+                  </span>
+                  {lastVitalsVisit.bloodPressure && <span>🩸 {lastVitalsVisit.bloodPressure}</span>}
+                  {lastVitalsVisit.bloodSugar != null && <span>🍬 {lastVitalsVisit.bloodSugar}</span>}
+                  {lastVitalsVisit.heartRate != null && <span>❤️ {lastVitalsVisit.heartRate}</span>}
+                  {lastVitalsVisit.respiratoryRate != null && <span>🫁 {lastVitalsVisit.respiratoryRate}</span>}
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.bloodPressure}</label>
