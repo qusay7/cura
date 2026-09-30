@@ -32,6 +32,8 @@ const T = {
     attachmentsSection: '📎 مرفقات هذي الزيارة',
     upcomingAppointment: '📅 الموعد القادم لهذا المريض',
     goToCheckout: 'إنهاء الزيارة (الخروج)', patient: 'المريض', collapse: 'طي', expand: 'عرض التفاصيل',
+    vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodPressurePlaceholder: '120/80',
+    bloodSugar: 'سكر الدم (mg/dL)', heartRate: 'نبضات القلب (bpm)', respiratoryRate: 'معدل التنفس (نفس/د)',
   },
   en: {
     back: 'Back', loading: 'Loading...',
@@ -46,6 +48,8 @@ const T = {
     attachmentsSection: '📎 Attachments for this Visit',
     upcomingAppointment: "📅 Patient's Next Appointment",
     goToCheckout: 'Finish Visit (Check Out)', patient: 'Patient', collapse: 'Collapse', expand: 'View Details',
+    vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodPressurePlaceholder: '120/80',
+    bloodSugar: 'Blood Sugar (mg/dL)', heartRate: 'Heart Rate (bpm)', respiratoryRate: 'Respiratory Rate (breaths/min)',
   },
 }
 
@@ -60,6 +64,10 @@ interface HistoryItem {
   doctorName: string | null
   appointmentDate: string | null
   visitType: string | null
+  bloodPressure: string | null
+  bloodSugar: number | null
+  heartRate: number | null
+  respiratoryRate: number | null
   attachments: { id: string; fileName: string; category: string | null; isImage: boolean }[]
 }
 
@@ -79,7 +87,7 @@ export default function VisitWorkspace() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [existingNoteId, setExistingNoteId] = useState<string | null>(null)
 
-  const [form, setForm] = useState({ diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '' })
+  const [form, setForm] = useState({ diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '', bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '' })
   const [templates, setTemplates] = useState<VisitTemplate[]>([])
   const [templateId, setTemplateId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -138,6 +146,10 @@ export default function VisitWorkspace() {
             tests: noteRes.data.tests || '',
             notes: noteRes.data.notes || '',
             nextVisitDate: noteRes.data.nextVisitDate ? noteRes.data.nextVisitDate.split('T')[0] : '',
+            bloodPressure: noteRes.data.bloodPressure || '',
+            bloodSugar: noteRes.data.bloodSugar?.toString() ?? '',
+            heartRate: noteRes.data.heartRate?.toString() ?? '',
+            respiratoryRate: noteRes.data.respiratoryRate?.toString() ?? '',
           })
         }
 
@@ -205,6 +217,10 @@ export default function VisitWorkspace() {
         tests: form.tests || null,
         notes: form.notes || null,
         nextVisitDate: form.nextVisitDate || null,
+        bloodPressure: form.bloodPressure || null,
+        bloodSugar: form.bloodSugar ? parseFloat(form.bloodSugar) : null,
+        heartRate: form.heartRate ? parseInt(form.heartRate) : null,
+        respiratoryRate: form.respiratoryRate ? parseInt(form.respiratoryRate) : null,
       }
       if (existingNoteId) {
         await api.put(`/visitnotes/${existingNoteId}`, payload)
@@ -332,6 +348,33 @@ export default function VisitWorkspace() {
               )}
             </div>
 
+            <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.vitals}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.bloodPressure}</label>
+                  <input value={form.bloodPressure} onChange={e => setForm({ ...form, bloodPressure: e.target.value })}
+                    placeholder={t.bloodPressurePlaceholder}
+                    style={{ width: '100%', padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: "'Inter',sans-serif", color: TEXT_DARK, background: CARD_BG }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.bloodSugar}</label>
+                  <input type="number" value={form.bloodSugar} onChange={e => setForm({ ...form, bloodSugar: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: "'Inter',sans-serif", color: TEXT_DARK, background: CARD_BG }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.heartRate}</label>
+                  <input type="number" value={form.heartRate} onChange={e => setForm({ ...form, heartRate: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: "'Inter',sans-serif", color: TEXT_DARK, background: CARD_BG }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.respiratoryRate}</label>
+                  <input type="number" value={form.respiratoryRate} onChange={e => setForm({ ...form, respiratoryRate: e.target.value })}
+                    style={{ width: '100%', padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: "'Inter',sans-serif", color: TEXT_DARK, background: CARD_BG }} />
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.diagnosis}</label>
@@ -408,7 +451,7 @@ export default function VisitWorkspace() {
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
                 <thead>
                   <tr>
-                    {[t.visitDate, t.doctor, t.type, t.diagnosis, t.prescription, t.attachments].map((c, i) => (
+                    {[t.visitDate, t.doctor, t.type, t.vitals, t.diagnosis, t.prescription, t.attachments].map((c, i) => (
                       <th key={i} style={{ padding: '10px 12px', textAlign: 'start', fontSize: 11, fontWeight: 700, color: TEXT_MUTED, background: '#F8FAFA', borderBottom: `1px solid ${BORDER}` }}>{c}</th>
                     ))}
                   </tr>
@@ -421,6 +464,16 @@ export default function VisitWorkspace() {
                       </td>
                       <td style={{ padding: '10px 12px', fontSize: 12, color: TEXT_DARK, borderBottom: `1px solid ${BORDER}` }}>{h.doctorName || '—'}</td>
                       <td style={{ padding: '10px 12px', fontSize: 12, color: TEXT_DARK, borderBottom: `1px solid ${BORDER}` }}>{h.visitType || '—'}</td>
+                      <td style={{ padding: '10px 12px', fontSize: 11, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}`, whiteSpace: 'nowrap' }}>
+                        {h.bloodPressure || h.bloodSugar != null || h.heartRate != null || h.respiratoryRate != null ? (
+                          <>
+                            {h.bloodPressure && <div>🩸 {h.bloodPressure}</div>}
+                            {h.bloodSugar != null && <div>🍬 {h.bloodSugar}</div>}
+                            {h.heartRate != null && <div>❤️ {h.heartRate}</div>}
+                            {h.respiratoryRate != null && <div>🫁 {h.respiratoryRate}</div>}
+                          </>
+                        ) : '—'}
+                      </td>
                       <td style={{ padding: '10px 12px', fontSize: 12, color: TEXT_DARK, borderBottom: `1px solid ${BORDER}`, maxWidth: 160 }}>{h.diagnosis || '—'}</td>
                       <td style={{ padding: '10px 12px', fontSize: 12, color: TEXT_DARK, borderBottom: `1px solid ${BORDER}`, maxWidth: 160 }}>{h.prescription || '—'}</td>
                       <td style={{ padding: '10px 12px', fontSize: 12, color: TEXT_DARK, borderBottom: `1px solid ${BORDER}` }}>

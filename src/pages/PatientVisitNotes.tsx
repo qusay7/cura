@@ -28,6 +28,8 @@ const T = {
     attachments: 'المرفقات', view: 'عرض', filterByDoctor: 'كل الأطباء',
     filterByDate: 'تصفية بالتاريخ', clearFilters: 'إلغاء التصفية',
     noResults: 'لا توجد زيارات مطابقة للتصفية', couldNotOpen: 'تعذّر فتح الملف', close: 'إغلاق',
+    vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodSugar: 'سكر الدم',
+    heartRate: 'نبضات القلب', respiratoryRate: 'معدل التنفس',
   },
   en: {
     back: 'Back', title: 'Visit History',
@@ -41,6 +43,8 @@ const T = {
     attachments: 'Attachments', view: 'View', filterByDoctor: 'All Doctors',
     filterByDate: 'Filter by date', clearFilters: 'Clear filters',
     noResults: 'No visits match the filters', couldNotOpen: 'Could not open file', close: 'Close',
+    vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodSugar: 'Blood Sugar',
+    heartRate: 'Heart Rate', respiratoryRate: 'Respiratory Rate',
   },
 }
 
@@ -53,6 +57,7 @@ interface VisitNote {
   notes?: string; nextVisitDate?: string; cost?: number
   doctorName?: string; appointmentDate?: string; source: 'appointment' | 'queue'
   createdAt: string; attachments?: NoteAttachment[]
+  bloodPressure?: string; bloodSugar?: number; heartRate?: number; respiratoryRate?: number
 }
 
 export default function PatientVisitNotes() {
@@ -235,6 +240,17 @@ export default function PatientVisitNotes() {
 
                 {/* محتوى البطاقة */}
                 <div style={{ padding:'16px 20px', display:'grid', gap:10 }}>
+                  {(note.bloodPressure || note.bloodSugar != null || note.heartRate != null || note.respiratoryRate != null) && (
+                    <div style={{ background:'#FDF2F8', borderRadius:10, padding:'10px 14px', border:'1px solid #FBCFE8' }}>
+                      <p style={{ fontSize:10, fontWeight:700, color:'#BE185D', margin:'0 0 6px', textTransform:'uppercase' }}>{t.vitals}</p>
+                      <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
+                        {note.bloodPressure && <span style={{ fontSize:12.5, color:TEXT_DARK }}>🩸 {t.bloodPressure}: <strong>{note.bloodPressure}</strong></span>}
+                        {note.bloodSugar != null && <span style={{ fontSize:12.5, color:TEXT_DARK }}>🍬 {t.bloodSugar}: <strong>{note.bloodSugar}</strong></span>}
+                        {note.heartRate != null && <span style={{ fontSize:12.5, color:TEXT_DARK }}>❤️ {t.heartRate}: <strong>{note.heartRate}</strong></span>}
+                        {note.respiratoryRate != null && <span style={{ fontSize:12.5, color:TEXT_DARK }}>🫁 {t.respiratoryRate}: <strong>{note.respiratoryRate}</strong></span>}
+                      </div>
+                    </div>
+                  )}
                   {note.diagnosis && (
                     <div style={{ background:'#F8FAFA', borderRadius:10, padding:'10px 14px', border:`1px solid ${BORDER}` }}>
                       <p style={{ fontSize:10, fontWeight:700, color:PRIMARY, margin:'0 0 3px', textTransform:'uppercase' }}>🔬 {t.diagnosis}</p>
