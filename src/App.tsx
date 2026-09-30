@@ -26,6 +26,7 @@ const AddUser             = lazy(() => import('./pages/AddUser'))
 const Users               = lazy(() => import('./pages/Users'))
 const Departments         = lazy(() => import('./pages/Departments'))
 const TreatmentTemplates  = lazy(() => import('./pages/TreatmentTemplates'))
+const DiagnosisTemplates  = lazy(() => import('./pages/DiagnosisTemplates'))
 const ClinicPermissions   = lazy(() => import('./pages/ClinicPermissions'))
 const Reports             = lazy(() => import('./pages/Reports'))
 const SuperAdminClinics   = lazy(() => import('./pages/SuperAdmin/Clinics'))
@@ -198,6 +199,13 @@ function App() {
         <Route path="/treatment-templates" element={
           <ProtectedRoute permission="departments.manage">
             <Layout><TreatmentTemplates /></Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* ── اقتراحات التشخيص والأدوية ── */}
+        <Route path="/diagnosis-templates" element={
+          <ProtectedRoute permission="departments.manage">
+            <Layout><DiagnosisTemplates /></Layout>
           </ProtectedRoute>
         } />
 

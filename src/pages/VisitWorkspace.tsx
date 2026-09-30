@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
+import DiagnosisAutocomplete from '../components/DiagnosisAutocomplete'
 import PatientAttachmentsTab, { type PatientAttachmentsTabHandle } from '../components/PatientAttachmentsTab'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
@@ -334,8 +335,12 @@ export default function VisitWorkspace() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.diagnosis}</label>
-                <textarea value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} rows={3}
-                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical' }} />
+                <DiagnosisAutocomplete
+                  value={form.diagnosis}
+                  onChange={v => setForm({ ...form, diagnosis: v })}
+                  onInsertPrescriptionText={text => setForm(f => ({ ...f, prescription: f.prescription ? `${f.prescription}\n${text}` : text }))}
+                  isAr={isAr}
+                />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.prescription}</label>

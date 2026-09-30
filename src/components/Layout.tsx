@@ -33,6 +33,7 @@ const TOUR_STEPS: TourStep[] = [
     descAr: 'الفواتير والمدفوعات والتقارير المالية لعيادتك، كلها في مكان واحد.',
     descEn: "Your clinic's invoices, payments, and financial reports — all in one place.",
   },
+  
   {
     target: '[data-tour="tour-notif-bell"]',
     titleAr: 'الإشعارات', titleEn: 'Notifications',
@@ -491,6 +492,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
       items: [
         { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage', superAdminOnly: false, feature: 'multipleDepartments' as const },
         { path: '/treatment-templates', labelAr: 'قوالب الزيارة', labelEn: 'Visit Templates', icon: 'ti-clipboard-list', permission: 'treatmenttemplates.manage', superAdminOnly: false },
+        { path: '/diagnosis-templates', labelAr: 'اقتراحات التشخيص والأدوية', labelEn: 'Diagnosis & Medication Suggestions', icon: 'ti-pill', permission: 'diagnosistemplates.manage', superAdminOnly: false },
         { path: '/insurance', labelAr: 'التأمين الصحي', labelEn: 'Health Insurance', icon: 'ti-heart-handshake', permission: 'insurance.view', superAdminOnly: false },
       ],
     },
