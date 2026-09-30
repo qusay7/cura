@@ -97,7 +97,10 @@ export default function DoctorDaily() {
     }
   }, [])
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  // ✅ لازم تاريخ محلي، مش toISOString() (UTC) — بين منتصف الليل و٣ فجراً بتوقيت
+  // الأردن يكون UTC لسا باليوم اللي قبل، فتاريخ "اليوم" يُحسب غلط ويطلع الجدول فاضي
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   const fetchToday = async () => {
     setLoading(true)
