@@ -335,18 +335,17 @@ export default function VisitWorkspace() {
           )}
 
           <div style={{ opacity: appointment?.checkInTime ? 1 : 0.5, pointerEvents: appointment?.checkInTime ? 'auto' : 'none' }}>
-            {appointment?.type && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>🏷️ {t.bookingType}</label>
-                <div style={{ padding: '9px 12px', background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontWeight: 600, color: TEXT_DARK }}>
-                  {appointment.type}
-                </div>
-              </div>
-            )}
+            {/* ✅ خانة واحدة توّحد "نوع الزيارة المحدّد بالحجز" (للعلم فقط) مع
+                "قالب خطة العلاج" (القابل للتعديل) — بدل خانتين منفصلتين */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>🔄 {t.visitType}</label>
               <SearchableSelect isRtl={isAr} value={templateId} onChange={handleTemplateChange}
                 options={templates.map(tpl => ({ value: tpl.id, label: isAr ? tpl.name : (tpl.nameEn || tpl.name) }))} />
+              {appointment?.type && (
+                <p style={{ fontSize: 10.5, color: TEXT_MUTED, margin: '5px 0 0' }}>
+                  🏷️ {t.bookingType}: <strong>{appointment.type}</strong>
+                </p>
+              )}
               {templateId && templateId !== appointment?.templateId && (
                 <p style={{ fontSize: 10.5, color: '#B8892A', margin: '5px 0 0' }}>
                   ⚠️ {isAr ? 'مختلف عن نوع الحجز الأصلي — تم تحديث سجل الموعد' : 'Different from the original booking — the appointment record was updated'}
