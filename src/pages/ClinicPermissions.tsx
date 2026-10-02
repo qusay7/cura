@@ -184,6 +184,7 @@ const T = {
       'visitnotes.delete': 'حذف ملاحظة',
 
       'treatmenttemplates.manage': 'إدارة قوالب الزيارات',
+      'diagnosistemplates.manage': 'إدارة اقتراحات التشخيص والأدوية',
       'treatmenttemplates.create': 'إضافة قالب زيارة',
       'treatmenttemplates.edit': 'تعديل قالب زيارة',
       'treatmenttemplates.delete': 'حذف قالب زيارة',
@@ -347,6 +348,7 @@ const T = {
       'visitnotes.delete': 'Delete Visit Note',
 
       'treatmenttemplates.manage': 'Manage Treatment Templates',
+      'diagnosistemplates.manage': 'Manage Diagnosis & Medication Suggestions',
       'treatmenttemplates.create': 'Create Treatment Template',
       'treatmenttemplates.edit': 'Edit Treatment Template',
       'treatmenttemplates.delete': 'Delete Treatment Template',
