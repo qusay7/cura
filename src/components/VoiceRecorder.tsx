@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../api/axios'
+import fixWebmDuration from 'fix-webm-duration'
 import { PRIMARY, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 
 interface VoiceRecorderProps {
@@ -46,6 +47,7 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
+  const recordStartRef = useRef<number>(0)
 
   const fetchSaved = () => {
     api.get(`/attachments/patient/${patientId}`)
@@ -77,13 +79,24 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
       chunksRef.current = []
       const recorder = new MediaRecorder(stream)
       recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(tr => tr.stop())
+        const mimeType = recorder.mimeType || 'audio/webm'
+        const rawBlob = new Blob(chunksRef.current, { type: mimeType })
+        const duration = Date.now() - recordStartRef.current
+
+        // ✅ تسجيلات MediaRecorder بصيغة WebM بتخرج بدون معلومة "المدة" بالملف —
+        // بتظهر 0:00/0:00 وما بتشتغل لما تُحفظ وتُعاد تشغيلها لاحقاً من السيرفر.
+        // هذي المكتبة تحقن المدة الصحيحة بالملف نفسه قبل ما نرفعه
+        const blob = mimeType.includes('webm')
+          ? await fixWebmDuration(rawBlob, duration).catch(() => rawBlob)
+          : rawBlob
+
         setAudioBlob(blob)
         setPreviewUrl(URL.createObjectURL(blob))
-        stream.getTracks().forEach(tr => tr.stop())
       }
       mediaRecorderRef.current = recorder
+      recordStartRef.current = Date.now()
       recorder.start()
       setRecording(true)
     } catch {
