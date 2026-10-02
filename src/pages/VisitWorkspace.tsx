@@ -4,8 +4,11 @@ import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import DiagnosisAutocomplete from '../components/DiagnosisAutocomplete'
 import PatientAttachmentsTab, { type PatientAttachmentsTabHandle } from '../components/PatientAttachmentsTab'
+import VoiceRecorder from '../components/VoiceRecorder'
+import SickLeaveCertificate from '../components/SickLeaveCertificate'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
+import { printSection, escapeHtml } from '../utils/printSection'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -35,6 +38,8 @@ const T = {
     vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'سكر الدم (mg/dL)', heartRate: 'نبضات القلب (bpm)', respiratoryRate: 'معدل التنفس (نفس/د)',
     lastVitals: 'قياس الزيارة السابقة',
+    print: '🖨️', report: '📄 تقرير حالة المريض', reportNotes: 'ملاحظات وتقييم إضافي',
+    reportCompiledTitle: 'الملخص', sickLeave: '🩺 إجازة مرضية', noContentToPrint: 'لا يوجد محتوى للطباعة بعد',
   },
   en: {
     back: 'Back', loading: 'Loading...',
@@ -52,6 +57,8 @@ const T = {
     vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'Blood Sugar (mg/dL)', heartRate: 'Heart Rate (bpm)', respiratoryRate: 'Respiratory Rate (breaths/min)',
     lastVitals: 'Previous Visit Reading',
+    print: '🖨️', report: '📄 Patient Status Report', reportNotes: 'Additional Notes & Assessment',
+    reportCompiledTitle: 'Summary', sickLeave: '🩺 Sick Leave', noContentToPrint: 'Nothing to print yet',
   },
 }
 
@@ -89,7 +96,8 @@ export default function VisitWorkspace() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [existingNoteId, setExistingNoteId] = useState<string | null>(null)
 
-  const [form, setForm] = useState({ diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '', bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '' })
+  const [form, setForm] = useState({ diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '', bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', reportNotes: '' })
+  const [showSickLeave, setShowSickLeave] = useState(false)
   const [templates, setTemplates] = useState<VisitTemplate[]>([])
   const [templateId, setTemplateId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -152,6 +160,7 @@ export default function VisitWorkspace() {
             bloodSugar: noteRes.data.bloodSugar?.toString() ?? '',
             heartRate: noteRes.data.heartRate?.toString() ?? '',
             respiratoryRate: noteRes.data.respiratoryRate?.toString() ?? '',
+            reportNotes: noteRes.data.reportNotes || '',
           })
         }
 
@@ -205,6 +214,22 @@ export default function VisitWorkspace() {
     } catch { /* ما نوقف الشغل لو فشل التحديث — الطبيب يقدر يكمل تسجيل الزيارة عادي */ }
   }
 
+  // ✅ طباعة قسم واحد بمعزل عن باقي الصفحة (تشخيص/وصفة/ملاحظات/تقرير) — نافذة
+  // منفصلة فيها ترويسة العيادة بس، بدون أي تداخل مع شكل الصفحة الأساسية
+  const handlePrintSection = (title: string, text: string) => {
+    if (!text.trim()) { setError(t.noContentToPrint); return }
+    let clinicId = ''
+    try { clinicId = JSON.parse(localStorage.getItem('user') || '{}').clinicId || '' } catch { /* ignore */ }
+    if (!clinicId) return
+    printSection({
+      clinicId,
+      title,
+      isAr,
+      bodyHtml: escapeHtml(text).replace(/\n/g, '<br/>'),
+      doctorName: appointment?.doctorName,
+    })
+  }
+
   const handleSave = async () => {
     if (!appointment) return
     if (!appointment.checkInTime) { setError(t.mustCheckInFirst); return }
@@ -223,6 +248,7 @@ export default function VisitWorkspace() {
         bloodSugar: form.bloodSugar ? parseFloat(form.bloodSugar) : null,
         heartRate: form.heartRate ? parseInt(form.heartRate) : null,
         respiratoryRate: form.respiratoryRate ? parseInt(form.respiratoryRate) : null,
+        reportNotes: form.reportNotes || null,
       }
       if (existingNoteId) {
         await api.put(`/visitnotes/${existingNoteId}`, payload)
@@ -395,7 +421,11 @@ export default function VisitWorkspace() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.diagnosis}</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.diagnosis}</label>
+                  <button type="button" onClick={() => handlePrintSection(t.diagnosis, form.diagnosis)} title={t.diagnosis}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+                </div>
                 <DiagnosisAutocomplete
                   value={form.diagnosis}
                   onChange={v => setForm({ ...form, diagnosis: v })}
@@ -404,7 +434,11 @@ export default function VisitWorkspace() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.prescription}</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.prescription}</label>
+                  <button type="button" onClick={() => handlePrintSection(t.prescription, form.prescription)} title={t.prescription}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+                </div>
                 <textarea value={form.prescription} onChange={e => setForm({ ...form, prescription: e.target.value })} rows={3}
                   style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical' }} />
               </div>
@@ -441,17 +475,65 @@ export default function VisitWorkspace() {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.notes}</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.notes}</label>
+                <button type="button" onClick={() => handlePrintSection(t.notes, form.notes)} title={t.notes}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+              </div>
               <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2}
                 style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical' }} />
+              <VoiceRecorder patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="notes-audio" />
             </div>
 
-            <button onClick={handleSave} disabled={saving || !appointment?.checkInTime}
-              style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '11px 26px', fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-              {saving ? t.saving : `💾 ${t.save}`}
-            </button>
+            {/* ✅ تقرير حالة المريض — ملخص مُجمّع من بيانات الزيارة الحالية +
+                إضافة الطبيب الحرة (نص أو تسجيل صوتي) فوقه */}
+            <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.report}</label>
+                <button type="button" onClick={() => handlePrintSection(t.report, [
+                  `${t.patient}: ${appointment.patientName}`,
+                  form.diagnosis && `${t.diagnosis}: ${form.diagnosis}`,
+                  form.prescription && `${t.prescription}: ${form.prescription}`,
+                  (form.bloodPressure || form.bloodSugar || form.heartRate || form.respiratoryRate) &&
+                    `${t.vitals}: ${[form.bloodPressure && `BP ${form.bloodPressure}`, form.bloodSugar && `Sugar ${form.bloodSugar}`, form.heartRate && `HR ${form.heartRate}`, form.respiratoryRate && `RR ${form.respiratoryRate}`].filter(Boolean).join(' · ')}`,
+                  form.reportNotes && `${t.reportNotes}: ${form.reportNotes}`,
+                ].filter(Boolean).join('\n\n'))} title={t.report}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+              </div>
+
+              <div style={{ fontSize: 12.5, color: TEXT_DARK, lineHeight: 1.7, marginBottom: 10 }}>
+                <strong>{t.reportCompiledTitle}:</strong>{' '}
+                {[form.diagnosis, form.prescription].filter(Boolean).join(' — ') || '—'}
+              </div>
+
+              <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.reportNotes}</label>
+              <textarea value={form.reportNotes} onChange={e => setForm({ ...form, reportNotes: e.target.value })} rows={3}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', background: CARD_BG }} />
+              <VoiceRecorder patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="report-audio" />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={handleSave} disabled={saving || !appointment?.checkInTime}
+                style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '11px 26px', fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? t.saving : `💾 ${t.save}`}
+              </button>
+              <button type="button" onClick={() => setShowSickLeave(true)}
+                style={{ background: CARD_BG, color: TEXT_DARK, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {t.sickLeave}
+              </button>
+            </div>
           </div>
         </div>
+
+        {showSickLeave && (
+          <SickLeaveCertificate
+            patientName={appointment.patientName}
+            doctorName={appointment.doctorName}
+            defaultReason={form.diagnosis}
+            lang={lang}
+            onClose={() => setShowSickLeave(false)}
+          />
+        )}
 
         {/* ✅ مرفقات هذي الزيارة — نفس مكوّن ملف المريض، بس مربوط بهذا الموعد بالذات */}
         <div style={{ marginBottom: 20, opacity: appointment?.checkInTime ? 1 : 0.5, pointerEvents: appointment?.checkInTime ? 'auto' : 'none' }}>
