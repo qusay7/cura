@@ -88,6 +88,7 @@ const T = {
   treatments: 'العلاجات',
   visitnotes: 'ملاحظات الزيارة',
   treatmenttemplates: 'قوالب الزيارات',
+  diagnosistemplates: 'اقتراحات التشخيص والأدوية',
   daily: 'الجدول اليومي',
 },
 
@@ -250,6 +251,7 @@ const T = {
       staff: 'Staff',
       treatments: 'Treatments',
       treatmenttemplates: 'Treatment Templates',
+      diagnosistemplates: 'Diagnosis & Medication Suggestions',
       visitnotes: 'Visit Notes',
       daily: 'Daily Schedule',
     },
