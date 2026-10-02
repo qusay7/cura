@@ -49,7 +49,13 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
 
   const fetchSaved = () => {
     api.get(`/attachments/patient/${patientId}`)
-      .then(res => setSaved((res.data as any[]).filter(a => a.category === category && a.appointmentId === appointmentId)))
+      .then(res => {
+        const items = (res.data as any[]).filter(a => a.category === category && a.appointmentId === appointmentId)
+        setSaved(items)
+        // ✅ نجيب رابط التشغيل فوراً لكل تسجيل سابق — بدون ما يحتاج المستخدم
+        // يضغط زر إضافي الأول، يفتح التسجيل مباشرة جاهز للاستماع
+        items.forEach(item => loadPlayUrl(item.id))
+      })
       .catch(() => {})
   }
 
@@ -165,13 +171,13 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
           <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>🎧 {t.savedRecordings} ({saved.length})</span>
           {saved.map(rec => (
             <div key={rec.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 10.5, color: TEXT_MUTED, whiteSpace: 'nowrap' }}>
+                {new Date(rec.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })}
+              </span>
               {playUrls[rec.id] ? (
                 <audio controls src={playUrls[rec.id]} style={{ height: 30 }} />
               ) : (
-                <button type="button" onClick={() => loadPlayUrl(rec.id)}
-                  style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 10px', fontSize: 11, color: PRIMARY, cursor: 'pointer' }}>
-                  ▶️ {new Date(rec.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })}
-                </button>
+                <span style={{ fontSize: 11, color: TEXT_MUTED }}>⏳</span>
               )}
             </div>
           ))}
