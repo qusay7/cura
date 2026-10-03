@@ -139,6 +139,22 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
     }
   }
 
+  // ✅ حل إضافي لنفس مشكلة المدة: بعض نسخ Chrome بتكتب المدة كـ Infinity (علامة
+  // "بث مباشر") بدل ما تخليها مفقودة، وهاي الحالة ما بتكتشفها مكتبة التصحيح
+  // بالأعلى. بنفرض على المتصفح يحسب المدة الحقيقية بالقفز لنهاية وهمية وبعدين
+  // الرجوع لـ 0 — حل معروف لهذا الخلل بالذات بمتصفحات Chromium
+  const fixInfiniteDuration = (e: React.SyntheticEvent<HTMLAudioElement>) => {
+    const audio = e.currentTarget
+    if (audio.duration === Infinity || isNaN(audio.duration)) {
+      audio.currentTime = 1e101
+      const onTimeUpdate = () => {
+        audio.currentTime = 0
+        audio.removeEventListener('timeupdate', onTimeUpdate)
+      }
+      audio.addEventListener('timeupdate', onTimeUpdate)
+    }
+  }
+
   const loadPlayUrl = async (id: string) => {
     if (playUrls[id]) return
     try {
@@ -164,7 +180,7 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
         )}
         {audioBlob && previewUrl && !recording && (
           <>
-            <audio controls src={previewUrl} style={{ height: 32 }} />
+            <audio controls src={previewUrl} onLoadedMetadata={fixInfiniteDuration} style={{ height: 32 }} />
             <button type="button" onClick={saveRecording} disabled={saving}
               style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? t.saving : t.save}
@@ -188,7 +204,7 @@ export default function VoiceRecorder({ patientId, appointmentId, lang, category
                 {new Date(rec.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })}
               </span>
               {playUrls[rec.id] ? (
-                <audio controls src={playUrls[rec.id]} style={{ height: 30 }} />
+                <audio controls src={playUrls[rec.id]} onLoadedMetadata={fixInfiniteDuration} style={{ height: 30 }} />
               ) : (
                 <span style={{ fontSize: 11, color: TEXT_MUTED }}>⏳</span>
               )}
