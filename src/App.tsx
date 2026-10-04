@@ -27,6 +27,10 @@ const Users               = lazy(() => import('./pages/Users'))
 const Departments         = lazy(() => import('./pages/Departments'))
 const TreatmentTemplates  = lazy(() => import('./pages/TreatmentTemplates'))
 const DiagnosisTemplates  = lazy(() => import('./pages/DiagnosisTemplates'))
+const Procedures          = lazy(() => import('./pages/Procedures'))
+const EmergencyCheckIn    = lazy(() => import('./pages/EmergencyCheckIn'))
+const EmergencyDashboard  = lazy(() => import('./pages/EmergencyDashboard'))
+const EmergencyPatientDetail = lazy(() => import('./pages/EmergencyPatientDetail'))
 const ClinicPermissions   = lazy(() => import('./pages/ClinicPermissions'))
 const Reports             = lazy(() => import('./pages/Reports'))
 const SuperAdminClinics   = lazy(() => import('./pages/SuperAdmin/Clinics'))
@@ -206,6 +210,30 @@ function App() {
         <Route path="/diagnosis-templates" element={
           <ProtectedRoute permission="departments.manage">
             <Layout><DiagnosisTemplates /></Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* ── كتالوج الإجراءات ── */}
+        <Route path="/procedures" element={
+          <ProtectedRoute permission="departments.manage">
+            <Layout><Procedures /></Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* ── الطوارئ ── */}
+        <Route path="/emergency/check-in" element={
+          <ProtectedRoute permission="queue.manage">
+            <Layout><EmergencyCheckIn /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/emergency/dashboard" element={
+          <ProtectedRoute permission="queue.manage">
+            <Layout><EmergencyDashboard /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/emergency/:id" element={
+          <ProtectedRoute permission="queue.manage">
+            <Layout><EmergencyPatientDetail /></Layout>
           </ProtectedRoute>
         } />
 

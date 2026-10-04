@@ -6,6 +6,7 @@ import DiagnosisAutocomplete from '../components/DiagnosisAutocomplete'
 import PatientAttachmentsTab, { type PatientAttachmentsTabHandle } from '../components/PatientAttachmentsTab'
 import VoiceRecorder from '../components/VoiceRecorder'
 import SickLeaveCertificate from '../components/SickLeaveCertificate'
+import ProceduresPicker from '../components/ProceduresPicker'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
 import { printSection, escapeHtml } from '../utils/printSection'
@@ -511,6 +512,8 @@ export default function VisitWorkspace() {
                 style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', background: CARD_BG }} />
               <VoiceRecorder patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="report-audio" />
             </div>
+
+            {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} />}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={handleSave} disabled={saving || !appointment?.checkInTime}

@@ -7,6 +7,7 @@ import { hasPermission } from '../utils/permissions'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import SearchableSelect from '../components/SearchableSelect'
+import ProceduresPicker from '../components/ProceduresPicker'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
@@ -523,6 +524,8 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   const [visitTemplates, setVisitTemplates] = useState<{ id: string; name: string; nameEn: string | null; firstVisitPrice: number | null; followUpPrice: number | null }[]>([])
   // ✅ قائمة المواعيد ما بترجّع templateId — نجيبه من سجل الموعد نفسه
   const [apptTemplateId, setApptTemplateId] = useState('')
+  // ✅ إجمالي الإجراءات (ProceduresPicker) — يُضاف لإجمالي الفاتورة عشان الموظف يشوف ويحصّل المبلغ كامل
+  const [proceduresTotal, setProceduresTotal] = useState(0)
 
   useEffect(() => {
     api.get('/treatmentplans/templates')
@@ -630,7 +633,7 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   }, [visitTemplates, apptTemplateId])
 
   const totals = (() => {
-    const totalAmount = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0)
+    const totalAmount = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0) + proceduresTotal
     // ✅ نتجاهل قيمة التأمين لأي بند غير مشمول، حتى لو فيه رقم قديم بالحقل (حماية إضافية)
     const totalInsurance = items.reduce((sum, it) => sum + itemInsuranceAmount(it), 0)
     const patientOwes = Math.max(0, totalAmount - totalInsurance)
@@ -922,6 +925,10 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
             </>
           )}
         </div>
+
+        {mode === 'checkout' && (
+          <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} onTotalChange={setProceduresTotal} />
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <div>

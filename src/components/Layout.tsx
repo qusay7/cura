@@ -493,7 +493,15 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
         { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage', superAdminOnly: false, feature: 'multipleDepartments' as const },
         { path: '/treatment-templates', labelAr: 'قوالب الزيارة', labelEn: 'Visit Templates', icon: 'ti-clipboard-list', permission: 'treatmenttemplates.manage', superAdminOnly: false },
         { path: '/diagnosis-templates', labelAr: 'اقتراحات التشخيص والأدوية', labelEn: 'Diagnosis & Medication Suggestions', icon: 'ti-pill', permission: 'diagnosistemplates.manage', superAdminOnly: false },
+        { path: '/procedures', labelAr: 'كتالوج الإجراءات', labelEn: 'Procedures Catalog', icon: 'ti-syringe', permission: 'procedures.manage', superAdminOnly: false },
         { path: '/insurance', labelAr: 'التأمين الصحي', labelEn: 'Health Insurance', icon: 'ti-heart-handshake', permission: 'insurance.view', superAdminOnly: false },
+      ],
+    },
+    {
+      key: 'emergency', labelAr: 'الطوارئ', labelEn: 'Emergency', icon: 'ti-ambulance',
+      items: [
+        { path: '/emergency/check-in', labelAr: 'تسجيل دخول', labelEn: 'Check-In', icon: 'ti-ambulance', permission: 'queue.manage', superAdminOnly: false },
+        { path: '/emergency/dashboard', labelAr: 'لوحة الطوارئ', labelEn: 'Emergency Dashboard', icon: 'ti-urgent', permission: 'queue.manage', superAdminOnly: false },
       ],
     },
     {
