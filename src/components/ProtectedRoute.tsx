@@ -4,7 +4,8 @@ import { hasPermission, getRole } from '../utils/permissions'
 
 interface Props {
   children: ReactNode
-  permission?: string
+  /** مصفوفة = يكفي إنه يملك أي واحدة منهم (OR)، مش كلهم */
+  permission?: string | string[]
   role?: string
 }
 
@@ -19,8 +20,11 @@ export default function ProtectedRoute({ children, permission, role }: Props) {
     return <Navigate to="/dashboard" replace />
   }
 
-  if (permission && !hasPermission(permission)) {
-    return <Navigate to="/dashboard" replace />
+  if (permission) {
+    const required = Array.isArray(permission) ? permission : [permission]
+    if (!required.some(p => hasPermission(p))) {
+      return <Navigate to="/dashboard" replace />
+    }
   }
 
   return <>{children}</>

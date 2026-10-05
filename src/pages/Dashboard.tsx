@@ -425,8 +425,9 @@ useEffect(() => {
           <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.welcome} {user.fullName ? `${user.fullName} 👋` : '👋'}</p>
         </div>
 
-        {/* ✅ دخول سريع للطوارئ من الصفحة الرئيسية — بارز وبلون مختلف عشان يُلاحظ فوراً */}
-        {hasPermission('queue.manage') && (
+        {/* ✅ دخول سريع للطوارئ من الصفحة الرئيسية — بارز وبلون مختلف عشان يُلاحظ فوراً.
+            queue.manage تبقى مقبولة كـ fallback لأي حساب فُعّلت له قبل فصل صلاحيات الطوارئ */}
+        {(hasPermission('emergency.checkin') || hasPermission('emergency.manage') || hasPermission('queue.manage')) && (
           <div onClick={() => navigate('/emergency/dashboard')}
             style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 18, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

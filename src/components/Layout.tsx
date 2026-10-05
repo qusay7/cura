@@ -500,8 +500,8 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     {
       key: 'emergency', labelAr: 'الطوارئ', labelEn: 'Emergency', icon: 'ti-ambulance',
       items: [
-        { path: '/emergency/check-in', labelAr: 'تسجيل دخول', labelEn: 'Check-In', icon: 'ti-ambulance', permission: 'queue.manage', superAdminOnly: false },
-        { path: '/emergency/dashboard', labelAr: 'لوحة الطوارئ', labelEn: 'Emergency Dashboard', icon: 'ti-urgent', permission: 'queue.manage', superAdminOnly: false },
+        { path: '/emergency/check-in', labelAr: 'تسجيل دخول', labelEn: 'Check-In', icon: 'ti-ambulance', permission: ['emergency.checkin', 'emergency.manage', 'queue.manage'], superAdminOnly: false },
+        { path: '/emergency/dashboard', labelAr: 'لوحة الطوارئ', labelEn: 'Emergency Dashboard', icon: 'ti-urgent', permission: ['emergency.checkin', 'emergency.manage', 'queue.manage'], superAdminOnly: false },
       ],
     },
     {
@@ -530,10 +530,13 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     },
   ]
 
-  const canSee = (item: { path: string; permission: string | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' }) => {
+  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
-    if (!(item.permission === null || hasPermission(item.permission))) return false
+    if (item.permission !== null) {
+      const required = Array.isArray(item.permission) ? item.permission : [item.permission]
+      if (!required.some(p => hasPermission(p))) return false
+    }
     // ✅ نخفيها بس لو تأكدنا إنها غير مشمولة بالخطة (false صراحة) — قبل ما يرجع
     // رد /dashboard تبقى ظاهرة عشان ما تومض (تختفي وتظهر) بأول تحميل للصفحة
     if (item.feature === 'multipleDepartments' && hasMultipleDepartments === false) return false

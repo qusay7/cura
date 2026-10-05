@@ -220,19 +220,20 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* ── الطوارئ ── */}
+        {/* ── الطوارئ — تسجيل الدخول صلاحية منفصلة عن إدارة الحالة كاملة، عشان
+            الاستقبال يقدر يسجّل دخول مرضى بدون صلاحية متابعة/خروج المريض ── */}
         <Route path="/emergency/check-in" element={
-          <ProtectedRoute permission="queue.manage">
+          <ProtectedRoute permission={['emergency.checkin', 'emergency.manage', 'queue.manage']}>
             <Layout><EmergencyCheckIn /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/emergency/dashboard" element={
-          <ProtectedRoute permission="queue.manage">
+          <ProtectedRoute permission={['emergency.checkin', 'emergency.manage', 'queue.manage']}>
             <Layout><EmergencyDashboard /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/emergency/:id" element={
-          <ProtectedRoute permission="queue.manage">
+          <ProtectedRoute permission={['emergency.manage', 'queue.manage']}>
             <Layout><EmergencyPatientDetail /></Layout>
           </ProtectedRoute>
         } />

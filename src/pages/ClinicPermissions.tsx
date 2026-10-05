@@ -89,6 +89,8 @@ const T = {
   visitnotes: 'ملاحظات الزيارة',
   treatmenttemplates: 'قوالب الزيارات',
   diagnosistemplates: 'اقتراحات التشخيص والأدوية',
+  procedures: 'كتالوج الإجراءات',
+  emergency: 'الطوارئ',
   daily: 'الجدول اليومي',
 },
 
@@ -162,6 +164,9 @@ const T = {
       'queue.view': 'عرض قائمة الانتظار',
       'queue.manage': 'إدارة قائمة الانتظار',
 
+      'emergency.checkin': 'تسجيل دخول الطوارئ',
+      'emergency.manage': 'إدارة لوحة ومتابعة الطوارئ',
+
       'visits.view': 'عرض الزيارات',
       'visits.create': 'إضافة زيارة',
       'visits.edit': 'تعديل زيارة',
@@ -185,6 +190,7 @@ const T = {
 
       'treatmenttemplates.manage': 'إدارة قوالب الزيارات',
       'diagnosistemplates.manage': 'إدارة اقتراحات التشخيص والأدوية',
+      'procedures.manage': 'إدارة كتالوج الإجراءات',
       'treatmenttemplates.create': 'إضافة قالب زيارة',
       'treatmenttemplates.edit': 'تعديل قالب زيارة',
       'treatmenttemplates.delete': 'حذف قالب زيارة',
@@ -253,6 +259,8 @@ const T = {
       treatments: 'Treatments',
       treatmenttemplates: 'Treatment Templates',
       diagnosistemplates: 'Diagnosis & Medication Suggestions',
+      procedures: 'Procedures Catalog',
+      emergency: 'Emergency',
       visitnotes: 'Visit Notes',
       daily: 'Daily Schedule',
     },
@@ -326,6 +334,9 @@ const T = {
       'queue.view': 'View Queue',
       'queue.manage': 'Manage Queue',
 
+      'emergency.checkin': 'Emergency Check-In',
+      'emergency.manage': 'Manage Emergency Dashboard & Cases',
+
       'visits.view': 'View Visits',
       'visits.create': 'Add Visit',
       'visits.edit': 'Edit Visit',
@@ -349,6 +360,7 @@ const T = {
 
       'treatmenttemplates.manage': 'Manage Treatment Templates',
       'diagnosistemplates.manage': 'Manage Diagnosis & Medication Suggestions',
+      'procedures.manage': 'Manage Procedures Catalog',
       'treatmenttemplates.create': 'Create Treatment Template',
       'treatmenttemplates.edit': 'Edit Treatment Template',
       'treatmenttemplates.delete': 'Delete Treatment Template',
