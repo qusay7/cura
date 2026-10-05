@@ -9,10 +9,11 @@ interface ProceduresPickerProps {
   parentId: string
   lang: 'ar' | 'en'
   onTotalChange?: (total: number) => void
+  onItemsChange?: (items: AddedItem[]) => void
 }
 
 interface CatalogItem { id: string; name: string; nameEn: string | null; defaultPrice: number | null }
-interface AddedItem { id: string; procedureId: string | null; name: string; price: number | null; createdAt: string }
+interface AddedItem { id: string; procedureId: string | null; name: string; price: number | null; createdAt: string; doctorName?: string | null }
 
 const T = {
   ar: {
@@ -28,7 +29,7 @@ const T = {
 // ✅ يُستخدم بزيارة موعد عادي أو حالة طوارئ (parentType يحدد مسار الـ API) —
 // سعر كل إجراء يبدأ بالسعر الافتراضي من الكتالوج، والطبيب يعدّله أو يصفّره
 // بحرية قبل الإضافة؛ الإزالة بعد الإضافة متاحة دايماً
-export default function ProceduresPicker({ parentType, parentId, lang, onTotalChange }: ProceduresPickerProps) {
+export default function ProceduresPicker({ parentType, parentId, lang, onTotalChange, onItemsChange }: ProceduresPickerProps) {
   const t = T[lang]
   const isAr = lang === 'ar'
   const basePath = parentType === 'appointment' ? `/appointments/${parentId}` : `/queue/${parentId}`
@@ -90,6 +91,14 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total])
 
+  useEffect(() => {
+    onItemsChange?.(items)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items])
+
+  const formatTime = (iso: string) =>
+    new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).toLocaleString(isAr ? 'ar-SA' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
+
   return (
     <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
       <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.title}</label>
@@ -114,7 +123,12 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {items.map(item => (
             <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '7px 12px' }}>
-              <span style={{ fontSize: 12.5, color: TEXT_DARK }}>{item.name}</span>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: 12.5, color: TEXT_DARK }}>{item.name}</span>
+                <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
+                  🕒 {formatTime(item.createdAt)}{item.doctorName ? ` · 👨‍⚕️ ${item.doctorName}` : ''}
+                </div>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>
                   {item.price != null ? `${item.price} ${getCurrencySymbol(lang)}` : '—'}

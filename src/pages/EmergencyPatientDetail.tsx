@@ -41,6 +41,11 @@ interface TimelineEntry {
   doctorName?: string | null
 }
 
+interface ProcedureTimelineItem { id: string; procedureId: string | null; name: string; price: number | null; createdAt: string; doctorName?: string | null }
+interface AttachmentTimelineItem { id: string; fileName: string; category: string | null; createdAt: string; isImage: boolean; queueEntryId: string | null }
+
+type Delta = { systolic?: number; sugar?: number; heart?: number; resp?: number }
+
 const T = {
   ar: {
     back: '← لوحة الطوارئ',
@@ -48,7 +53,8 @@ const T = {
     discharge: '🚪 تسجيل خروج المريض', discharging: 'جارٍ التسجيل...',
     dischargeConfirm: 'هل أنت متأكد من تسجيل خروج هذا المريض؟ سيُغلق ملفه ويختفي من لوحة الطوارئ.',
     discharged: 'تم تسجيل الخروج', dischargedAtLabel: 'تاريخ الخروج',
-    timeline: '📋 السجل الزمني', noEntries: 'لا توجد سجلات بعد',
+    fullTimeline: '📈 السجل الزمني الكامل للحالة', timelineHint: 'كل قراءة وإجراء ومرفق، بالأحدث أولاً — لمتابعة تطور حالة المريض',
+    noEntries: 'لا توجد سجلات بعد',
     vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'سكر الدم', heartRate: 'النبض', respiratoryRate: 'التنفس',
     diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات المطلوبة', notes: 'ملاحظات إضافية',
@@ -56,7 +62,8 @@ const T = {
     sickLeave: '🩺 إجازة مرضية', print: '🖨️', noContentToPrint: 'لا يوجد محتوى للطباعة بعد',
     save: '💾 حفظ السجل', saving: 'جارٍ الحفظ...',
     errorOccurred: 'حدث خطأ', loading: 'جارٍ التحميل...', notFound: 'الحالة غير موجودة',
-    patient: 'المريض',
+    patient: 'المريض', reading: '🩺 قراءة', procedure: '💉 إجراء', attachment: '📎 مرفق', unknown: 'غير معروف',
+    xray: 'أشعة', lab: 'تحليل مخبري', other: 'أخرى',
   },
   en: {
     back: '← Emergency Dashboard',
@@ -64,7 +71,8 @@ const T = {
     discharge: '🚪 Discharge Patient', discharging: 'Discharging...',
     dischargeConfirm: 'Are you sure you want to discharge this patient? This closes their file and removes it from the ER dashboard.',
     discharged: 'Discharged', dischargedAtLabel: 'Discharged at',
-    timeline: '📋 Timeline', noEntries: 'No entries yet',
+    fullTimeline: '📈 Full Case Timeline', timelineHint: 'Every reading, procedure and attachment, newest first — to track how the patient is progressing',
+    noEntries: 'No entries yet',
     vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'Blood Sugar', heartRate: 'Heart Rate', respiratoryRate: 'Resp. Rate',
     diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Requested Tests', notes: 'Additional Notes',
@@ -72,11 +80,40 @@ const T = {
     sickLeave: '🩺 Sick Leave', print: '🖨️', noContentToPrint: 'Nothing to print yet',
     save: '💾 Save Entry', saving: 'Saving...',
     errorOccurred: 'An error occurred', loading: 'Loading...', notFound: 'Case not found',
-    patient: 'Patient',
+    patient: 'Patient', reading: '🩺 Reading', procedure: '💉 Procedure', attachment: '📎 Attachment', unknown: 'Unknown',
+    xray: 'X-Ray', lab: 'Lab Result', other: 'Other',
   },
 }
 
 const emptyEntryForm = { bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', diagnosis: '', prescription: '', tests: '', notes: '', reportNotes: '' }
+
+// ✅ "140/90" → 140 — نقارن الانقباضي فقط بين قراءة وأللي قبلها، كفاية لإظهار الاتجاه
+const parseSystolic = (bp?: string | null): number | null => {
+  if (!bp) return null
+  const m = bp.match(/(\d+)/)
+  return m ? parseInt(m[1], 10) : null
+}
+
+// ✅ نحسب الفرق بين كل قراءة والقراءة الأقدم منها (بالترتيب التصاعدي) — هذا هو
+// "توثيق التغيّرات" اللي طلبه المستخدم: يشوف الضغط نازل تدريجياً بعد الإجراءات مثلاً
+const computeDeltas = (entriesAsc: TimelineEntry[]): Map<string, Delta> => {
+  const map = new Map<string, Delta>()
+  let prevSys: number | null = null, prevSugar: number | null = null, prevHeart: number | null = null, prevResp: number | null = null
+  for (const n of entriesAsc) {
+    const sys = parseSystolic(n.bloodPressure)
+    const d: Delta = {}
+    if (sys != null && prevSys != null) d.systolic = sys - prevSys
+    if (n.bloodSugar != null && prevSugar != null) d.sugar = n.bloodSugar - prevSugar
+    if (n.heartRate != null && prevHeart != null) d.heart = n.heartRate - prevHeart
+    if (n.respiratoryRate != null && prevResp != null) d.resp = n.respiratoryRate - prevResp
+    map.set(n.id, d)
+    if (sys != null) prevSys = sys
+    if (n.bloodSugar != null) prevSugar = n.bloodSugar
+    if (n.heartRate != null) prevHeart = n.heartRate
+    if (n.respiratoryRate != null) prevResp = n.respiratoryRate
+  }
+  return map
+}
 
 export default function EmergencyPatientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -87,6 +124,8 @@ export default function EmergencyPatientDetail() {
 
   const [entry, setEntry] = useState<QueueDetail | null>(null)
   const [timeline, setTimeline] = useState<TimelineEntry[]>([])
+  const [procedureItems, setProcedureItems] = useState<ProcedureTimelineItem[]>([])
+  const [attachments, setAttachments] = useState<AttachmentTimelineItem[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -105,12 +144,15 @@ export default function EmergencyPatientDetail() {
   const fetchAll = useCallback(async () => {
     if (!id) return
     try {
-      const [entryRes, timelineRes] = await Promise.all([
-        api.get(`/queue/${id}`),
-        api.get(`/visitnotes/queue/${id}/timeline`),
-      ])
+      const entryRes = await api.get(`/queue/${id}`)
       setEntry(entryRes.data)
+
+      const [timelineRes, attachmentsRes] = await Promise.all([
+        api.get(`/visitnotes/queue/${id}/timeline`),
+        api.get(`/attachments/patient/${entryRes.data.patientId}`).catch(() => ({ data: [] })),
+      ])
       setTimeline(timelineRes.data)
+      setAttachments((attachmentsRes.data as AttachmentTimelineItem[]).filter(a => a.queueEntryId === id))
     } catch {
       setNotFound(true)
     } finally {
@@ -179,6 +221,15 @@ export default function EmergencyPatientDetail() {
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 11px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG, boxSizing: 'border-box' }
 
+  const renderDelta = (d?: number) => {
+    if (d == null || d === 0) return null
+    const up = d > 0
+    return <span style={{ color: up ? '#B8892A' : '#3B82F6', fontWeight: 700, fontFamily: "'Inter',sans-serif" }}> {up ? '↑' : '↓'}{Math.abs(d)}</span>
+  }
+
+  const categoryLabel = (c: string | null) => c === 'xray' ? t.xray : c === 'lab' ? t.lab : t.other
+  const categoryIcon = (c: string | null) => c === 'xray' ? '🩻' : c === 'lab' ? '🧪' : '📄'
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: TEXT_MUTED }}>{t.loading}</div>
   )
@@ -188,6 +239,23 @@ export default function EmergencyPatientDetail() {
   )
 
   const isDischarged = entry.status === 'completed' && !!entry.dischargedAt
+
+  // ✅ الفرق محسوب بالترتيب التصاعدي (الأقدم أول) عشان كل قراءة تُقارَن باللي قبلها فعلياً
+  const deltaMap = computeDeltas([...timeline].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()))
+
+  // ✅ دمج القراءات + الإجراءات + المرفقات بقصة زمنية واحدة، بالأحدث أول — هذا هو
+  // "التغيّرات اللي حدثت لحالة المريض" اللي طلبها المستخدم بالضبط: شوف إجراء بوقت
+  // معيّن، وبعده قراءة تحسّنت
+  type UnifiedItem =
+    | { kind: 'note'; timestamp: string; note: TimelineEntry }
+    | { kind: 'procedure'; timestamp: string; procedure: ProcedureTimelineItem }
+    | { kind: 'attachment'; timestamp: string; attachment: AttachmentTimelineItem }
+
+  const unified: UnifiedItem[] = [
+    ...timeline.map(n => ({ kind: 'note' as const, timestamp: n.createdAt, note: n })),
+    ...procedureItems.map(p => ({ kind: 'procedure' as const, timestamp: p.createdAt, procedure: p })),
+    ...attachments.map(a => ({ kind: 'attachment' as const, timestamp: a.createdAt, attachment: a })),
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
   return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif", background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
@@ -247,7 +315,8 @@ export default function EmergencyPatientDetail() {
 
         {!isDischarged && (
           <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 18, padding: 20, marginBottom: 18 }}>
-            {/* 🩺 العلامات الحيوية — أول شي يشوفه الطبيب عند الدخول */}
+            {/* 🩺 العلامات الحيوية — أول شي يشوفه الطبيب، وكل حفظ يسجّل قراءة جديدة
+                (ما بيستبدل القديمة) عشان تقدر تراقب المريض بأكثر من قراءة بالوقت */}
             <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.vitals}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
@@ -270,13 +339,13 @@ export default function EmergencyPatientDetail() {
               </div>
             </div>
 
-            {/* 📎 صور الأشعة والمرفقات — مربوطة بهذي الحالة بالذات */}
+            {/* 📎 صور الأشعة والمرفقات — تتكرر بأي وقت، كلها مربوطة بهذي الحالة بالذات */}
             <div style={{ marginBottom: 16 }}>
               <PatientAttachmentsTab patientId={entry.patientId} lang={lang} queueEntryId={entry.id} />
             </div>
 
-            {/* 💉 الإجراءات */}
-            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} />
+            {/* 💉 الإجراءات — تتكرر بأي وقت، كل واحد موثّق بوقته وطبيبه */}
+            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} onItemsChange={setProcedureItems} />
 
             {/* 🩺 التشخيص والوصفة — بالنهاية، كل واحد بزر طباعة مستقل */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14, marginTop: 16 }}>
@@ -362,36 +431,64 @@ export default function EmergencyPatientDetail() {
           />
         )}
 
-        {/* Timeline */}
+        {/* السجل الزمني الكامل — دمج القراءات + الإجراءات + المرفقات بقصة واحدة */}
         <div>
-          <label style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, display: 'block', marginBottom: 10 }}>{t.timeline}</label>
-          {timeline.length === 0 ? (
+          <label style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, display: 'block', marginBottom: 2 }}>{t.fullTimeline}</label>
+          <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '0 0 10px' }}>{t.timelineHint}</p>
+
+          {unified.length === 0 ? (
             <p style={{ fontSize: 12.5, color: TEXT_MUTED, fontStyle: 'italic' }}>{t.noEntries}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {timeline.map(entry2 => (
-                <div key={entry2.id} style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: PRIMARY }}>👨‍⚕️ {entry2.doctorName || (isAr ? 'غير معروف' : 'Unknown')}</span>
-                    <span style={{ fontSize: 11, color: TEXT_MUTED, fontFamily: "'Inter',sans-serif" }}>{formatDateTime(entry2.createdAt)}</span>
-                  </div>
-                  {(entry2.bloodPressure || entry2.bloodSugar != null || entry2.heartRate != null || entry2.respiratoryRate != null) && (
-                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 8, fontSize: 12, color: TEXT_DARK, fontFamily: "'Inter',sans-serif" }}>
-                      {entry2.bloodPressure && <span>🩸 {entry2.bloodPressure}</span>}
-                      {entry2.bloodSugar != null && <span>🍬 {entry2.bloodSugar}</span>}
-                      {entry2.heartRate != null && <span>❤️ {entry2.heartRate}</span>}
-                      {entry2.respiratoryRate != null && <span>🫁 {entry2.respiratoryRate}</span>}
+              {unified.map(u => {
+                if (u.kind === 'note') {
+                  const n = u.note
+                  const d = deltaMap.get(n.id)
+                  return (
+                    <div key={`note-${n.id}`} style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: PRIMARY }}>{t.reading} · 👨‍⚕️ {n.doctorName || t.unknown}</span>
+                        <span style={{ fontSize: 11, color: TEXT_MUTED, fontFamily: "'Inter',sans-serif" }}>{formatDateTime(n.createdAt)}</span>
+                      </div>
+                      {(n.bloodPressure || n.bloodSugar != null || n.heartRate != null || n.respiratoryRate != null) && (
+                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 8, fontSize: 12, color: TEXT_DARK, fontFamily: "'Inter',sans-serif" }}>
+                          {n.bloodPressure && <span>🩸 {n.bloodPressure}{renderDelta(d?.systolic)}</span>}
+                          {n.bloodSugar != null && <span>🍬 {n.bloodSugar}{renderDelta(d?.sugar)}</span>}
+                          {n.heartRate != null && <span>❤️ {n.heartRate}{renderDelta(d?.heart)}</span>}
+                          {n.respiratoryRate != null && <span>🫁 {n.respiratoryRate}{renderDelta(d?.resp)}</span>}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12.5, color: TEXT_DARK, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {n.diagnosis && <div>🩺 {t.diagnosis}: {n.diagnosis}</div>}
+                        {n.prescription && <div>💊 {t.prescription}: {n.prescription}</div>}
+                        {n.tests && <div>🧪 {t.tests}: {n.tests}</div>}
+                        {n.notes && <div>📝 {n.notes}</div>}
+                        {n.reportNotes && <div>📄 {n.reportNotes}</div>}
+                      </div>
                     </div>
-                  )}
-                  <div style={{ fontSize: 12.5, color: TEXT_DARK, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {entry2.diagnosis && <div>🩺 {t.diagnosis}: {entry2.diagnosis}</div>}
-                    {entry2.prescription && <div>💊 {t.prescription}: {entry2.prescription}</div>}
-                    {entry2.tests && <div>🧪 {t.tests}: {entry2.tests}</div>}
-                    {entry2.notes && <div>📝 {entry2.notes}</div>}
-                    {entry2.reportNotes && <div>📄 {entry2.reportNotes}</div>}
+                  )
+                }
+                if (u.kind === 'procedure') {
+                  const p = u.procedure
+                  return (
+                    <div key={`proc-${p.id}`} style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: TEXT_DARK }}>
+                        {t.procedure}: {p.name}{p.doctorName ? ` · 👨‍⚕️ ${p.doctorName}` : ''}
+                      </span>
+                      <span style={{ fontSize: 11, color: TEXT_MUTED, fontFamily: "'Inter',sans-serif" }}>{formatDateTime(p.createdAt)}</span>
+                    </div>
+                  )
+                }
+                const a = u.attachment
+                return (
+                  <div key={`att-${a.id}`} style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: TEXT_DARK }}>
+                      {categoryIcon(a.category)} {categoryLabel(a.category)}: {a.fileName}
+                    </span>
+                    <span style={{ fontSize: 11, color: TEXT_MUTED, fontFamily: "'Inter',sans-serif" }}>{formatDateTime(a.createdAt)}</span>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
