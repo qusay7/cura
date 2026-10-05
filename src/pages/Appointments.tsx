@@ -8,6 +8,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import SearchableSelect from '../components/SearchableSelect'
 import ProceduresPicker from '../components/ProceduresPicker'
+import Modal from '../components/Modal'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
@@ -766,26 +767,33 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   const inputStyle: React.CSSProperties = { padding: '7px 9px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, fontFamily: "'Inter',sans-serif", color: TEXT_DARK, background: CARD_BG }
 
   return (
-    <div onClick={() => !saving && onClose()}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16, backdropFilter: 'blur(2px)' }}>
-      <div onClick={e => e.stopPropagation()} className="detail-card"
-        style={{ background: CARD_BG, borderRadius: 22, padding: 26, maxWidth: 460, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>
-              {mode === 'checkout' ? '🏁' : '💰'} {mode === 'checkout' ? t.quickCheckoutTitle : (isAr ? 'تسجيل دفعة' : 'Register Payment')}
-            </h3>
-            <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4, marginBottom: 0 }}>
-              {mode === 'checkout' ? t.quickCheckoutHint : (isAr ? 'الموعد مكتمل أصلاً — هذي بس تسجيل دفعة لاحقة' : 'The visit is already completed — this just registers a payment')}
-            </p>
-          </div>
-          <button onClick={onClose} disabled={saving}
-            style={{ background: '#F1F4F4', border: 'none', borderRadius: 10, width: 30, height: 30, flexShrink: 0, color: TEXT_MUTED, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer' }}>
-            ✕
+    <Modal open onClose={() => !saving && onClose()} isRtl={isAr} fullScreen contentMaxWidth={640}
+      title={<>
+        {mode === 'checkout' ? '🏁' : '💰'} {mode === 'checkout' ? t.quickCheckoutTitle : (isAr ? 'تسجيل دفعة' : 'Register Payment')}
+        <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: TEXT_MUTED, marginTop: 4 }}>
+          {mode === 'checkout' ? t.quickCheckoutHint : (isAr ? 'الموعد مكتمل أصلاً — هذي بس تسجيل دفعة لاحقة' : 'The visit is already completed — this just registers a payment')}
+        </span>
+      </>}
+      footer={<div style={{ width: '100%' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => submit(false)} disabled={saving || loadingInsurance}
+            style={{ flex: 1, background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '12px', fontSize: 13.5, fontWeight: 700, cursor: (saving || loadingInsurance) ? 'not-allowed' : 'pointer', opacity: (saving || loadingInsurance) ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+            {saving ? t.saving : mode === 'checkout' ? `✔️ ${t.finishVisit}` : `💰 ${isAr ? 'تسجيل الدفعة' : 'Register Payment'}`}
           </button>
+          {mode === 'checkout' ? (
+            <button onClick={() => submit(true)} disabled={saving}
+              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {t.skipAndFinish}
+            </button>
+          ) : (
+            <button onClick={onClose} disabled={saving}
+              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {t.cancel}
+            </button>
+          )}
         </div>
+        {mode === 'checkout' && <p style={{ fontSize: 10.5, color: '#B8892A', textAlign: 'center', marginTop: 10, marginBottom: 0 }}>⚠️ {t.skipWarning}</p>}
+      </div>}>
 
         {appointment?.patientName && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 14, padding: '8px 12px', background: PRIMARY_SOFT, borderRadius: 10 }}>
@@ -953,27 +961,7 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
             <span style={{ fontWeight: 700, color: totals.remaining > 0 ? '#B8892A' : SUCCESS, fontFamily: "'Inter',sans-serif" }}>{totals.remaining.toFixed(2)} {t.riyal}</span>
           </div>
         )}
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => submit(false)} disabled={saving || loadingInsurance}
-            style={{ flex: 1, background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '12px', fontSize: 13.5, fontWeight: 700, cursor: (saving || loadingInsurance) ? 'not-allowed' : 'pointer', opacity: (saving || loadingInsurance) ? 0.6 : 1, transition: 'all 0.15s ease' }}>
-            {saving ? t.saving : mode === 'checkout' ? `✔️ ${t.finishVisit}` : `💰 ${isAr ? 'تسجيل الدفعة' : 'Register Payment'}`}
-          </button>
-          {mode === 'checkout' ? (
-            <button onClick={() => submit(true)} disabled={saving}
-              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: saving ? 'not-allowed' : 'pointer' }}>
-              {t.skipAndFinish}
-            </button>
-          ) : (
-            <button onClick={onClose} disabled={saving}
-              style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: saving ? 'not-allowed' : 'pointer' }}>
-              {t.cancel}
-            </button>
-          )}
-        </div>
-        {mode === 'checkout' && <p style={{ fontSize: 10.5, color: '#B8892A', textAlign: 'center', marginTop: 10 }}>⚠️ {t.skipWarning}</p>}
-      </div>
-    </div>
+    </Modal>
   )
 }
 

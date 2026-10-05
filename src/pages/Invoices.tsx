@@ -414,59 +414,70 @@ function ReturnModal({ invoiceId, lang, onClose, onCreated }: { invoiceId: strin
     } finally { setSaving(false) }
   }
 
+  // ✅ ملء الشاشة بدل صندوق صغير بالنص — النموذج فيه جدول بنود قد يطول، وأوضح
+  // إنه ياخذ المساحة كاملة: رأس وتذييل ثابتين بعرض كامل، والمحتوى نفسه بعرض
+  // مقروء متمركز (لا يلتصق بالحيطان على شاشة واسعة)
   return (
-    <div className="no-print" onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+    <div className="no-print" style={{ position: 'fixed', inset: 0, background: CARD_BG, zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
       <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="return-modal-title" tabIndex={-1}
-        onClick={e => e.stopPropagation()}
-        style={{ background: CARD_BG, borderRadius: 18, padding: 24, maxWidth: 600, width: '100%', maxHeight: '88vh', overflowY: 'auto' }}>
-        <h3 id="return-modal-title" style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: '0 0 6px' }}>↩️ {t.creditNote}</h3>
-        <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '0 0 16px' }}>{t.sourceInvoice}: {inv?.invoiceNumber || ''}</p>
+        style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
+          <div>
+            <h3 id="return-modal-title" style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>↩️ {t.creditNote}</h3>
+            <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '4px 0 0' }}>{t.sourceInvoice}: {inv?.invoiceNumber || ''}</p>
+          </div>
+          <button onClick={onClose} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
+            style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: TEXT_MUTED, lineHeight: 1, padding: 4 }}>✕</button>
+        </div>
 
-        {error && (
-          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: DANGER }}>⚠️ {error}</div>
-        )}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px' }}>
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            {error && (
+              <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: DANGER }}>⚠️ {error}</div>
+            )}
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 30, color: TEXT_MUTED, fontSize: 13 }}>{t.loading}</div>
-        ) : (
-          <>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.reason}</label>
-              <input value={reason} onChange={e => setReason(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK }} />
-            </div>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 30, color: TEXT_MUTED, fontSize: 13 }}>{t.loading}</div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.reason}</label>
+                  <input value={reason} onChange={e => setReason(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK }} />
+                </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-              <thead>
-                <tr style={{ background: '#F8FAFA' }}>
-                  {[t.item, t.price, t.returnQty].map((h, i) => (
-                    <th key={i} style={{ padding: '8px 10px', textAlign: i === 0 ? 'start' : 'end', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {inv?.items?.map((it: any) => (
-                  <tr key={it.id}>
-                    <td style={{ padding: '8px 10px', color: TEXT_DARK, borderBottom: `1px solid ${BORDER}` }}>{it.name}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'end', borderBottom: `1px solid ${BORDER}`, fontFamily: "'Inter',monospace" }}>{fmt(it.unitPrice)}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'end', borderBottom: `1px solid ${BORDER}` }}>
-                      <input type="number" min={0} max={it.quantity} value={qty[it.id] ?? ''}
-                        onChange={e => setQty(prev => ({ ...prev, [it.id]: e.target.value }))}
-                        style={{ width: 70, padding: '5px 8px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, textAlign: 'center', fontFamily: "'Inter',sans-serif" }} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFA' }}>
+                      {[t.item, t.price, t.returnQty].map((h, i) => (
+                        <th key={i} style={{ padding: '8px 10px', textAlign: i === 0 ? 'start' : 'end', fontSize: 11, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inv?.items?.map((it: any) => (
+                      <tr key={it.id}>
+                        <td style={{ padding: '8px 10px', color: TEXT_DARK, borderBottom: `1px solid ${BORDER}` }}>{it.name}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'end', borderBottom: `1px solid ${BORDER}`, fontFamily: "'Inter',monospace" }}>{fmt(it.unitPrice)}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'end', borderBottom: `1px solid ${BORDER}` }}>
+                          <input type="number" min={0} max={it.quantity} value={qty[it.id] ?? ''}
+                            onChange={e => setQty(prev => ({ ...prev, [it.id]: e.target.value }))}
+                            style={{ width: 70, padding: '5px 8px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, textAlign: 'center', fontFamily: "'Inter',sans-serif" }} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        </div>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-          <button onClick={create} disabled={saving || loading} style={{ ...btn(PRIMARY, '#FFF'), flex: 1, padding: '11px', opacity: (saving || loading) ? 0.6 : 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 24px', borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ ...btn('transparent', TEXT_MUTED, BORDER), padding: '11px 18px' }}>{t.cancel}</button>
+          <button onClick={create} disabled={saving || loading} style={{ ...btn(PRIMARY, '#FFF'), padding: '11px 28px', opacity: (saving || loading) ? 0.6 : 1 }}>
             {saving ? t.saving : t.create}
           </button>
-          <button onClick={onClose} style={{ ...btn('transparent', TEXT_MUTED, BORDER), padding: '11px 18px' }}>{t.cancel}</button>
         </div>
       </div>
     </div>

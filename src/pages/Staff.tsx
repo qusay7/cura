@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
+import Modal from '../components/Modal'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
@@ -648,16 +649,23 @@ const [departments, setDepartments] = useState<Department[]>([])
           </div>
         )}
 
-        {/* ════ نموذج الإضافة/التعديل ════ */}
-        {showForm && (
-          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9998 }}
-            onClick={()=>setShowForm(false)}>
-            <div style={{ background:CARD_BG, borderRadius:20, padding:28, width:600, maxWidth:'95vw', maxHeight:'90vh', overflowY:'auto', direction:t.dir }}
-              onClick={e=>e.stopPropagation()}>
-              <h3 style={{ fontSize:17, fontWeight:700, color:TEXT_DARK, margin:'0 0 20px' }}>
-                {editId ? `✏️ ${t.edit}` : `+ ${t.add}`}
-              </h3>
-
+        {/* ════ نموذج الإضافة/التعديل — ملء الشاشة عشان النموذج الكثيف (٣ تبويبات)
+            يكون واضح وسهل، مش مزدحم بصندوق صغير بنص الشاشة ════ */}
+        <Modal open={showForm} onClose={()=>setShowForm(false)} isRtl={isAr} fullScreen
+          title={editId ? `✏️ ${t.edit}` : `+ ${t.add}`}
+          footer={<>
+            <button onClick={()=>setShowForm(false)} disabled={savingStaff}
+              style={{ padding:'10px 20px', background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, fontSize:13, cursor:'pointer', color:TEXT_MUTED }}>
+              {t.cancel}
+            </button>
+            {hasPermission('staff.manage') && (
+              <button onClick={handleSave} disabled={savingStaff}
+                style={{ padding:'10px 28px', background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, fontSize:14, fontWeight:600, cursor: savingStaff ? 'not-allowed' : 'pointer', opacity: savingStaff ? 0.7 : 1 }}>
+                {savingStaff ? '⏳ ...' : `💾 ${t.save}`}
+              </button>
+            )}
+          </>}>
+          <div style={{ direction:t.dir }}>
               {/* تبويبات النموذج */}
               <div style={{ display:'flex', gap:8, marginBottom:20 }}>
                 {(['personal','contact','work'] as const).map(tab=>(
@@ -847,22 +855,8 @@ const [departments, setDepartments] = useState<Department[]>([])
                   )}
                 </div>
               )}
-
-              <div style={{ display:'flex', gap:10, marginTop:20 }}>
-                {hasPermission('staff.manage') && (
-                  <button onClick={handleSave} disabled={savingStaff}
-                    style={{ flex:1, padding:'10px', background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, fontSize:14, fontWeight:600, cursor: savingStaff ? 'not-allowed' : 'pointer', opacity: savingStaff ? 0.7 : 1 }}>
-                    {savingStaff ? '⏳ ...' : `💾 ${t.save}`}
-                  </button>
-                )}
-                <button onClick={()=>setShowForm(false)} disabled={savingStaff}
-                  style={{ padding:'10px 20px', background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, fontSize:13, cursor:'pointer', color:TEXT_MUTED }}>
-                  {t.cancel}
-                </button>
-              </div>
-            </div>
           </div>
-        )}
+        </Modal>
 
         {/* ════ نافذة تفاصيل الموظف ════ */}
         {selected && !showForm && (
