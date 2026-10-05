@@ -47,6 +47,7 @@ interface AttachmentItem {
   notes: string | null
   createdAt: string
   appointmentId: string | null
+  queueEntryId: string | null
   isImage: boolean
 }
 
@@ -56,7 +57,7 @@ const fmtSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const PatientAttachmentsTab = forwardRef<PatientAttachmentsTabHandle, { patientId: string; lang: 'ar' | 'en'; appointmentId?: string; hideOwnSaveButton?: boolean }>(({ patientId, lang, appointmentId, hideOwnSaveButton }, ref) => {
+const PatientAttachmentsTab = forwardRef<PatientAttachmentsTabHandle, { patientId: string; lang: 'ar' | 'en'; appointmentId?: string; queueEntryId?: string; hideOwnSaveButton?: boolean }>(({ patientId, lang, appointmentId, queueEntryId, hideOwnSaveButton }, ref) => {
   const t = T[lang]
   const isAr = lang === 'ar'
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -104,6 +105,7 @@ const PatientAttachmentsTab = forwardRef<PatientAttachmentsTabHandle, { patientI
       formData.append('patientId', patientId)
       formData.append('category', category)
       if (appointmentId) formData.append('appointmentId', appointmentId)
+      if (queueEntryId) formData.append('queueEntryId', queueEntryId)
       if (notes) formData.append('notes', notes)
 
       await api.post(`/attachments/upload?lang=${lang}`, formData, {

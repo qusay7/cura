@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import ProceduresPicker from '../components/ProceduresPicker'
+import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
+import SickLeaveCertificate from '../components/SickLeaveCertificate'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { getCurrencySymbol } from '../utils/i18n'
+import { printSection, escapeHtml } from '../utils/printSection'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -46,12 +49,14 @@ const T = {
     dischargeConfirm: 'هل أنت متأكد من تسجيل خروج هذا المريض؟ سيُغلق ملفه ويختفي من لوحة الطوارئ.',
     discharged: 'تم تسجيل الخروج', dischargedAtLabel: 'تاريخ الخروج',
     timeline: '📋 السجل الزمني', noEntries: 'لا توجد سجلات بعد',
-    addEntry: '➕ إضافة سجل جديد',
     vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'سكر الدم', heartRate: 'النبض', respiratoryRate: 'التنفس',
-    diagnosis: 'التشخيص', prescription: 'الوصفة', tests: 'الفحوصات', notes: 'ملاحظات',
-    save: '💾 حفظ السجل', saving: 'جارٍ الحفظ...', cancel: 'إلغاء',
+    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات المطلوبة', notes: 'ملاحظات إضافية',
+    report: '📄 تقرير الحالة', reportNotes: 'ملاحظات وتقييم إضافي', reportCompiledTitle: 'الملخص',
+    sickLeave: '🩺 إجازة مرضية', print: '🖨️', noContentToPrint: 'لا يوجد محتوى للطباعة بعد',
+    save: '💾 حفظ السجل', saving: 'جارٍ الحفظ...',
     errorOccurred: 'حدث خطأ', loading: 'جارٍ التحميل...', notFound: 'الحالة غير موجودة',
+    patient: 'المريض',
   },
   en: {
     back: '← Emergency Dashboard',
@@ -60,16 +65,18 @@ const T = {
     dischargeConfirm: 'Are you sure you want to discharge this patient? This closes their file and removes it from the ER dashboard.',
     discharged: 'Discharged', dischargedAtLabel: 'Discharged at',
     timeline: '📋 Timeline', noEntries: 'No entries yet',
-    addEntry: '➕ Add New Entry',
     vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'Blood Sugar', heartRate: 'Heart Rate', respiratoryRate: 'Resp. Rate',
-    diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Tests', notes: 'Notes',
-    save: '💾 Save Entry', saving: 'Saving...', cancel: 'Cancel',
+    diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Requested Tests', notes: 'Additional Notes',
+    report: '📄 Status Report', reportNotes: 'Additional Notes & Assessment', reportCompiledTitle: 'Summary',
+    sickLeave: '🩺 Sick Leave', print: '🖨️', noContentToPrint: 'Nothing to print yet',
+    save: '💾 Save Entry', saving: 'Saving...',
     errorOccurred: 'An error occurred', loading: 'Loading...', notFound: 'Case not found',
+    patient: 'Patient',
   },
 }
 
-const emptyEntryForm = { bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', diagnosis: '', prescription: '', tests: '', notes: '' }
+const emptyEntryForm = { bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', diagnosis: '', prescription: '', tests: '', notes: '', reportNotes: '' }
 
 export default function EmergencyPatientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -83,11 +90,11 @@ export default function EmergencyPatientDetail() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
-  const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyEntryForm)
   const [saving, setSaving] = useState(false)
   const [discharging, setDischarging] = useState(false)
   const [error, setError] = useState('')
+  const [showSickLeave, setShowSickLeave] = useState(false)
 
   useEffect(() => {
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
@@ -113,6 +120,21 @@ export default function EmergencyPatientDetail() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  // ✅ طباعة قسم واحد بمعزل عن باقي الصفحة — نفس أسلوب VisitWorkspace
+  const handlePrintSection = (title: string, text: string) => {
+    if (!text.trim()) { setError(t.noContentToPrint); return }
+    let clinicId = ''
+    try { clinicId = JSON.parse(localStorage.getItem('user') || '{}').clinicId || '' } catch { /* ignore */ }
+    if (!clinicId) return
+    printSection({
+      clinicId,
+      title,
+      isAr,
+      bodyHtml: escapeHtml(text).replace(/\n/g, '<br/>'),
+      doctorName: entry?.doctorName || undefined,
+    })
+  }
+
   const handleSaveEntry = async () => {
     if (!entry) return
     setSaving(true); setError('')
@@ -128,9 +150,9 @@ export default function EmergencyPatientDetail() {
         prescription: form.prescription || null,
         tests: form.tests || null,
         notes: form.notes || null,
+        reportNotes: form.reportNotes || null,
       })
       setForm(emptyEntryForm)
-      setShowForm(false)
       fetchAll()
     } catch (err: any) {
       setError(err.response?.data || t.errorOccurred)
@@ -169,7 +191,7 @@ export default function EmergencyPatientDetail() {
 
   return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif", background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      <div style={{ maxWidth: 780, margin: '0 auto' }}>
         <button onClick={() => navigate('/emergency/dashboard')}
           style={{ background: 'none', border: 'none', color: TEXT_MUTED, fontSize: 12.5, cursor: 'pointer', marginBottom: 16, padding: 0 }}>
           {t.back}
@@ -223,59 +245,121 @@ export default function EmergencyPatientDetail() {
           </div>
         )}
 
-        {/* Procedures */}
-        {!isDischarged && <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} />}
-
-        {/* Add new timeline entry */}
         {!isDischarged && (
-          <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 18, marginBottom: 18 }}>
-            {!showForm ? (
-              <button onClick={() => setShowForm(true)}
-                style={{ width: '100%', background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 10, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {t.addEntry}
+          <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 18, padding: 20, marginBottom: 18 }}>
+            {/* 🩺 العلامات الحيوية — أول شي يشوفه الطبيب عند الدخول */}
+            <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.vitals}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.bloodPressure}</label>
+                  <input value={form.bloodPressure} onChange={e => setForm({ ...form, bloodPressure: e.target.value })} placeholder={t.bloodPressurePlaceholder} style={{ ...inputStyle, fontFamily: "'Inter',sans-serif" }} autoFocus />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.bloodSugar}</label>
+                  <input type="number" value={form.bloodSugar} onChange={e => setForm({ ...form, bloodSugar: e.target.value })} style={{ ...inputStyle, fontFamily: "'Inter',sans-serif" }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.heartRate}</label>
+                  <input type="number" value={form.heartRate} onChange={e => setForm({ ...form, heartRate: e.target.value })} style={{ ...inputStyle, fontFamily: "'Inter',sans-serif" }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.respiratoryRate}</label>
+                  <input type="number" value={form.respiratoryRate} onChange={e => setForm({ ...form, respiratoryRate: e.target.value })} style={{ ...inputStyle, fontFamily: "'Inter',sans-serif" }} />
+                </div>
+              </div>
+            </div>
+
+            {/* 📎 صور الأشعة والمرفقات — مربوطة بهذي الحالة بالذات */}
+            <div style={{ marginBottom: 16 }}>
+              <PatientAttachmentsTab patientId={entry.patientId} lang={lang} queueEntryId={entry.id} />
+            </div>
+
+            {/* 💉 الإجراءات */}
+            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} />
+
+            {/* 🩺 التشخيص والوصفة — بالنهاية، كل واحد بزر طباعة مستقل */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14, marginTop: 16 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.diagnosis}</label>
+                  <button type="button" onClick={() => handlePrintSection(t.diagnosis, form.diagnosis)} title={t.diagnosis}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+                </div>
+                <textarea value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} rows={3}
+                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.prescription}</label>
+                  <button type="button" onClick={() => handlePrintSection(t.prescription, form.prescription)} title={t.prescription}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+                </div>
+                <textarea value={form.prescription} onChange={e => setForm({ ...form, prescription: e.target.value })} rows={3}
+                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.tests}</label>
+              <input value={form.tests} onChange={e => setForm({ ...form, tests: e.target.value })}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.notes}</label>
+                <button type="button" onClick={() => handlePrintSection(t.notes, form.notes)} title={t.notes}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+              </div>
+              <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', boxSizing: 'border-box' }} />
+            </div>
+
+            {/* 📄 تقرير الحالة — ملخص مُجمّع + إضافة الطبيب الحرة، بزر طباعة */}
+            <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.report}</label>
+                <button type="button" onClick={() => handlePrintSection(t.report, [
+                  `${t.patient}: ${entry.patientName}`,
+                  form.diagnosis && `${t.diagnosis}: ${form.diagnosis}`,
+                  form.prescription && `${t.prescription}: ${form.prescription}`,
+                  (form.bloodPressure || form.bloodSugar || form.heartRate || form.respiratoryRate) &&
+                    `${t.vitals}: ${[form.bloodPressure && `BP ${form.bloodPressure}`, form.bloodSugar && `Sugar ${form.bloodSugar}`, form.heartRate && `HR ${form.heartRate}`, form.respiratoryRate && `RR ${form.respiratoryRate}`].filter(Boolean).join(' · ')}`,
+                  form.reportNotes && `${t.reportNotes}: ${form.reportNotes}`,
+                ].filter(Boolean).join('\n\n'))} title={t.report}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>{t.print}</button>
+              </div>
+              <div style={{ fontSize: 12.5, color: TEXT_DARK, lineHeight: 1.7, marginBottom: 10 }}>
+                <strong>{t.reportCompiledTitle}:</strong>{' '}
+                {[form.diagnosis, form.prescription].filter(Boolean).join(' — ') || '—'}
+              </div>
+              <label style={{ display: 'block', fontSize: 10.5, color: TEXT_MUTED, marginBottom: 4 }}>{t.reportNotes}</label>
+              <textarea value={form.reportNotes} onChange={e => setForm({ ...form, reportNotes: e.target.value })} rows={3}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', background: CARD_BG, boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={handleSaveEntry} disabled={saving}
+                style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '11px 26px', fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? t.saving : t.save}
               </button>
-            ) : (
-              <>
-                <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, display: 'block', marginBottom: 8 }}>{t.vitals}</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 14 }}>
-                  <input value={form.bloodPressure} onChange={e => setForm({ ...form, bloodPressure: e.target.value })} placeholder={t.bloodPressurePlaceholder} title={t.bloodPressure} style={inputStyle} />
-                  <input type="number" value={form.bloodSugar} onChange={e => setForm({ ...form, bloodSugar: e.target.value })} placeholder={t.bloodSugar} style={inputStyle} />
-                  <input type="number" value={form.heartRate} onChange={e => setForm({ ...form, heartRate: e.target.value })} placeholder={t.heartRate} style={inputStyle} />
-                  <input type="number" value={form.respiratoryRate} onChange={e => setForm({ ...form, respiratoryRate: e.target.value })} placeholder={t.respiratoryRate} style={inputStyle} />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                  <div>
-                    <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 5 }}>{t.diagnosis}</label>
-                    <input value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 5 }}>{t.prescription}</label>
-                    <input value={form.prescription} onChange={e => setForm({ ...form, prescription: e.target.value })} style={inputStyle} />
-                  </div>
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 5 }}>{t.tests}</label>
-                  <input value={form.tests} onChange={e => setForm({ ...form, tests: e.target.value })} style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 5 }}>{t.notes}</label>
-                  <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} style={{ ...inputStyle, resize: 'none' }} />
-                </div>
-
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={handleSaveEntry} disabled={saving}
-                    style={{ flex: 1, background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 10, padding: '10px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                    {saving ? t.saving : t.save}
-                  </button>
-                  <button onClick={() => { setShowForm(false); setForm(emptyEntryForm) }} disabled={saving}
-                    style={{ background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 16px', fontSize: 12.5, fontWeight: 600, color: TEXT_MUTED, cursor: 'pointer' }}>
-                    {t.cancel}
-                  </button>
-                </div>
-              </>
-            )}
+              <button type="button" onClick={() => setShowSickLeave(true)}
+                style={{ background: CARD_BG, color: TEXT_DARK, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {t.sickLeave}
+              </button>
+            </div>
           </div>
+        )}
+
+        {showSickLeave && (
+          <SickLeaveCertificate
+            patientName={entry.patientName}
+            doctorName={entry.doctorName || ''}
+            defaultReason={form.diagnosis}
+            lang={lang}
+            onClose={() => setShowSickLeave(false)}
+          />
         )}
 
         {/* Timeline */}
@@ -304,6 +388,7 @@ export default function EmergencyPatientDetail() {
                     {entry2.prescription && <div>💊 {t.prescription}: {entry2.prescription}</div>}
                     {entry2.tests && <div>🧪 {t.tests}: {entry2.tests}</div>}
                     {entry2.notes && <div>📝 {entry2.notes}</div>}
+                    {entry2.reportNotes && <div>📄 {entry2.reportNotes}</div>}
                   </div>
                 </div>
               ))}

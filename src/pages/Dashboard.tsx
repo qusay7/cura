@@ -425,6 +425,24 @@ useEffect(() => {
           <p style={{ fontSize: 13, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.welcome} {user.fullName ? `${user.fullName} 👋` : '👋'}</p>
         </div>
 
+        {/* ✅ دخول سريع للطوارئ من الصفحة الرئيسية — بارز وبلون مختلف عشان يُلاحظ فوراً */}
+        {hasPermission('queue.manage') && (
+          <div onClick={() => navigate('/emergency/dashboard')}
+            style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 18, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 24 }}>🚨</span>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', margin: 0 }}>{isAr ? 'الطوارئ' : 'Emergency'}</p>
+                <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '2px 0 0' }}>{isAr ? 'لوحة الحالات النشطة وتسجيل دخول سريع' : 'Active cases dashboard & fast check-in'}</p>
+              </div>
+            </div>
+            <button onClick={e => { e.stopPropagation(); navigate('/emergency/check-in') }}
+              style={{ background: '#EF4444', color: '#FFF', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {isAr ? '+ تسجيل دخول' : '+ Check-In'}
+            </button>
+          </div>
+        )}
+
         {/* عنوان قسم واضح يفصل "الأرقام السريعة" عن باقي الشاشة */}
         <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.5px', textTransform: 'uppercase', margin: '0 0 10px 4px' }}>
           {isAr ? 'نظرة سريعة' : 'Quick Overview'}
