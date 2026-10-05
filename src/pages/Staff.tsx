@@ -204,6 +204,9 @@ export default function Staff() {
   const [stats, setStats]   = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [alert, setAlert]   = useState<{type:'ok'|'err';msg:string}|null>(null)
+  // ✅ خطأ النموذج يُعرض داخل النافذة نفسها وما يختفي تلقائياً (بعكس التوست العلوي اللي
+  // يطيح بعد ٣ ثواني) — عشان المستخدم يقرأ السبب الفعلي بدون داعي لفتح الكونسول
+  const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole]     = useState('')
   const [filterActive, setFilterActive] = useState('')
@@ -314,7 +317,7 @@ const [departments, setDepartments] = useState<Department[]>([])
 
    const openAdd = () => {
     setEditId(null); setForm({...emptyForm}); setFormTab('personal'); setShowForm(true)
-    setCurrentUserId(null); setAvailableDoctors([])
+    setCurrentUserId(null); setAvailableDoctors([]); setFormError('')
   }
 
   const openEdit = (s:any) => {
@@ -333,29 +336,30 @@ const [departments, setDepartments] = useState<Department[]>([])
   isDoctor: !!s.doctorId, doctorMode:'existing', doctorId: s.doctorId||'', doctorWorkType:'appointments',
   createLoginAccount:false, loginEmail:'', loginUsername:'', loginPassword:'',
 })
-    setFormTab('personal'); setShowForm(true); setSelected(null)
+    setFormTab('personal'); setShowForm(true); setSelected(null); setFormError('')
     if (s.doctorId) fetchAvailableDoctors()
   }
 
   const handleSaveRaw = async () => {
-    if (!form.fullName.trim()) { showAlrt('err', isAr?'الاسم مطلوب':'Name required'); return }
+    setFormError('')
+    if (!form.fullName.trim()) { setFormError(isAr?'الاسم مطلوب':'Name required'); return }
 
     // ✅ تحقق قبل الإرسال
     if (form.isDoctor && form.doctorMode === 'existing' && !form.doctorId) {
-      showAlrt('err', isAr ? 'اختر طبيباً من القائمة' : 'Please select a doctor'); return
+      setFormError(isAr ? 'اختر طبيباً من القائمة' : 'Please select a doctor'); return
     }
     if (form.createLoginAccount) {
       if (!form.loginUsername.trim()) {
-        showAlrt('err', isAr ? 'اسم المستخدم مطلوب' : 'Username is required'); return
+        setFormError(isAr ? 'اسم المستخدم مطلوب' : 'Username is required'); return
       }
       if (!/^[a-zA-Z0-9]+$/.test(form.loginUsername)) {
-        showAlrt('err', isAr ? 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط' : 'Username must contain only English letters and numbers'); return
+        setFormError(isAr ? 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط' : 'Username must contain only English letters and numbers'); return
       }
       if (!form.loginPassword.trim() || form.loginPassword.length < 6) {
-        showAlrt('err', isAr ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters'); return
+        setFormError(isAr ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters'); return
       }
       if (!form.roleId) {
-        showAlrt('err', isAr ? 'اختر دور الموظف من تبويب العمل أولاً' : 'Please select the staff role in the Work tab first'); return
+        setFormError(isAr ? 'اختر دور الموظف من تبويب العمل أولاً' : 'Please select the staff role in the Work tab first'); return
       }
     }
 
@@ -388,7 +392,10 @@ const [departments, setDepartments] = useState<Department[]>([])
       setShowForm(false); setEditId(null)
       fetchAll()
     } catch (err:any) {
-      showAlrt('err', err.response?.data?.message || err.response?.data || t.errSave)
+      // ✅ نص الخطأ الفعلي اللي رجعه الباك إند (مثلاً "يوجد موظف بنفس الاسم مسبقاً" أو
+      // "البريد الإلكتروني مستخدم مسبقاً") — يُعرض داخل النافذة نفسها، ثابت لحد ما
+      // المستخدم يصلّح ويعيد المحاولة، بدل توست بالزاوية يختفي بعد ٣ ثواني
+      setFormError(err.response?.data?.message || err.response?.data || t.errSave)
     }
   }
 
@@ -651,10 +658,10 @@ const [departments, setDepartments] = useState<Department[]>([])
 
         {/* ════ نموذج الإضافة/التعديل — ملء الشاشة عشان النموذج الكثيف (٣ تبويبات)
             يكون واضح وسهل، مش مزدحم بصندوق صغير بنص الشاشة ════ */}
-        <Modal open={showForm} onClose={()=>setShowForm(false)} isRtl={isAr} fullScreen
+        <Modal open={showForm} onClose={()=>{setShowForm(false); setFormError('')}} isRtl={isAr} fullScreen
           title={editId ? `✏️ ${t.edit}` : `+ ${t.add}`}
           footer={<>
-            <button onClick={()=>setShowForm(false)} disabled={savingStaff}
+            <button onClick={()=>{setShowForm(false); setFormError('')}} disabled={savingStaff}
               style={{ padding:'10px 20px', background:'transparent', border:`1px solid ${BORDER}`, borderRadius:10, fontSize:13, cursor:'pointer', color:TEXT_MUTED }}>
               {t.cancel}
             </button>
@@ -666,6 +673,16 @@ const [departments, setDepartments] = useState<Department[]>([])
             )}
           </>}>
           <div style={{ direction:t.dir }}>
+              {/* ✅ رسالة خطأ واضحة وثابتة — تبيّن السبب الفعلي (مثلاً اسم أو إيميل مستخدم
+                  مسبقاً) وما تختفي لحالها، بعكس التوست العلوي اللي يطيح بسرعة */}
+              {formError && (
+                <div role="alert" style={{ background:'#FFF5F5', border:'1px solid #FCA5A5', borderRadius:10, padding:'12px 16px', marginBottom:16, fontSize:13, color:DANGER, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                  <span>⚠️ {formError}</span>
+                  <button onClick={()=>setFormError('')} aria-label={isAr?'إغلاق':'Dismiss'}
+                    style={{ background:'none', border:'none', cursor:'pointer', color:'inherit', fontSize:14, flexShrink:0 }}>✕</button>
+                </div>
+              )}
+
               {/* تبويبات النموذج */}
               <div style={{ display:'flex', gap:8, marginBottom:20 }}>
                 {(['personal','contact','work'] as const).map(tab=>(
