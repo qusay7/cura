@@ -383,7 +383,9 @@ const handleLogin = async (e: React.FormEvent) => {
     if (data.currency) localStorage.setItem('cura-currency', data.currency)
 
 if (data.role?.toLowerCase() === 'doctor') {
-  navigate('/daily')
+  // ✅ طبيب الطوارئ ما له جدول مواعيد ثابت — يُفتح له مباشرة لوحة الطوارئ
+  // بدل جدول اليوم العادي (data.isEmergencyDoctor يحسبها الباك اند وقت تسجيل الدخول)
+  navigate(data.isEmergencyDoctor ? '/emergency/dashboard' : '/daily')
 } else {
   navigate('/dashboard')
 }

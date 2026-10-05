@@ -221,7 +221,7 @@ const T = {
   },
 }
 
-interface Department { id: string; name: string; nameEn?: string; isActive: boolean }
+interface Department { id: string; name: string; nameEn?: string; isActive: boolean; type: number }
 
 interface Template { id: string; name: string; nameEn?: string | null }
 
@@ -581,7 +581,11 @@ export default function EditDoctor() {
     <DepartmentSelect
       departments={departments}
       value={form.departmentId}
-      onChange={id => setForm(prev => ({ ...prev, departmentId: id }))}
+      onChange={id => {
+        // ✅ قسم الطوارئ (type===1) — نوع عمل الطبيب الافتراضي "طابور" بدل "مواعيد"
+        const dept = departments.find(d => d.id === id)
+        setForm(prev => ({ ...prev, departmentId: id, workType: dept?.type === 1 ? 'queue' : prev.workType }))
+      }}
       placeholder={t.departmentPlaceholder}
       isAr={isAr}
     />

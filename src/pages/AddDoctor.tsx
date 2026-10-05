@@ -94,7 +94,7 @@ const T = {
   },
 }
 
-interface Department { id: string; name: string; nameEn?: string; isActive: boolean }
+interface Department { id: string; name: string; nameEn?: string; isActive: boolean; type: number }
 
 const FormField = ({ label, required, children, error }: {
   label: string; required?: boolean; children: React.ReactNode; error?: string
@@ -343,7 +343,12 @@ const DepartmentSelect = ({ departments, value, onChange, placeholder, isAr }: {
     <DepartmentSelect
       departments={departments}
       value={form.departmentId}
-      onChange={id => setForm(prev => ({ ...prev, departmentId: id }))}
+      onChange={id => {
+        // ✅ قسم الطوارئ (type===1) — نوع عمل الطبيب الافتراضي "طابور" بدل "مواعيد"،
+        // لأن أطباء الطوارئ يستقبلون حسب الدور لا بموعد محدد مسبقاً
+        const dept = departments.find(d => d.id === id)
+        setForm(prev => ({ ...prev, departmentId: id, workType: dept?.type === 1 ? 'queue' : prev.workType }))
+      }}
       placeholder={t.departmentPlaceholder}
       isAr={isAr}
     />

@@ -134,6 +134,7 @@ const T = {
 interface Department {
   id: string
   name: string
+  type?: number
 }
 
 interface DoctorOption {
@@ -747,7 +748,12 @@ const [departments, setDepartments] = useState<Department[]>([])
                       options={systemRoles.map(r=>({value:r.id, label:systemRoleLabel(r)}))} />
                   ))}
                   {fld(t.department, (
-                    <SearchableSelect isRtl={isAr} value={form.departmentId} onChange={v=>setForm({...form,departmentId:v})}
+                    <SearchableSelect isRtl={isAr} value={form.departmentId} onChange={v=>{
+                      // ✅ قسم الطوارئ (type===1) — نوع عمل الطبيب الافتراضي "مواعيد وطابور"
+                      // بدل "مواعيد فقط"، لأن أطباء الطوارئ يستقبلون حسب الدور بشكل أساسي
+                      const dept = departments.find(d=>d.id===v)
+                      setForm({...form, departmentId:v, doctorWorkType: dept?.type===1 ? 'both' : form.doctorWorkType})
+                    }}
                       placeholder={isAr?'اختر قسماً...':'Select department...'}
                       searchPlaceholder={t.search}
                       options={departments.map(d=>({value:d.id,label:d.name}))} />

@@ -13,6 +13,7 @@ export interface AuthResponse {
   expiresAt: string
   refreshTokenExpiresAt: string
   permissions: string[]
+  isEmergencyDoctor?: boolean
 }
 
 export interface Patient {
