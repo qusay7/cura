@@ -298,6 +298,14 @@ api.interceptors.response.use(
       }
     }
 
+    // ✅ 403 — الباك إند رفض الطلب لنقص صلاحية (Forbid() بدون أي رسالة عادةً) —
+    // بدون هذا التنبيه، الطلب يفشل بصمت وما يظهر شي للمستخدم أصلاً، فيضطر
+    // يفتح Network tab عشان يفهم ليش. رسالة واحدة موحّدة أوضح من تكرارها بكل صفحة
+    if (error.response?.status === 403) {
+      const isAr = (localStorage.getItem('cura-lang') || 'ar') !== 'en'
+      alert(isAr ? '⛔ ليس لديك صلاحية لتنفيذ هذا الإجراء' : "⛔ You don't have permission to perform this action")
+    }
+
     return Promise.reject(error)
   }
 )
