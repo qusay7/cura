@@ -1342,8 +1342,11 @@ export default function Appointments() {
                               </button>
                             )}
 
-                            {/* ✅ موعد مكتمل وغير مدفوع — تسجيل دفعة لاحقاً */}
-                            {hasPermission('payments.manage') && appointment.status === 'completed' && (appointment as any).isPaid === false && (
+                            {/* ✅ موعد مكتمل وغير مدفوع — تسجيل دفعة لاحقاً. isPaid ممكن يكون null
+                                (ما فيه سجل دفعة إطلاقاً بعد — مثلاً موعد اتسكّر من "حفظ وإنهاء"
+                                بصفحة الزيارة بدل شاشة الدفع الكاملة) أو false (فيه سجل بس ناقص) —
+                                بالحالتين لسا المريض عليه مبلغ، فالزر لازم يظهر بالاثنين، لا false بس */}
+                            {hasPermission('payments.manage') && appointment.status === 'completed' && (appointment as any).isPaid !== true && (appointment.price ?? 0) > 0 && (
                               <button className="action-btn" onClick={e=>openPaymentModal(appointment.id,'payLater',e)}
                                 style={{ background:'#FFF8E1', color:'#B8892A', borderColor:'#E8D4A8' }}>
                                 💰 {isAr ? 'تسجيل دفعة' : 'Register Payment'}
