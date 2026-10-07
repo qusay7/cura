@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
 import type { Appointment } from '../types'
 import { ECGAnimation } from '../components/ECGAnimation'
@@ -968,6 +968,7 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function Appointments() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('today')
@@ -1034,6 +1035,18 @@ export default function Appointments() {
     e.stopPropagation()
     setPaymentModal({ id, mode })
   }
+
+  // ✅ فتح نافذة الدفع تلقائياً لو وصلنا من إشعار "انتهت الزيارة" (?pay=appointmentId)
+  // — نشيل البارامتر فوراً عشان ما تنفتح تاني لو المستخدم رجع لنفس الرابط
+  useEffect(() => {
+    const payId = searchParams.get('pay')
+    if (!payId || appointments.length === 0) return
+    if (appointments.some(a => a.id === payId)) {
+      setPaymentModal({ id: payId, mode: 'payLater' })
+    }
+    setSearchParams(prev => { prev.delete('pay'); return prev }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appointments])
 
   const handlePaymentModalSuccess = (id: string, updates: Partial<Appointment>) => {
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates } as Appointment : a))

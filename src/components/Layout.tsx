@@ -433,7 +433,8 @@ export function getStoredLang(): 'ar' | 'en' {
 
 interface Notification {
   id: string; title: string; message: string; createdAt: string
-  read: boolean; type: 'appointment' | 'alert' | 'system'
+  read: boolean; type: 'appointment' | 'alert' | 'system' | 'visit-finished'
+  relatedAppointmentId?: string | null
 }
 
 // ✅ "منذ 5 دقائق" بدل وقت ثابت من السيرفر — يبقى صحيح بين كل تحديث بدون إعادة الجلب
@@ -656,8 +657,8 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
 }
 
 // ─── Notification Bell ────────────────────────────────────────────────────────
-const NotificationBell = ({ notifications, onMarkAsRead, onMarkAllRead, onViewAll, lang }: {
-  notifications: Notification[]; onMarkAsRead: (id: string) => void; onMarkAllRead: () => void; onViewAll: () => void; lang: 'ar' | 'en'
+const NotificationBell = ({ notifications, onNotificationClick, onMarkAllRead, onViewAll, lang }: {
+  notifications: Notification[]; onNotificationClick: (n: Notification) => void; onMarkAllRead: () => void; onViewAll: () => void; lang: 'ar' | 'en'
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isRinging, setIsRinging] = useState(false)
@@ -674,7 +675,7 @@ const NotificationBell = ({ notifications, onMarkAsRead, onMarkAllRead, onViewAl
     return () => document.removeEventListener('click', handler)
   }, [])
 
-  const getIcon = (type: string) => ({ appointment: '📅', alert: '⚠️', system: '🔔' }[type] || '📋')
+  const getIcon = (type: string) => ({ appointment: '📅', alert: '⚠️', system: '🔔', 'visit-finished': '💰' }[type] || '📋')
 
   return (
     <div className="notif-container" style={{ position: 'relative' }}>
@@ -699,7 +700,7 @@ const NotificationBell = ({ notifications, onMarkAsRead, onMarkAllRead, onViewAl
                 <p style={{ fontSize: 13, marginTop: 8 }}>{t.noNotifications}</p>
               </div>
             ) : notifications.map(notif => (
-              <button key={notif.id} type="button" onClick={() => onMarkAsRead(notif.id)}
+              <button key={notif.id} type="button" onClick={() => onNotificationClick(notif)}
                 style={{ padding: '11px 14px', borderBottom: `1px solid ${BORDER}`, borderInline: 'none', borderTop: 'none', display: 'flex', gap: 10, cursor: 'pointer', background: notif.read ? 'transparent' : '#E8F0F0', width: '100%', textAlign: isAr ? 'right' : 'left', font: 'inherit', color: 'inherit' }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${PRIMARY}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{getIcon(notif.type)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -855,9 +856,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* الإشعارات */}
           <NotificationBell notifications={notifications}
-            onMarkAsRead={(id) => {
-              setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-              api.put(`/notifications/${id}/read`).catch(() => {})
+            onNotificationClick={(n) => {
+              setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+              api.put(`/notifications/${n.id}/read`).catch(() => {})
+              // ✅ إشعار "انتهت الزيارة" يودّي مباشرة لشاشة الدفع لهذا الموعد
+              if (n.type === 'visit-finished' && n.relatedAppointmentId) {
+                navigate(`/appointments?pay=${n.relatedAppointmentId}`)
+              }
             }}
             onMarkAllRead={() => {
               setNotifications(prev => prev.map(n => ({ ...n, read: true })))
