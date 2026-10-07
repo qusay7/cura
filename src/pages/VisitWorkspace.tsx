@@ -28,7 +28,7 @@ const T = {
     currentVisit: '🩺 الزيارة الحالية', visitType: 'قالب خطة العلاج (اختياري)', bookingType: 'نوع الزيارة المحدّد بالحجز',
     diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات المطلوبة',
     notes: 'ملاحظات إضافية', nextVisit: 'موعد الزيارة القادمة (اختياري)',
-    save: 'حفظ الزيارة', saving: 'جارٍ الحفظ...', saved: 'تم حفظ الزيارة بنجاح ✅',
+    save: 'حفظ الزيارة', saveAndFinish: 'حفظ وإنهاء', saving: 'جارٍ الحفظ...', saved: 'تم حفظ الزيارة بنجاح ✅',
     history: '📋 السجل المرضي السابق', noHistory: 'لا يوجد سجل زيارات سابقة لهذا المريض',
     visitDate: 'التاريخ', doctor: 'الطبيب', type: 'النوع', attachments: 'مرفقات',
     checkedIn: 'تم تسجيل الدخول', notCheckedIn: 'لسا ما سجّل دخول', checkInNow: 'تسجيل الدخول الآن',
@@ -47,7 +47,7 @@ const T = {
     currentVisit: '🩺 Current Visit', visitType: 'Treatment Plan Template (optional)', bookingType: 'Visit type set at booking',
     diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Requested Tests',
     notes: 'Additional Notes', nextVisit: 'Next Visit Date (optional)',
-    save: 'Save Visit', saving: 'Saving...', saved: 'Visit saved successfully ✅',
+    save: 'Save Visit', saveAndFinish: 'Save & Finish', saving: 'Saving...', saved: 'Visit saved successfully ✅',
     history: '📋 Previous Medical History', noHistory: 'No previous visit history for this patient',
     visitDate: 'Date', doctor: 'Doctor', type: 'Type', attachments: 'Attachments',
     checkedIn: 'Checked In', notCheckedIn: 'Not checked in yet', checkInNow: 'Check In Now',
@@ -231,7 +231,10 @@ export default function VisitWorkspace() {
     })
   }
 
-  const handleSave = async () => {
+  // ✅ زرّين منفصلين: "حفظ" يبقى بالصفحة (الطبيب يقدر يكمل تعبئة الزيارة بدون ما
+  // يُرمى برّا كل مرة يحفظ)، و"حفظ وإنهاء" يحفظ ويرجع لجدول اليوم — بدل ما كان
+  // زر الحفظ الوحيد يرجّع تلقائياً بكل مرة
+  const handleSave = async (andFinish: boolean) => {
     if (!appointment) return
     if (!appointment.checkInTime) { setError(t.mustCheckInFirst); return }
     setSaving(true); setError(''); setSuccess('')
@@ -269,8 +272,13 @@ export default function VisitWorkspace() {
       }
 
       setSuccess(t.saved)
-      // ✅ تأخير بسيط عشان رسالة النجاح تظهر لحظة قبل الرجوع، بدل تحويل فوري بلا تأكيد
-      setTimeout(() => navigate('/daily'), 1200)
+      if (andFinish) {
+        // ✅ تأخير بسيط عشان رسالة النجاح تظهر لحظة قبل الرجوع، بدل تحويل فوري بلا تأكيد
+        setTimeout(() => navigate('/daily'), 1200)
+      } else {
+        // ✅ الطبيب باقي بالصفحة — الرسالة تختفي لحالها بدل ما تفضل عالقة للأبد
+        setTimeout(() => setSuccess(''), 3000)
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
     } finally {
@@ -516,9 +524,13 @@ export default function VisitWorkspace() {
             {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} />}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button onClick={handleSave} disabled={saving || !appointment?.checkInTime}
-                style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '11px 26px', fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              <button onClick={() => handleSave(false)} disabled={saving || !appointment?.checkInTime}
+                style={{ background: CARD_BG, color: PRIMARY, border: `1px solid ${PRIMARY}`, borderRadius: 12, padding: '11px 26px', fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? t.saving : `💾 ${t.save}`}
+              </button>
+              <button onClick={() => handleSave(true)} disabled={saving || !appointment?.checkInTime}
+                style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '11px 26px', fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                {saving ? t.saving : `✅ ${t.saveAndFinish}`}
               </button>
               <button type="button" onClick={() => setShowSickLeave(true)}
                 style={{ background: CARD_BG, color: TEXT_DARK, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
