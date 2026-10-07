@@ -298,10 +298,13 @@ api.interceptors.response.use(
       }
     }
 
-    // ✅ 403 — الباك إند رفض الطلب لنقص صلاحية (Forbid() بدون أي رسالة عادةً) —
-    // بدون هذا التنبيه، الطلب يفشل بصمت وما يظهر شي للمستخدم أصلاً، فيضطر
-    // يفتح Network tab عشان يفهم ليش. رسالة واحدة موحّدة أوضح من تكرارها بكل صفحة
-    if (error.response?.status === 403) {
+    // ✅ 403 على إجراء فعلي قام به المستخدم (ضغط حفظ/إضافة/حذف...) — نبّهه بوضوح.
+    // ✅ قراءات الصفحة بالخلفية (GET) تُستثنى عمداً: كل صفحة أصلاً تخفي أقسامها
+    // حسب hasPermission() بالفرونت، فـ403 هون طبيعي ومتوقع (قسم غير مرئي لهذا
+    // الدور) — تنبيه المستخدم عليه بكل تنقّل بين الصفحات كان هو نفسه الخلل المُكتشف
+    const method = (originalRequest?.method || 'get').toLowerCase()
+    const isMutating = (MUTATING_METHODS as readonly string[]).includes(method)
+    if (error.response?.status === 403 && isMutating) {
       const isAr = (localStorage.getItem('cura-lang') || 'ar') !== 'en'
       alert(isAr ? '⛔ ليس لديك صلاحية لتنفيذ هذا الإجراء' : "⛔ You don't have permission to perform this action")
     }
