@@ -70,6 +70,7 @@ const globalCss = `
   .sub-grid { grid-template-columns: repeat(2, 1fr); }
   .sa-stats-grid { grid-template-columns: repeat(2, 1fr); }
   .sa-two-col { grid-template-columns: 1fr; }
+  .reception-grid { grid-template-columns: 1fr !important; }
 }
 
 /* ── Mobile ── */
@@ -117,6 +118,10 @@ const T = {
     quickVisit: 'زيارة سريعة', bookAppointment: 'حجز موعد',
      staff: 'فريق العمل',
     addStaff: 'إضافة موظف',
+    receptionTitle: '🩺 حالة الأطباء الآن', busy: 'عنده مريض', free: 'متاح',
+    awaitingPaymentTitle: '💰 بانتظار الدفع', noAwaitingPayment: 'لا يوجد مرضى بانتظار الدفع',
+    completedPaidTitle: '✅ انتهى ودفع', noCompletedPaid: 'لا يوجد مرضى مكتملين اليوم',
+    payNow: 'تسجيل الدفع', finishedAt: 'انتهى الساعة',
   },
   en: {
     title: 'Dashboard', plan: 'Plan', loading: 'Loading...',
@@ -137,6 +142,10 @@ const T = {
     quickVisit: 'Quick Visit', bookAppointment: 'Book Appointment',
      staff: 'Staff',
     addStaff: 'Add Staff',
+    receptionTitle: '🩺 Doctor Status Now', busy: 'With a patient', free: 'Available',
+    awaitingPaymentTitle: '💰 Awaiting Payment', noAwaitingPayment: 'No patients awaiting payment',
+    completedPaidTitle: '✅ Finished & Paid', noCompletedPaid: 'No completed patients today',
+    payNow: 'Record Payment', finishedAt: 'Finished at',
   },
 }
 
@@ -145,6 +154,10 @@ interface DoctorTodayAppointment {
   appointmentCount: number
   appointments: Array<{ id: number; patientName: string; time: string }>
 }
+
+interface DoctorStatus { doctorId: string; doctorName: string; specialty: string | null; isBusy: boolean; currentPatientName: string | null }
+interface FinishedAppointment { appointmentId: string; patientName: string; doctorName: string | null; checkOutTime: string; totalAmount: number | null }
+interface ReceptionOverview { doctors: DoctorStatus[]; awaitingPayment: FinishedAppointment[]; completedPaid: FinishedAppointment[] }
 
 // ─── ProgressBar ─────────────────────────────────────────────────────────────
 const ProgressBar = ({ label, current, max }: { label: string; current: number; max: number }) => {
@@ -358,6 +371,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctorsToday, setDoctorsToday] = useState<DoctorTodayAppointment[]>([])
+  const [receptionOverview, setReceptionOverview] = useState<ReceptionOverview | null>(null)
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const isSuperAdmin = user.role === 'SuperAdmin'
@@ -385,6 +399,9 @@ useEffect(() => {
     api.get('/dashboard'),
     api.get('/appointments/today-by-doctor')
       .then(r => setDoctorsToday(r.data))
+      .catch(() => {}),
+    api.get('/appointments/reception-overview')
+      .then(r => setReceptionOverview(r.data))
       .catch(() => {}),
   ])
     .then(([r]) => setData(r.data))
@@ -511,6 +528,82 @@ useEffect(() => {
             </div>
           )}
         </div>
+        )}
+
+        {/* ✅ حالة الأطباء الآن + بانتظار الدفع + انتهى ودفع — للاستقبال/الممرض/أي
+            حدا بياخذ مواعيد ويرتّب الدور، عشان يشوف بنظرة واحدة مين عند الطبيب
+            ومين خلص وبانتظار الدفع بدون ما يحتاج يفتح كل موعد لحاله */}
+        {hasPermission('appointments.view') && receptionOverview && (
+          <div style={{ display: 'grid', gridTemplateColumns: hasPermission('payments.view') ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 24 }} className="reception-grid">
+            <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: TEXT_DARK, margin: '0 0 14px' }}>{t.receptionTitle}</h3>
+              {receptionOverview.doctors.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: TEXT_MUTED, textAlign: 'center', padding: '12px 0' }}>{isAr ? 'لا يوجد أطباء نشطون' : 'No active doctors'}</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {receptionOverview.doctors.map(d => (
+                    <div key={d.doctorId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 12px', background: '#F8FAFA', borderRadius: 12 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_DARK, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.doctorName}</p>
+                        {d.isBusy && d.currentPatientName && (
+                          <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>👤 {d.currentPatientName}</p>
+                        )}
+                      </div>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 100, whiteSpace: 'nowrap', flexShrink: 0,
+                        background: d.isBusy ? '#FFF8E1' : '#E8F5E9', color: d.isBusy ? '#F59E0B' : '#22C55E',
+                      }}>
+                        {d.isBusy ? `🔴 ${t.busy}` : `🟢 ${t.free}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {hasPermission('payments.view') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: TEXT_DARK, margin: '0 0 14px' }}>{t.awaitingPaymentTitle}</h3>
+                  {receptionOverview.awaitingPayment.length === 0 ? (
+                    <p style={{ fontSize: 12.5, color: TEXT_MUTED, textAlign: 'center', padding: '8px 0' }}>{t.noAwaitingPayment}</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {receptionOverview.awaitingPayment.map(a => (
+                        <div key={a.appointmentId} onClick={() => navigate('/appointments')}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 12px', background: '#FFF8E1', borderRadius: 12, cursor: 'pointer' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{a.patientName}</p>
+                            <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>{a.doctorName} · {t.finishedAt} {new Date(a.checkOutTime).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#B8892A', whiteSpace: 'nowrap', flexShrink: 0 }}>{formatPrice(a.totalAmount || 0, lang)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 20 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: TEXT_DARK, margin: '0 0 14px' }}>{t.completedPaidTitle}</h3>
+                  {receptionOverview.completedPaid.length === 0 ? (
+                    <p style={{ fontSize: 12.5, color: TEXT_MUTED, textAlign: 'center', padding: '8px 0' }}>{t.noCompletedPaid}</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {receptionOverview.completedPaid.map(a => (
+                        <div key={a.appointmentId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 12px', background: '#F0FDF4', borderRadius: 12 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_DARK, margin: 0 }}>{a.patientName}</p>
+                            <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>{a.doctorName} · {t.finishedAt} {new Date(a.checkOutTime).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', whiteSpace: 'nowrap', flexShrink: 0 }}>{formatPrice(a.totalAmount || 0, lang)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Subscription */}
