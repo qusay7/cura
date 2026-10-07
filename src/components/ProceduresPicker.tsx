@@ -10,6 +10,13 @@ interface ProceduresPickerProps {
   lang: 'ar' | 'en'
   onTotalChange?: (total: number) => void
   onItemsChange?: (items: AddedItem[]) => void
+  /** ✅ تُستخدم لما الصفحة الأم (مثلاً شاشة الدفع) تريد تعرض الإجراءات المضافة
+   * كبنود داخل جدول الفاتورة نفسه بدل صندوق منفصل — فتاخذ القائمة عبر
+   * onItemsChange وتعرضها هي، وهذا المكوّن يبقى بس لإضافة إجراء جديد */
+  hideItemsList?: boolean
+  /** ✅ لو الصفحة الأم حذفت إجراء بنفسها (بدل زر الحذف هون)، تزيد هذا الرقم
+   * عشان يعيد الجلب ويبقى متزامن مع حالة هذا المكوّن الداخلية */
+  refreshTrigger?: number
 }
 
 interface CatalogItem { id: string; name: string; nameEn: string | null; defaultPrice: number | null }
@@ -29,7 +36,7 @@ const T = {
 // ✅ يُستخدم بزيارة موعد عادي أو حالة طوارئ (parentType يحدد مسار الـ API) —
 // سعر كل إجراء يبدأ بالسعر الافتراضي من الكتالوج، والطبيب يعدّله أو يصفّره
 // بحرية قبل الإضافة؛ الإزالة بعد الإضافة متاحة دايماً
-export default function ProceduresPicker({ parentType, parentId, lang, onTotalChange, onItemsChange }: ProceduresPickerProps) {
+export default function ProceduresPicker({ parentType, parentId, lang, onTotalChange, onItemsChange, hideItemsList, refreshTrigger }: ProceduresPickerProps) {
   const t = T[lang]
   const isAr = lang === 'ar'
   const basePath = parentType === 'appointment' ? `/appointments/${parentId}` : `/queue/${parentId}`
@@ -49,7 +56,7 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
     api.get('/procedures').then(res => setCatalog(res.data)).catch(() => {})
     fetchItems()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentId, parentType])
+  }, [parentId, parentType, refreshTrigger])
 
   const handlePick = (id: string) => {
     setSelectedProcedureId(id)
@@ -117,7 +124,7 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
 
       {error && <p style={{ fontSize: 11, color: '#EF4444', margin: '0 0 10px' }}>⚠️ {error}</p>}
 
-      {items.length === 0 ? (
+      {!hideItemsList && (items.length === 0 ? (
         <p style={{ fontSize: 11.5, color: TEXT_MUTED, fontStyle: 'italic', margin: 0 }}>{t.noItems}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -145,7 +152,7 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
             <span style={{ fontFamily: "'Inter',sans-serif" }}>{total} {getCurrencySymbol(lang)}</span>
           </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }

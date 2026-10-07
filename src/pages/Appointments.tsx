@@ -527,6 +527,21 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   const [apptTemplateId, setApptTemplateId] = useState('')
   // ✅ إجمالي الإجراءات (ProceduresPicker) — يُضاف لإجمالي الفاتورة عشان الموظف يشوف ويحصّل المبلغ كامل
   const [proceduresTotal, setProceduresTotal] = useState(0)
+  // ✅ القائمة نفسها — تُعرض كبنود داخل جدول الفاتورة (مش بصندوق منفصل)، عشان
+  // الموظف يشوف الإجراءات اللي ضافها الطبيب كبند واضح بجانب بنود نوع الزيارة.
+  // الحذف من هون يُحدّث ProceduresPicker عبر refreshTrigger عشان تبقى الحالتين متزامنتين
+  const [procedureItems, setProcedureItems] = useState<{ id: string; name: string; price: number | null }[]>([])
+  const [procedureRefreshKey, setProcedureRefreshKey] = useState(0)
+  const [removingProcedureId, setRemovingProcedureId] = useState<string | null>(null)
+
+  const handleRemoveProcedure = async (id: string) => {
+    setRemovingProcedureId(id)
+    try {
+      await api.delete(`/appointments/${appointmentId}/procedures/${id}`)
+      setProcedureRefreshKey(k => k + 1)
+    } catch { /* ignore — ProceduresPicker نفسه بيعرض خطأ لو فشل لاحقاً */ }
+    finally { setRemovingProcedureId(null) }
+  }
 
   useEffect(() => {
     api.get('/treatmentplans/templates')
@@ -563,6 +578,16 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
       setLoadingInsurance(true)
       const price = appointment?.price ?? 0
 
+      // ✅ appointment.price أصلاً بيضمّ سعر الإجراءات (الباك إند يحسبه هيك) — لازم
+      // نطرحه قبل ما نعبّي "بند نوع الزيارة"، لأن الإجراءات تُعرض وتُحسب كبند مستقل
+      // بالأسفل (ProceduresPicker + proceduresTotal)، وإلا بنحسبها مرتين بالإجمالي
+      let proceduresSum = 0
+      try {
+        const procRes = await api.get(`/appointments/${appointmentId}/procedures`)
+        proceduresSum = (procRes.data as any[]).reduce((s, p) => s + (p.price || 0), 0)
+      } catch { /* ignore */ }
+      const visitOnlyPrice = Math.max(0, price - proceduresSum)
+
       // 1) تحقق أول: فيه دفعة مسجّلة أصلاً لهذا الموعد؟
       let existing: any = null
       try {
@@ -574,12 +599,14 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
 
       if (existing) {
         // ✅ فيه دفعة سابقة — نعبّي الفورم منها بدل حساب جديد، ونحفظ بياناتها للتحديث لاحقاً
+        // (نفس طرح الإجراءات هون كمان — existing.totalAmount محفوظ وقت إنشاء الدفعة
+        // وممكن يكون ضامّ الإجراءات أصلاً)
         setExistingPayment(existing)
         setPatientHasInsurance((existing.insuranceAmount ?? 0) > 0)
         const rate = existing.totalAmount > 0 ? String(Math.round((existing.insuranceAmount / existing.totalAmount) * 100)) : ''
         setItems(prev => prev.map((it, idx) => idx === 0 ? {
           ...it,
-          price: String(existing.totalAmount ?? price),
+          price: String(Math.max(0, (existing.totalAmount ?? price) - proceduresSum)),
           insuranceRate: rate,
           covered: (existing.insuranceAmount ?? 0) > 0,
         } : it))
@@ -589,11 +616,12 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
       }
 
       // 2) ما فيه دفعة سابقة — نحسب حصة التأمين تلقائياً بنفس آلية صفحة الحجز
+      // (على سعر الزيارة فقط، بدون الإجراءات — الإجراءات مستثناة من التأمين بهذا التصميم)
       let rate = ''
       let hasIns = false
       try {
-        if (appointment?.patientId && price > 0) {
-          const res = await api.get(`/insurance/calculate?patientId=${appointment.patientId}&amount=${price}`)
+        if (appointment?.patientId && visitOnlyPrice > 0) {
+          const res = await api.get(`/insurance/calculate?patientId=${appointment.patientId}&amount=${visitOnlyPrice}`)
           if (res.data?.hasInsurance) {
             hasIns = true
             rate = String(res.data.coverageRate)
@@ -607,7 +635,7 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
         // لو رد التأمين الفعلي يقول إن هذا البند بالذات مستثنى (زي الأسنان غالباً)
         setItems(prev => prev.map((it, idx) => idx === 0 ? {
           ...it,
-          price: price ? String(price) : '',
+          price: visitOnlyPrice ? String(visitOnlyPrice) : '',
           insuranceRate: rate,
           covered: hasIns,
         } : it))
@@ -905,6 +933,26 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
                 )
               })}
 
+              {/* ✅ بنود الإجراءات (ProceduresPicker) — تُعرض هون كبنود فاتورة فعلية
+                  بجانب بنود نوع الزيارة، مش بصندوق منفصل تحت. غير قابلة للتعديل هون
+                  (التعديل/الإضافة من قسم الإجراءات تحت)، بس بتأثر بالإجمالي العام */}
+              {procedureItems.map(p => (
+                <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 62px 55px 68px auto', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, color: TEXT_DARK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>
+                    💉 {p.name}
+                  </div>
+                  <div style={{ ...inputStyle, textAlign: 'center', background: '#F1F4F4' }}>{(p.price ?? 0).toFixed(2)}</div>
+                  <div style={{ ...inputStyle, textAlign: 'center', background: '#F1F4F4', color: TEXT_MUTED }}>—</div>
+                  <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>
+                    {(p.price ?? 0).toFixed(2)}
+                  </div>
+                  <button type="button" onClick={() => handleRemoveProcedure(p.id)} disabled={removingProcedureId === p.id}
+                    style={{ background: 'none', border: 'none', color: removingProcedureId === p.id ? '#CBD5D5' : '#EF4444', cursor: removingProcedureId === p.id ? 'not-allowed' : 'pointer', fontSize: 15, padding: 4 }}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+
               {/* عناوين الأعمدة — توضيح سريع لمعنى كل رقم بالصف */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 62px 55px 68px auto', gap: 6, marginTop: -4, marginBottom: 6, padding: '0 2px' }}>
                 <span />
@@ -934,9 +982,12 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
           )}
         </div>
 
-        {mode === 'checkout' && (
-          <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} onTotalChange={setProceduresTotal} />
-        )}
+        {/* ✅ موجودة بالوضعين (checkout وpayLater) — الإجراءات ممكن تكون انضافت
+            وقت الزيارة نفسها (VisitWorkspace)، فالموظف لازم يشوفها هون كمان
+            حتى لو بس جاي يسجّل دفعة لزيارة خلصت أصلاً */}
+        <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang}
+          onTotalChange={setProceduresTotal} onItemsChange={setProcedureItems}
+          hideItemsList refreshTrigger={procedureRefreshKey} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <div>
