@@ -271,6 +271,13 @@ export default function VisitWorkspace() {
         }
       }
 
+      // ✅ "حفظ وإنهاء" لازم يُنهي الموعد فعلياً (checkout) — مش بس يحفظ الملاحظة
+      // ويرجع — وإلا الموعد يفضل "جارية" للأبد، وما بيظهر لا بلوحة الاستقبال
+      // كـ"بانتظار الدفع" ولا بأي تقرير. الاستقبال يكمّل الدفع لاحقاً من صفحة المواعيد.
+      if (andFinish && !appointment.checkOutTime) {
+        await api.post(`/appointments/${appointmentId}/checkout`)
+      }
+
       setSuccess(t.saved)
       if (andFinish) {
         // ✅ تأخير بسيط عشان رسالة النجاح تظهر لحظة قبل الرجوع، بدل تحويل فوري بلا تأكيد
