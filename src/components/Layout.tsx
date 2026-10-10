@@ -5,6 +5,7 @@ import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
 import { isHour12 } from '../utils/i18n'
 import OnboardingTour, { type TourStep } from './OnboardingTour'
+import MessageBoxHost from './MessageBoxHost'
 
 // ✅ جولة تعريفية قصيرة — تظهر تلقائياً مرة واحدة فقط لكل مستخدم عند أول دخوله
 // للوحة التحكم، ويمكن إعادة تشغيلها يدوياً من زر "جولة تعريفية" بأسفل القائمة
@@ -915,6 +916,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {showTour && <OnboardingTour steps={TOUR_STEPS} isAr={isAr} onFinish={finishTour} />}
+      <MessageBoxHost />
     </div>
   )
 }

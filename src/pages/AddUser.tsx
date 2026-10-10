@@ -4,6 +4,7 @@ import api from '../api/axios'
 import SearchableSelect from '../components/SearchableSelect'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -40,7 +41,6 @@ const SPECIALTIES = {
 
 export default function AddUser() {
   const navigate = useNavigate()
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [lang] = useState<'ar' | 'en'>(getStoredLang())
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
@@ -100,24 +100,24 @@ export default function AddUser() {
 
   const handleSubmitRaw = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(''); setSuccess('')
+    setSuccess('')
 
     if (!form.fullName.trim())
-      return setError(isAr ? 'الاسم مطلوب' : 'Name is required')
+      return showMessageBox(isAr ? 'الاسم مطلوب' : 'Name is required', 'warning')
     if (!form.username.trim())
-      return setError(isAr ? 'اسم المستخدم مطلوب' : 'Username is required')
+      return showMessageBox(isAr ? 'اسم المستخدم مطلوب' : 'Username is required', 'warning')
     if (!form.password.trim())
-      return setError(isAr ? 'كلمة المرور مطلوبة' : 'Password is required')
+      return showMessageBox(isAr ? 'كلمة المرور مطلوبة' : 'Password is required', 'warning')
     if (!form.role)
-      return setError(isAr ? 'الدور مطلوب' : 'Role is required')
+      return showMessageBox(isAr ? 'الدور مطلوب' : 'Role is required', 'warning')
     if (!/^[a-zA-Z0-9]+$/.test(form.username))
-      return setError(isAr ? 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط' : 'Username must contain only English letters and numbers')
+      return showMessageBox(isAr ? 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط' : 'Username must contain only English letters and numbers', 'warning')
     if (form.password.length < 6)
-      return setError(isAr ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters')
+      return showMessageBox(isAr ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters', 'warning')
 
     // ✅ التخصص إجباري للطبيب
     if (form.role === 'Doctor' && !form.specialty.trim())
-      return setError(isAr ? 'التخصص مطلوب للطبيب' : 'Specialty is required for Doctor')
+      return showMessageBox(isAr ? 'التخصص مطلوب للطبيب' : 'Specialty is required for Doctor', 'warning')
 
     const email = `${form.username}@CURA.COM`
 
@@ -137,7 +137,7 @@ export default function AddUser() {
       setTimeout(() => navigate('/users'), 1500)
     } catch (err: any) {
       const errData = err.response?.data
-      setError(typeof errData === 'string' ? errData : (isAr ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred'))
+      showMessageBox(typeof errData === 'string' ? errData : (isAr ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred'), 'error')
     }
   }
 
@@ -265,12 +265,7 @@ export default function AddUser() {
               </Field>
             )}
 
-            {/* خطأ / نجاح */}
-            {error && (
-              <div style={{ background: '#FDF5F5', border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: ERROR_TEXT }}>
-                ⚠️ {error}
-              </div>
-            )}
+            {/* نجاح */}
             {success && (
               <div style={{ background: '#F0F8F0', border: '1px solid #4A767940', borderRadius: 12, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#4A7679' }}>
                 {success}

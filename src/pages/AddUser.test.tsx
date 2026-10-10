@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import AddUser from './AddUser'
+import MessageBoxHost from '../components/MessageBoxHost'
 import api from '../api/axios'
 
 vi.mock('../api/axios', () => ({
@@ -18,6 +19,7 @@ function renderAddUser() {
         <Route path="/users/add" element={<AddUser />} />
         <Route path="/users" element={<div>users page</div>} />
       </Routes>
+      <MessageBoxHost />
     </MemoryRouter>
   )
 }
@@ -105,7 +107,7 @@ describe('AddUser', () => {
 
     await user.click(screen.getByRole('button', { name: /add user/i }))
 
-    // Shown both inline under the field and in the submit-error banner.
+    // Shown both inline under the field and in the messagebox.
     expect((await screen.findAllByText('Specialty is required for Doctor', { exact: false })).length).toBeGreaterThan(0)
     expect(mockedApi.post).not.toHaveBeenCalled()
   })
