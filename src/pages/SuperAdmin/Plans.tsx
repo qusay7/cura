@@ -505,6 +505,9 @@ interface Plan {
   id: string
   name: string
   description?: string
+  nameEn?: string
+  descriptionEn?: string
+  featuresEn?: string[]
   monthlyPrice: number
   yearlyPrice: number
   maxUsers: number
@@ -523,6 +526,7 @@ const defaultPlans = [
   {
     name: 'Basic',
     description: 'للعيادات الصغيرة',
+    descriptionEn: 'For small clinics',
     monthlyPrice: 20,
     yearlyPrice: 199,
     maxUsers: 3,
@@ -534,10 +538,12 @@ const defaultPlans = [
     hasElectronicInvoicing: false,
     hasMultipleDepartments: false,
     featuresText: 'جدولة المواعيد\nملاحظات الزيارة\nتقارير أساسية',
+    featuresTextEn: 'Appointment Scheduling\nVisit Notes\nBasic Reports',
   },
   {
     name: 'Standard',
     description: 'للعيادات المتوسطة',
+    descriptionEn: 'For medium clinics',
     monthlyPrice: 29,
     yearlyPrice: 299,
     maxUsers: 10,
@@ -549,10 +555,12 @@ const defaultPlans = [
     hasElectronicInvoicing: true,
     hasMultipleDepartments: true,
     featuresText: 'جميع مميزات الخطة الأساسية\nفواتير إلكترونية\nأقسام متعددة\nدعم ذو أولوية',
+    featuresTextEn: 'Everything in Basic\nElectronic Invoicing\nMultiple Departments\nPriority Support',
   },
   {
     name: 'Premium',
     description: 'للعيادات الكبيرة',
+    descriptionEn: 'For large clinics',
     monthlyPrice: 45,
     yearlyPrice: 410,
     maxUsers: -1,
@@ -564,6 +572,7 @@ const defaultPlans = [
     hasElectronicInvoicing: true,
     hasMultipleDepartments: true,
     featuresText: 'جميع مميزات الخطة المتقدمة\nمستخدمون وأطباء غير محدودين\nمدير حساب مخصص\nتدريب مجاني للفريق',
+    featuresTextEn: 'Everything in Standard\nUnlimited Users & Doctors\nDedicated Account Manager\nFree Team Training',
   },
 ]
 
@@ -591,9 +600,10 @@ export default function SuperAdminPlans() {
 // emptyForm
    const emptyForm = {
     name: '', description: '',
+    nameEn: '', descriptionEn: '',
     monthlyPrice: '', yearlyPrice: '',
     maxUsers: '', maxDoctors: '', maxPatients: '', maxDailyMessages: '',
-    featuresText: '', isFeatured: false,
+    featuresText: '', featuresTextEn: '', isFeatured: false,
     hasElectronicInvoicing: false, hasMultipleDepartments: false,
   }
   const [form, setForm] = useState(emptyForm)
@@ -651,6 +661,8 @@ export default function SuperAdminPlans() {
     setForm({
       name: plan.name,
       description: plan.description || '',
+      nameEn: plan.nameEn || '',
+      descriptionEn: plan.descriptionEn || '',
       monthlyPrice: String(plan.monthlyPrice),
       yearlyPrice: String(plan.yearlyPrice),
       maxUsers: String(plan.maxUsers),
@@ -659,6 +671,7 @@ export default function SuperAdminPlans() {
       maxDailyMessages: String(plan.maxDailyMessages),  // ← جديد
       // Rejoin the features array back into one-per-line text for editing
       featuresText: (plan.features || []).join('\n'),
+      featuresTextEn: (plan.featuresEn || []).join('\n'),
       isFeatured: plan.isFeatured,
       hasElectronicInvoicing: plan.hasElectronicInvoicing,
       hasMultipleDepartments: plan.hasMultipleDepartments,
@@ -674,6 +687,8 @@ export default function SuperAdminPlans() {
       const payload = {
         name: form.name,
         description: form.description,
+        nameEn: form.nameEn,
+        descriptionEn: form.descriptionEn,
         monthlyPrice: parseFloat(form.monthlyPrice),
         yearlyPrice: parseFloat(form.yearlyPrice),
         maxUsers: parseInt(form.maxUsers),
@@ -681,6 +696,7 @@ export default function SuperAdminPlans() {
         maxPatients: parseInt(form.maxPatients),
         maxDailyMessages: parseInt(form.maxDailyMessages),
         featuresText: form.featuresText,
+        featuresTextEn: form.featuresTextEn,
         isFeatured: form.isFeatured,
         hasElectronicInvoicing: form.hasElectronicInvoicing,
         hasMultipleDepartments: form.hasMultipleDepartments,
@@ -722,7 +738,9 @@ export default function SuperAdminPlans() {
   const unlimitedPlaceholder = lang === 'ar' ? '-1 = غير محدود' : '-1 = Unlimited'
   const fields = [
     { key: 'name', label: lang === 'ar' ? 'اسم الخطة' : 'Plan Name', placeholder: 'Basic', type: 'text', required: true },
+    { key: 'nameEn', label: lang === 'ar' ? 'اسم الخطة (إنجليزي، اختياري)' : 'Plan Name (English, optional)', placeholder: 'e.g. Basic', type: 'text', required: false },
     { key: 'description', label: lang === 'ar' ? 'الوصف' : 'Description', placeholder: lang === 'ar' ? 'للعيادات الصغيرة' : 'For small clinics', type: 'text', required: false },
+    { key: 'descriptionEn', label: lang === 'ar' ? 'الوصف (إنجليزي، اختياري)' : 'Description (English, optional)', placeholder: 'e.g. For small clinics', type: 'text', required: false },
     { key: 'monthlyPrice', label: lang === 'ar' ? 'السعر الشهري' : 'Monthly Price', placeholder: '20', type: 'number', required: true },
     { key: 'yearlyPrice', label: lang === 'ar' ? 'السعر السنوي' : 'Yearly Price', placeholder: '199', type: 'number', required: true },
     { key: 'maxUsers', label: lang === 'ar' ? 'عدد المستخدمين' : 'Max Users', placeholder: unlimitedPlaceholder, type: 'number', required: true },
@@ -863,6 +881,18 @@ export default function SuperAdminPlans() {
                     rows={5}
                   />
                   <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>💡 {t.featuresHint}</p>
+                </div>
+
+                {/* Features (English, optional) — same one-per-line format */}
+                <div className="form-field form-field-full">
+                  <label className="form-label">{lang === 'ar' ? 'المميزات (إنجليزي، اختياري)' : 'Features (English, optional)'}</label>
+                  <textarea
+                    value={form.featuresTextEn}
+                    onChange={e => setForm({ ...form, featuresTextEn: e.target.value })}
+                    placeholder={'Appointment Scheduling\nVisit Notes\nBasic Reports'}
+                    className="form-textarea"
+                    rows={5}
+                  />
                 </div>
 
                 {/* Featured toggle — spans the full grid width */}

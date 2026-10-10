@@ -13,6 +13,8 @@ interface ApiPlan {
   id: string
   name: string
   description: string | null
+  nameEn: string | null
+  descriptionEn: string | null
   monthlyPrice: number
   yearlyPrice: number
   maxUsers: number
@@ -21,6 +23,7 @@ interface ApiPlan {
   isActive: boolean
   isFeatured: boolean
   features: string[]
+  featuresEn: string[]
 }
 
 const C = {
@@ -885,6 +888,11 @@ export default function LandingPage() {
                   { icon:'🩺', val: plan.maxDoctors === -1 ? t.pricing.unlimited : plan.maxDoctors, label: t.pricing.doctors },
                   { icon:'🧍', val: plan.maxPatients === -1 ? t.pricing.unlimited : plan.maxPatients, label: t.pricing.patients },
                 ]
+                // ✅ نسخة إنجليزية اختيارية لكل حقل — نرجع للعربي لو مش معبّاة، بنفس
+                // اتفاقية NameEn المستخدمة بباقي الكيانات بالتطبيق
+                const displayName = isAr ? plan.name : (plan.nameEn || plan.name)
+                const displayDescription = isAr ? plan.description : (plan.descriptionEn || plan.description)
+                const displayFeatures = isAr ? plan.features : (plan.featuresEn?.length ? plan.featuresEn : plan.features)
                 return (
                   <div key={plan.id} className={`plan-card${plan.isFeatured?' top':''}`}>
 
@@ -894,9 +902,9 @@ export default function LandingPage() {
                       </div>
                     )}
 
-                    <h3 style={{ fontSize:20, fontWeight:800, color:plan.isFeatured?'#FFF':C.dark, marginBottom:6 }}>{plan.name}</h3>
-                    {plan.description && (
-                      <p style={{ fontSize:13, color:plan.isFeatured?'rgba(255,255,255,0.6)':C.muted, marginBottom:24, lineHeight:1.5 }}>{plan.description}</p>
+                    <h3 style={{ fontSize:20, fontWeight:800, color:plan.isFeatured?'#FFF':C.dark, marginBottom:6 }}>{displayName}</h3>
+                    {displayDescription && (
+                      <p style={{ fontSize:13, color:plan.isFeatured?'rgba(255,255,255,0.6)':C.muted, marginBottom:24, lineHeight:1.5 }}>{displayDescription}</p>
                     )}
 
                     <div style={{ marginBottom:28, display:'flex', alignItems:'baseline', gap:4 }}>
@@ -920,7 +928,7 @@ export default function LandingPage() {
                     </div>
 
                     <ul style={{ listStyle:'none', marginBottom:32 }}>
-                      {plan.features.map((f,j) => (
+                      {displayFeatures.map((f,j) => (
                         <li key={j} style={{ display:'flex', alignItems:'flex-start', gap:10, fontSize:14, color:plan.isFeatured?'rgba(255,255,255,0.85)':C.dark, marginBottom:12, lineHeight:1.5 }}>
                           <span style={{ color:plan.isFeatured?'#4ADE80':C.teal, fontWeight:700, flexShrink:0, marginTop:1 }}>✓</span>
                           {f}
