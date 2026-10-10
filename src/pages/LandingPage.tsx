@@ -238,7 +238,7 @@ const T = {
   ar: {
     dir:'rtl' as const,
     font:"'Noto Kufi Arabic', sans-serif",
-    nav:{ features:'المميزات', pricing:'الأسعار', about:'من نحن', login:'تسجيل الدخول', cta:'ابدأ مجاناً' },
+    nav:{ features:'المميزات', pricing:'الأسعار', faq:'الأسئلة المتكررة', about:'من نحن', login:'تسجيل الدخول', cta:'ابدأ مجاناً' },
     hero:{
       eyebrow:'منصة إدارة العيادات الطبية',
       h1:  'إدارة عيادة أكثر ذكاء.',
@@ -329,7 +329,7 @@ const T = {
   en: {
     dir:'ltr' as const,
     font:"'Inter', sans-serif",
-    nav:{ features:'Features', pricing:'Pricing', about:'About', login:'Sign In', cta:'Get Started' },
+    nav:{ features:'Features', pricing:'Pricing', faq:'FAQ', about:'About', login:'Sign In', cta:'Get Started' },
     hero:{
       eyebrow:'Clinic Management Platform',
       h1:  'Smarter clinic management.',
@@ -523,6 +523,7 @@ export default function LandingPage() {
               {[
                 { label:t.nav.features, id:'features' },
                 { label:t.nav.pricing,  id:'pricing'  },
+                { label:t.nav.faq,      id:'faq'      },
               ].map(l => (
                 <span key={l.id} className="nav-item" onClick={() => scrollTo(l.id)}>{l.label}</span>
               ))}
@@ -566,6 +567,7 @@ export default function LandingPage() {
               {[
                 { label:t.nav.features, id:'features' },
                 { label:t.nav.pricing,  id:'pricing'  },
+                { label:t.nav.faq,      id:'faq'      },
               ].map(l => (
                 <button key={l.id} onClick={() => scrollTo(l.id)}
                   style={{ textAlign:isAr ? 'right' : 'left', background:'none', border:'none', padding:'12px 4px',
