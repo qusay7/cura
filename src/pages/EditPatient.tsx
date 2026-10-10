@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -309,7 +310,6 @@ export default function EditPatient() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
 
   const [form, setForm] = useState({
@@ -434,7 +434,6 @@ export default function EditPatient() {
       return
     }
 
-    setError('')
     setSaving(true)
 
     try {
@@ -446,14 +445,14 @@ export default function EditPatient() {
     } catch (err: any) {
       const errData = err.response?.data
       if (typeof errData === 'string') {
-        setError(errData)
+        showMessageBox(errData, 'error')
       } else if (errData?.errors) {
         const messages = Object.values(errData.errors).flat().join('، ')
-        setError(messages as string)
+        showMessageBox(messages as string, 'error')
       } else if (errData?.message) {
-        setError(errData.message)
+        showMessageBox(errData.message, 'error')
       } else {
-        setError(T[lang].error)
+        showMessageBox(T[lang].error, 'error')
       }
     } finally {
       setSaving(false)
@@ -985,23 +984,6 @@ export default function EditPatient() {
               />
             </FormSection>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div style={{
-              background: ERROR_BG,
-              border: `1px solid ${ERROR_TEXT}40`,
-              borderRadius: 12,
-              padding: '12px 16px',
-              marginTop: 24,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}>
-              <span style={{ fontSize: 14 }}>⚠️</span>
-              <span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
-            </div>
-          )}
 
           {/* Actions Buttons */}
           <div className="action-buttons" style={{

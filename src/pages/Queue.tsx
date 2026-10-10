@@ -3,6 +3,7 @@ import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { hasPermission, getRole } from '../utils/permissions'
 import { isHour12 } from '../utils/i18n'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -251,7 +252,6 @@ export default function Queue() {
   const [loading, setLoading]         = useState(true)
   const [showForm, setShowForm]       = useState(false)
   const [saving, setSaving]           = useState(false)
-  const [error, setError]             = useState('')
   const [success, setSuccess]         = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
@@ -313,7 +313,7 @@ export default function Queue() {
       }
       setStats(sRes.data)
     } catch {
-      setError(t.messages.errorLoading)
+      showMessageBox(t.messages.errorLoading, 'error')
     } finally {
       setLoading(false)
     }
@@ -433,18 +433,17 @@ export default function Queue() {
         setSuccess(`${t.messages.patientAdded} ${patientResponse.data.fullName} — #${patientResponse.data.patientNumber}`)
         setTimeout(() => setSuccess(''), 4000)
       } catch (err: any) {
-        setError(err.response?.data || t.messages.errorOccurred)
+        showMessageBox(err.response?.data || t.messages.errorOccurred, 'error')
         setSavingQuick(false)
         return
       }
       setSavingQuick(false)
     } else {
-      setError(t.messages.selectPatientFirst)
+      showMessageBox(t.messages.selectPatientFirst, 'warning')
       return
     }
-    
+
     setSaving(true)
-    setError('')
     try {
       const res = await api.post('/queue', {
         patientId: patientId,
@@ -460,7 +459,7 @@ export default function Queue() {
       fetchAll()
       setTimeout(() => setSuccess(''), 5000)
     } catch (err: any) {
-      setError(err.response?.data || t.messages.errorOccurred)
+      showMessageBox(err.response?.data || t.messages.errorOccurred, 'error')
     } finally {
       setSaving(false)
     }
@@ -471,7 +470,7 @@ export default function Queue() {
       await api.put(`/queue/${id}/${action}`)
       fetchAll()
     } catch {
-      setError(t.messages.errorOccurred)
+      showMessageBox(t.messages.errorOccurred, 'error')
     }
   }
 
@@ -544,12 +543,6 @@ export default function Queue() {
         )}
 
         {/* Alerts */}
-        {error && (
-          <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', color: ERROR_TEXT }}>
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>✕</button>
-          </div>
-        )}
         {success && (
           <div style={{ background: PRIMARY_SOFT, border: `1px solid ${PRIMARY}`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, color: TEXT_DARK }}>
             {success}

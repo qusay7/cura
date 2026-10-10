@@ -8,6 +8,7 @@ import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../comp
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { PRIMARY_SOFT } from '../styles/theme'
 import { getCurrencySymbol, getStoredCountryCode } from '../utils/i18n'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' => (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
@@ -281,7 +282,6 @@ function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onCl
   const t = { ...T[lang], riyal: getCurrencySymbol(lang) }
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [payments, setPayments] = useState<any[]>([])
   const [selected, setSelected] = useState('')
   const [taxMethod, setTaxMethod] = useState('2')
@@ -298,7 +298,7 @@ function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onCl
 
   const create = async () => {
     if (!selected) return
-    setSaving(true); setError('')
+    setSaving(true)
     try {
       await api.post('/invoices/from-payment', {
         paymentDetailId: selected,
@@ -307,7 +307,7 @@ function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onCl
       })
       onCreated()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noData)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noData, 'error')
     } finally { setSaving(false) }
   }
 
@@ -318,10 +318,6 @@ function NewInvoiceModal({ lang, onClose, onCreated }: { lang: 'ar' | 'en'; onCl
         onClick={e => e.stopPropagation()}
         style={{ background: CARD_BG, borderRadius: 18, padding: 24, maxWidth: 560, width: '100%', maxHeight: '88vh', overflowY: 'auto' }}>
         <h3 id="new-invoice-modal-title" style={{ fontSize: 17, fontWeight: 700, color: TEXT_DARK, margin: '0 0 16px' }}>🧾 {t.pickPayment}</h3>
-
-        {error && (
-          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: DANGER }}>⚠️ {error}</div>
-        )}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: 30, color: TEXT_MUTED, fontSize: 13 }}>{t.loading}</div>
@@ -380,7 +376,6 @@ function ReturnModal({ invoiceId, lang, onClose, onCreated }: { invoiceId: strin
   const t = T[lang]
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [inv, setInv] = useState<any>(null)
   const [reason, setReason] = useState('')
   const [qty, setQty] = useState<Record<string, string>>({})
@@ -405,12 +400,12 @@ function ReturnModal({ invoiceId, lang, onClose, onCreated }: { invoiceId: strin
       .filter(x => x.quantity > 0)
     if (items.length === 0) return
 
-    setSaving(true); setError('')
+    setSaving(true)
     try {
       await api.post('/invoices/return', { sourceInvoiceId: invoiceId, reason, items })
       onCreated()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noData)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noData, 'error')
     } finally { setSaving(false) }
   }
 
@@ -432,10 +427,6 @@ function ReturnModal({ invoiceId, lang, onClose, onCreated }: { invoiceId: strin
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px' }}>
           <div style={{ maxWidth: 720, margin: '0 auto' }}>
-            {error && (
-              <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: DANGER }}>⚠️ {error}</div>
-            )}
-
             {loading ? (
               <div style={{ textAlign: 'center', padding: 30, color: TEXT_MUTED, fontSize: 13 }}>{t.loading}</div>
             ) : (

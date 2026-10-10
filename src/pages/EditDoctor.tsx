@@ -5,6 +5,7 @@ import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
 import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -293,7 +294,6 @@ export default function EditDoctor() {
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [departments, setDepartments] = useState<Department[]>([])
@@ -309,7 +309,6 @@ export default function EditDoctor() {
   const [financialLoading, setFinancialLoading] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
   const [settings, setSettings] = useState<FinancialSetting[]>([])
-  const [financialError, setFinancialError] = useState('')
   const [financialSuccess, setFinancialSuccess] = useState('')
 
   const emptyMoneyForm = {
@@ -328,7 +327,6 @@ export default function EditDoctor() {
 
   const loadFinancialData = async () => {
     setFinancialLoading(true)
-    setFinancialError('')
     try {
       const [tplRes, settingsRes] = await Promise.all([
         api.get('/treatmentplans/templates'),
@@ -349,7 +347,7 @@ export default function EditDoctor() {
       }
       setFinancialLoaded(true)
     } catch {
-      setFinancialError(t.financialError)
+      showMessageBox(t.financialError, 'error')
     } finally {
       setFinancialLoading(false)
     }
@@ -370,14 +368,14 @@ export default function EditDoctor() {
 
   const handleSaveGeneral = async () => {
     setSavingGeneral(true)
-    setFinancialError(''); setFinancialSuccess('')
+    setFinancialSuccess('')
     try {
       await api.put(`/doctors/${id}/financial-settings/general`, buildMoneyPayload(generalForm))
       setFinancialSuccess(t.financialSaved)
       await loadFinancialData()
       setTimeout(() => setFinancialSuccess(''), 3000)
     } catch (err: any) {
-      setFinancialError(err.response?.data?.message || err.response?.data || t.financialError)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.financialError, 'error')
     } finally {
       setSavingGeneral(false)
     }
@@ -405,11 +403,11 @@ export default function EditDoctor() {
 
   const handleSaveException = async () => {
     if (!exceptionTemplateId) {
-      setFinancialError(isAr ? 'اختر قالباً أولاً' : 'Please select a template first')
+      showMessageBox(isAr ? 'اختر قالباً أولاً' : 'Please select a template first', 'warning')
       return
     }
     setSavingException(true)
-    setFinancialError(''); setFinancialSuccess('')
+    setFinancialSuccess('')
     try {
       await api.put(`/doctors/${id}/financial-settings/exceptions/${exceptionTemplateId}`, buildMoneyPayload(exceptionForm))
       setFinancialSuccess(t.financialSaved)
@@ -417,7 +415,7 @@ export default function EditDoctor() {
       await loadFinancialData()
       setTimeout(() => setFinancialSuccess(''), 3000)
     } catch (err: any) {
-      setFinancialError(err.response?.data?.message || err.response?.data || t.financialError)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.financialError, 'error')
     } finally {
       setSavingException(false)
     }
@@ -429,7 +427,7 @@ export default function EditDoctor() {
       await api.delete(`/doctors/${id}/financial-settings/${settingId}`)
       await loadFinancialData()
     } catch {
-      setFinancialError(t.financialError)
+      showMessageBox(t.financialError, 'error')
     }
   }
 
@@ -482,7 +480,7 @@ export default function EditDoctor() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(''); setSaving(true)
+    setSaving(true)
     try {
       const payload: Record<string, any> = {
         fullName:  form.fullName,
@@ -500,7 +498,7 @@ export default function EditDoctor() {
       setTimeout(() => navigate('/doctors'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
-      setError(typeof errData === 'string' ? errData : errData?.message || T[lang].error)
+      showMessageBox(typeof errData === 'string' ? errData : errData?.message || T[lang].error, 'error')
     } finally { setSaving(false) }
   }
 
@@ -645,12 +643,6 @@ export default function EditDoctor() {
             )}
 
             {/* خطأ */}
-            {error && (
-              <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span>⚠️</span><span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
-              </div>
-            )}
-
             {/* أزرار */}
             <div className="action-row" style={{ display: 'flex', gap: 12, marginTop: 20 }}>
               <button type="submit" disabled={saving}
@@ -680,11 +672,6 @@ export default function EditDoctor() {
               </div>
             ) : (
               <>
-                {financialError && (
-                  <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span>⚠️</span><span style={{ fontSize: 13, color: ERROR_TEXT }}>{financialError}</span>
-                  </div>
-                )}
                 {financialSuccess && (
                   <div style={{ background: PRIMARY_SOFT, border: `1px solid ${SUCCESS}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span>✅</span><span style={{ fontSize: 13, color: SUCCESS }}>{financialSuccess}</span>

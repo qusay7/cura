@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Settings from './Settings'
+import MessageBoxHost from '../components/MessageBoxHost'
 import api from '../api/axios'
 
 vi.mock('../api/axios', () => ({
@@ -39,7 +40,7 @@ function mockSettingsGets(overrides: Record<string, unknown> = {}) {
 }
 
 function renderSettings() {
-  return render(<Settings />)
+  return render(<><Settings /><MessageBoxHost /></>)
 }
 
 describe('Settings', () => {

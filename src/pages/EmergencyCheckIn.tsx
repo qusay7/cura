@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -69,7 +70,6 @@ export default function EmergencyCheckIn() {
   const [newPatient, setNewPatient] = useState({ fullName: '', phone: '', gender: '' })
   const [notes, setNotes] = useState('')
 
-  const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ queueNumber: number } | null>(null)
 
@@ -114,9 +114,8 @@ export default function EmergencyCheckIn() {
   }
 
   const handleSubmit = async () => {
-    setError('')
-    if (!selectedPatient && !isNewPatient) { setError(t.selectPatientFirst); return }
-    if (isNewPatient && !newPatient.fullName.trim()) { setError(t.enterPatientName); return }
+    if (!selectedPatient && !isNewPatient) { showMessageBox(t.selectPatientFirst, 'warning'); return }
+    if (isNewPatient && !newPatient.fullName.trim()) { showMessageBox(t.enterPatientName, 'warning'); return }
     if (!department) return
 
     setSaving(true)
@@ -139,7 +138,7 @@ export default function EmergencyCheckIn() {
       })
       setResult({ queueNumber: res.data.queueNumber })
     } catch (err: any) {
-      setError(err.response?.data || t.errorOccurred)
+      showMessageBox(err.response?.data || t.errorOccurred, 'error')
     } finally {
       setSaving(false)
     }
@@ -192,12 +191,6 @@ export default function EmergencyCheckIn() {
           </div>
         ) : (
           <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 20, padding: 24 }}>
-            {error && (
-              <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#EF4444' }}>
-                ⚠️ {error}
-              </div>
-            )}
-
             {!selectedPatient && !isNewPatient && (
               <>
                 <label style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, display: 'block', marginBottom: 8 }}>{t.patientSearch}</label>

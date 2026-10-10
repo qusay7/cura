@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -64,7 +65,6 @@ export default function DiagnosisTemplates() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   const t = T[lang]
@@ -99,7 +99,6 @@ export default function DiagnosisTemplates() {
   const openAdd = () => {
     setEditId(null)
     setForm(emptyForm)
-    setError('')
     setShowForm(true)
   }
 
@@ -111,7 +110,6 @@ export default function DiagnosisTemplates() {
         ? tpl.medications.map(m => ({ drugName: m.drugName, instructions: m.instructions || '' }))
         : [{ drugName: '', instructions: '' }],
     })
-    setError('')
     setShowForm(true)
   }
 
@@ -124,11 +122,10 @@ export default function DiagnosisTemplates() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setError(t.nameRequired)
+      showMessageBox(t.nameRequired, 'warning')
       return
     }
     setSaving(true)
-    setError('')
     try {
       const payload = {
         name: form.name,
@@ -148,7 +145,7 @@ export default function DiagnosisTemplates() {
       fetchAll()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.errGeneric)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.errGeneric, 'error')
     } finally {
       setSaving(false)
     }
@@ -160,7 +157,7 @@ export default function DiagnosisTemplates() {
       await api.delete(`/diagnosistemplates/${id}`)
       fetchAll()
     } catch {
-      setError(t.errGeneric)
+      showMessageBox(t.errGeneric, 'error')
     }
   }
 
@@ -205,12 +202,6 @@ export default function DiagnosisTemplates() {
             <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_DARK, marginBottom: 18 }}>
               {editId ? `✏️ ${t.editTemplate}` : `➕ ${t.newTemplate}`}
             </h3>
-
-            {error && (
-              <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: ERROR_TEXT }}>
-                ⚠️ {error}
-              </div>
-            )}
 
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.name} *</label>

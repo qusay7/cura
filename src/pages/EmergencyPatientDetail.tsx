@@ -7,6 +7,7 @@ import SickLeaveCertificate from '../components/SickLeaveCertificate'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { getCurrencySymbol } from '../utils/i18n'
 import { printSection, escapeHtml } from '../utils/printSection'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -132,7 +133,6 @@ export default function EmergencyPatientDetail() {
   const [form, setForm] = useState(emptyEntryForm)
   const [saving, setSaving] = useState(false)
   const [discharging, setDischarging] = useState(false)
-  const [error, setError] = useState('')
   const [showSickLeave, setShowSickLeave] = useState(false)
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function EmergencyPatientDetail() {
 
   // ✅ طباعة قسم واحد بمعزل عن باقي الصفحة — نفس أسلوب VisitWorkspace
   const handlePrintSection = (title: string, text: string) => {
-    if (!text.trim()) { setError(t.noContentToPrint); return }
+    if (!text.trim()) { showMessageBox(t.noContentToPrint, 'warning'); return }
     let clinicId = ''
     try { clinicId = JSON.parse(localStorage.getItem('user') || '{}').clinicId || '' } catch { /* ignore */ }
     if (!clinicId) return
@@ -179,7 +179,7 @@ export default function EmergencyPatientDetail() {
 
   const handleSaveEntry = async () => {
     if (!entry) return
-    setSaving(true); setError('')
+    setSaving(true)
     try {
       await api.post('/visitnotes', {
         patientId: entry.patientId,
@@ -197,7 +197,7 @@ export default function EmergencyPatientDetail() {
       setForm(emptyEntryForm)
       fetchAll()
     } catch (err: any) {
-      setError(err.response?.data || t.errorOccurred)
+      showMessageBox(err.response?.data || t.errorOccurred, 'error')
     } finally {
       setSaving(false)
     }
@@ -211,7 +211,7 @@ export default function EmergencyPatientDetail() {
       await api.put(`/queue/${entry.id}/discharge`)
       navigate('/emergency/dashboard')
     } catch (err: any) {
-      setError(err.response?.data || t.errorOccurred)
+      showMessageBox(err.response?.data || t.errorOccurred, 'error')
       setDischarging(false)
     }
   }
@@ -306,12 +306,6 @@ export default function EmergencyPatientDetail() {
             </button>
           )}
         </div>
-
-        {error && (
-          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#EF4444' }}>
-            ⚠️ {error}
-          </div>
-        )}
 
         {!isDischarged && (
           <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 18, padding: 20, marginBottom: 18 }}>

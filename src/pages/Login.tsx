@@ -6,6 +6,7 @@ import logo from '../assets/logo.png'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { authService } from '../api/axios'
+import { showMessageBox } from '../utils/messageBox'
 const translations = {
   en: {
     dir: 'ltr' as const,
@@ -267,7 +268,6 @@ export default function Login() {
   const [emailOrUsername, setEmailOrUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
-  const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
   const [shakeForm, setShakeForm] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -325,6 +325,7 @@ export default function Login() {
       window.dispatchEvent(new CustomEvent('cura-clinic-resolved'))
     } catch {
       setSubdomainError(t.subdomainNotFound)
+      showMessageBox(t.subdomainNotFound, 'warning')
       setShakeForm(true); setTimeout(() => setShakeForm(false), 400)
     } finally {
       setCheckingSubdomain(false)
@@ -350,7 +351,7 @@ export default function Login() {
   // ── Step 2: Login ──────────────────────────────────────────────────────────
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault()
-  setError(''); setLoading(true)
+  setLoading(true)
   try {
     const response = await api.post<AuthResponse>(
       `/auth/login?lang=${lang}&subdomain=${subdomain}`, 
@@ -391,7 +392,7 @@ if (data.role?.toLowerCase() === 'doctor') {
 }
   } catch (err) {
     console.error('❌ Login error:', err)
-    setError(isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials')
+    showMessageBox(isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials', 'error')
     setShakeForm(true)
     setTimeout(() => setShakeForm(false), 400)
   } finally {
@@ -486,7 +487,7 @@ if (data.role?.toLowerCase() === 'doctor') {
           {/* Lang toggle */}
           <div style={{ display:'flex', justifyContent:'center', gap:6, background:PS, borderRadius:100, padding:4, marginBottom:'1.5rem' }}>
             {(['en','ar'] as Lang[]).map(l => (
-              <button key={l} onClick={() => { setLang(l); setError(''); setSubdomainError('') }}
+              <button key={l} onClick={() => { setLang(l); setSubdomainError('') }}
                 style={{ border:'none', borderRadius:100, padding:'6px 20px', fontSize:12, fontWeight:600, cursor:'pointer', transition:'all 0.2s ease', fontFamily:l==='ar'?"'Noto Kufi Arabic',sans-serif":"'Inter',sans-serif", background:lang===l?P:'transparent', color:lang===l?'#FFF':TM }}>
                 {l==='ar' ? 'العربية' : 'English'}
               </button>
@@ -507,7 +508,7 @@ if (data.role?.toLowerCase() === 'doctor') {
                 <div className="pop-in" style={{ display:'flex', alignItems:'center', gap:8, background:accentS, border:`1px solid ${accentBr}`, borderRadius:100, padding:'5px 14px' }}>
                   {clinicInfo.isAdmin ? <ShieldIcon color={GOLD} /> : <span style={{ fontSize:14 }}>🏥</span>}
                   <span style={{ fontSize:13, fontWeight:700, color: isAdminMode ? '#8A6A22' : TD }}>{clinicInfo.name}</span>
-                  <button onClick={() => { setStep('subdomain'); setClinicInfo(null); setError(''); navigate('/login', { replace:true }) }}
+                  <button onClick={() => { setStep('subdomain'); setClinicInfo(null); navigate('/login', { replace:true }) }}
                     title={isAr?'تغيير العيادة':'Change clinic'} aria-label={isAr?'تغيير العيادة':'Change clinic'}
                     style={{ background:'none', border:'none', color:TM, cursor:'pointer', fontSize:11, padding:'0 2px' }}>✕</button>
                 </div>
@@ -648,14 +649,6 @@ if (data.role?.toLowerCase() === 'doctor') {
                     style={{ fontSize:11, color:accent, opacity:0.5, cursor:'default' }}>{t.forgot}</span>
                 </div>
 
-                {/* Error */}
-                {error && (
-                  <div style={{ background:EB, border:`1px solid ${ET}40`, borderRadius:10, padding:'10px 12px', fontSize:12, color:ET, marginBottom:14, display:'flex', alignItems:'center', gap:8, animation:'fade-in 0.3s ease' }}>
-                    <span>⚠️</span><span style={{ flex:1 }}>{error}</span>
-                    <button onClick={()=>setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, color:ET }}>✕</button>
-                  </div>
-                )}
-
                 {/* Submit */}
                 <button type="submit" disabled={loading}
                   style={{ width:'100%', background:accent, color:'#FFF', border:'none', borderRadius:12, padding:'13px', fontSize:14, fontWeight:600, fontFamily:t.font, cursor:loading?'not-allowed':'pointer', opacity:loading?0.7:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all 0.2s ease', marginBottom:14 }}
@@ -665,7 +658,7 @@ if (data.role?.toLowerCase() === 'doctor') {
                 </button>
 
                 {/* Back to subdomain */}
-                <button type="button" onClick={() => { setStep('subdomain'); setClinicInfo(null); setError(''); navigate('/login', { replace:true }) }}
+                <button type="button" onClick={() => { setStep('subdomain'); setClinicInfo(null); navigate('/login', { replace:true }) }}
                   style={{ width:'100%', background:'transparent', border:`1px solid ${BR}`, borderRadius:12, padding:'10px', fontSize:12, fontWeight:500, color:TM, cursor:'pointer', fontFamily:t.font, transition:'all 0.2s' }}
                   onMouseEnter={e=>{ e.currentTarget.style.background=PS; e.currentTarget.style.color=P }}
                   onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color=TM }}>

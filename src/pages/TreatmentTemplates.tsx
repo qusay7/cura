@@ -6,6 +6,7 @@ import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnTog
 import { hasPermission } from '../utils/permissions'
 import type { ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -104,7 +105,6 @@ export default function TreatmentTemplates() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
   const [toastError, setToastError] = useState('')
@@ -163,7 +163,6 @@ export default function TreatmentTemplates() {
   const openAdd = () => {
     setEditId(null)
     setForm(emptyForm)
-    setError('')
     setShowForm(true)
   }
 
@@ -179,17 +178,15 @@ export default function TreatmentTemplates() {
       firstVisitPrice: tpl.firstVisitPrice?.toString() ?? '',
       followUpPrice: tpl.followUpPrice?.toString() ?? '',
     })
-    setError('')
     setShowForm(true)
   }
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setError(t.nameRequired)
+      showMessageBox(t.nameRequired, 'warning')
       return
     }
     setSaving(true)
-    setError('')
     try {
       const payload = {
         name: form.name,
@@ -213,7 +210,7 @@ export default function TreatmentTemplates() {
       fetchAll()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.errGeneric)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.errGeneric, 'error')
     } finally {
       setSaving(false)
     }
@@ -225,7 +222,7 @@ export default function TreatmentTemplates() {
       await api.delete(`/treatmentplans/templates/${id}`)
       fetchAll()
     } catch {
-      setError(t.errGeneric)
+      showMessageBox(t.errGeneric, 'error')
     }
   }
 
@@ -336,12 +333,6 @@ export default function TreatmentTemplates() {
             <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_DARK, marginBottom: 18 }}>
               {editId ? `✏️ ${t.editTemplate}` : `➕ ${t.newTemplate}`}
             </h3>
-
-            {error && (
-              <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: ERROR_TEXT }}>
-                ⚠️ {error}
-              </div>
-            )}
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
               <div>

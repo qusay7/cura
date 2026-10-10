@@ -6,6 +6,7 @@ import AppointmentCalendar from '../components/AppointmentCalendar'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12, getCurrencySymbol } from '../utils/i18n'
 import { getRole } from '../utils/permissions'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -385,7 +386,6 @@ export default function QuickVisit() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
-  const [error, setError] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [allPatients, setAllPatients] = useState<Patient[]>([])
@@ -484,7 +484,7 @@ export default function QuickVisit() {
       })
       .catch((err) => {
         console.error('Error loading data:', err)
-        setError(T[lang].error)
+        showMessageBox(T[lang].error, 'error')
       })
       .finally(() => setLoadingData(false))
 
@@ -554,7 +554,6 @@ export default function QuickVisit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setLoading(true)
 
     try {
@@ -565,7 +564,7 @@ export default function QuickVisit() {
       }
       else if (isNewPatient) {
         if (!newPatient.fullName.trim()) {
-          setError(T[lang].required)
+          showMessageBox(T[lang].required, 'warning')
           setLoading(false)
           return
         }
@@ -586,19 +585,19 @@ export default function QuickVisit() {
         const patientResponse = await api.post('/patients', patientPayload)
         patientId = patientResponse.data.id
       } else {
-        setError(T[lang].required)
+        showMessageBox(T[lang].required, 'warning')
         setLoading(false)
         return
       }
 
       if (!visitForm.doctorId) {
-        setError(T[lang].required)
+        showMessageBox(T[lang].required, 'warning')
         setLoading(false)
         return
       }
-      
+
       if (!visitForm.appointmentDate) {
-        setError(T[lang].required)
+        showMessageBox(T[lang].required, 'warning')
         setLoading(false)
         return
       }
@@ -606,14 +605,14 @@ export default function QuickVisit() {
       const selectedDate = new Date(visitForm.appointmentDate)
       const now = new Date()
       if (selectedDate <= now) {
-        setError(lang === 'ar' ? 'تاريخ الموعد يجب أن يكون في المستقبل' : 'Appointment date must be in the future')
+        showMessageBox(lang === 'ar' ? 'تاريخ الموعد يجب أن يكون في المستقبل' : 'Appointment date must be in the future', 'warning')
         setLoading(false)
         return
       }
 
       const availability = await checkDoctorAvailability(visitForm.doctorId, visitForm.appointmentDate)
       if (!availability.available) {
-        setError(availability.message)
+        showMessageBox(availability.message, 'warning')
         setLoading(false)
         return
       }
@@ -643,7 +642,7 @@ export default function QuickVisit() {
     } catch (err: any) {
       console.error('Error details:', err.response?.data)
       const errorMessage = err.response?.data?.message || err.response?.data?.title || T[lang].error
-      setError(typeof errorMessage === 'string' ? errorMessage : T[lang].error)
+      showMessageBox(typeof errorMessage === 'string' ? errorMessage : T[lang].error, 'error')
     } finally {
       setLoading(false)
     }
@@ -1095,18 +1094,6 @@ export default function QuickVisit() {
                   style={{ width: '100%', padding: '12px 16px', border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }} 
                 />
               </div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div style={{ 
-              background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, 
-              padding: '14px 18px', marginTop: 20, color: ERROR_TEXT, display: 'flex', 
-              alignItems: 'center', gap: 10
-            }}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
-              <span style={{ fontSize: 13 }}>{error}</span>
             </div>
           )}
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { ECGAnimation } from '../../components/ECGAnimation'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../../styles/theme'
+import { showMessageBox } from '../../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -593,7 +594,6 @@ export default function SuperAdminPlans() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
@@ -638,7 +638,6 @@ export default function SuperAdminPlans() {
 
   const handleSeedPlans = async () => {
     setSeeding(true)
-    setError('')
     try {
       for (const plan of defaultPlans) {
         const exists = plans.find(p => p.name === plan.name)
@@ -650,7 +649,7 @@ export default function SuperAdminPlans() {
       fetchPlans()
       setTimeout(() => setSuccess(''), 3000)
     } catch {
-      setError(lang === 'ar' ? 'حدث خطأ أثناء إنشاء الخطط' : 'Error creating default plans')
+      showMessageBox(lang === 'ar' ? 'حدث خطأ أثناء إنشاء الخطط' : 'Error creating default plans', 'error')
     } finally {
       setSeeding(false)
     }
@@ -681,7 +680,6 @@ export default function SuperAdminPlans() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setSaving(true)
     try {
       const payload = {
@@ -717,7 +715,7 @@ export default function SuperAdminPlans() {
       fetchPlans()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || (lang === 'ar' ? 'حدث خطأ' : 'An error occurred'))
+      showMessageBox(err.response?.data?.message || err.response?.data || (lang === 'ar' ? 'حدث خطأ' : 'An error occurred'), 'error')
     } finally {
       setSaving(false)
     }
@@ -730,8 +728,7 @@ export default function SuperAdminPlans() {
         p.id === id ? { ...p, isActive: !p.isActive } : p
       ))
     } catch {
-      setError(lang === 'ar' ? 'حدث خطأ' : 'An error occurred')
-      setTimeout(() => setError(''), 5000)
+      showMessageBox(lang === 'ar' ? 'حدث خطأ' : 'An error occurred', 'error')
     }
   }
 
@@ -835,12 +832,6 @@ export default function SuperAdminPlans() {
         </div>
 
         {/* Messages */}
-        {error && (
-          <div className="alert-error" role="alert">
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>✕</button>
-          </div>
-        )}
         {success && (
           <div className="alert-success">
             <span>✅ {success}</span>

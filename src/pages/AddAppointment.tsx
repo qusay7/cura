@@ -9,6 +9,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12, getCurrencySymbol } from '../utils/i18n'
 import { getRole } from '../utils/permissions'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -269,7 +270,6 @@ export default function AddAppointment() {
    const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [loadDataFailed, setLoadDataFailed] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [patients, setPatients] = useState<Patient[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -483,7 +483,7 @@ export default function AddAppointment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
-    setError(''); setLoading(true)
+    setLoading(true)
 
     try {
       const appointmentDate = isQueueOnly ? getLocalNowString() : form.appointmentDate
@@ -528,7 +528,7 @@ export default function AddAppointment() {
           .sort((a: any, b: any) => a.sessionNumber - b.sessionNumber)
 
         if (unlinkedSessions.length === 0) {
-          setError(isAr ? 'كل جلسات هذي الخطة محجوزة أو مكتملة أصلاً — راجع خطة العلاج بملف المريض' : 'All sessions in this plan are already booked or completed — check the treatment plan in the patient file')
+          showMessageBox(isAr ? 'كل جلسات هذي الخطة محجوزة أو مكتملة أصلاً — راجع خطة العلاج بملف المريض' : 'All sessions in this plan are already booked or completed — check the treatment plan in the patient file', 'warning')
           setLoading(false)
           return
         }
@@ -568,7 +568,7 @@ export default function AddAppointment() {
         }
 
         if (bookedCount === 0) {
-          setError(isAr ? 'تعذّر حجز أي جلسة — تحقق من دوام الطبيب بالتواريخ المحسوبة' : 'Could not book any session — check the doctor\'s availability on the calculated dates')
+          showMessageBox(isAr ? 'تعذّر حجز أي جلسة — تحقق من دوام الطبيب بالتواريخ المحسوبة' : 'Could not book any session — check the doctor\'s availability on the calculated dates', 'warning')
           setLoading(false)
           return
         }
@@ -600,10 +600,10 @@ export default function AddAppointment() {
       setTimeout(() => navigate('/appointments'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
-      if (typeof errData === 'string') setError(errData)
-      else if (errData?.errors) setError(Object.values(errData.errors).flat().join('، ') as string)
-      else if (errData?.message) setError(errData.message)
-      else setError(T[lang].error)
+      if (typeof errData === 'string') showMessageBox(errData, 'error')
+      else if (errData?.errors) showMessageBox(Object.values(errData.errors).flat().join('، ') as string, 'error')
+      else if (errData?.message) showMessageBox(errData.message, 'error')
+      else showMessageBox(T[lang].error, 'error')
     } finally { setLoading(false) }
   }
 
@@ -966,14 +966,6 @@ export default function AddAppointment() {
               <div style={{ background:SUCCESS_BG, border:`1px solid ${SUCCESS}40`, borderRadius:12, padding:'12px 16px', marginBottom:20, display:'flex', alignItems:'center', gap:10 }}>
                 <span style={{ fontSize:16 }}>✅</span>
                 <span style={{ fontSize:13, color:SUCCESS, fontWeight:600 }}>{success}</span>
-              </div>
-            )}
-
-            {/* خطأ */}
-            {error && (
-              <div style={{ background:ERROR_BG, border:`1px solid ${ERROR_TEXT}40`, borderRadius:12, padding:'12px 16px', marginBottom:20, display:'flex', alignItems:'center', gap:10 }}>
-                <span style={{ fontSize:14 }}>⚠️</span>
-                <span style={{ fontSize:13, color:ERROR_TEXT }}>{error}</span>
               </div>
             )}
 

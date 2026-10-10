@@ -9,6 +9,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
 import { getRole } from '../utils/permissions'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -521,6 +522,7 @@ export default function EditAppointment() {
     // (لا عنصر <select required> فعلي)، فلم يعد ممكناً الاعتماد عليه هنا
     if (!form.patientId) {
       setError(T[lang].required)
+      showMessageBox(T[lang].required, 'warning')
       return
     }
 
@@ -533,6 +535,7 @@ export default function EditAppointment() {
         const conflict = await checkTimeConflict(form.doctorId, form.appointmentDate)
         if (conflict.conflict) {
           setError(conflict.message || '')
+          showMessageBox(conflict.message || T[lang].error, 'warning')
           return
         }
       }
@@ -556,13 +559,16 @@ export default function EditAppointment() {
       setTimeout(() => navigate('/appointments'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
+      let msg: string
       if (typeof errData === 'string') {
-        setError(errData)
+        msg = errData
       } else if (errData?.message) {
-        setError(errData.message)
+        msg = errData.message
       } else {
-        setError(T[lang].error)
+        msg = T[lang].error
       }
+      setError(msg)
+      showMessageBox(msg, 'error')
     } finally {
       setSaving(false)
     }
@@ -891,23 +897,6 @@ export default function EditAppointment() {
               }}>
                 <span style={{ fontSize: 16 }}>✅</span>
                 <span style={{ fontSize: 13, color: SUCCESS, fontWeight: 600 }}>{success}</span>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div style={{
-                background: ERROR_BG,
-                border: `1px solid ${ERROR_TEXT}40`,
-                borderRadius: 12,
-                padding: '12px 16px',
-                marginBottom: 20,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}>
-                <span style={{ fontSize: 14 }}>⚠️</span>
-                <span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
               </div>
             )}
 

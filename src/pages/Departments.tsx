@@ -5,6 +5,7 @@ import { hasPermission } from '../utils/permissions'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 import type { ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -117,7 +118,6 @@ const DepartmentModal = ({
   const [name, setName] = useState(initial?.name || '')
   const [type, setType] = useState(initial?.type ?? 0)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const isAr = lang === 'ar'
   const t = T[lang]
 
@@ -129,14 +129,13 @@ const DepartmentModal = ({
       setName('')
       setType(0)
     }
-    setError('')
   }, [initial, isOpen])
 
   if (!isOpen) return null
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError(isAr ? 'اسم القسم مطلوب' : 'Department name is required')
+      showMessageBox(isAr ? 'اسم القسم مطلوب' : 'Department name is required', 'warning')
       return
     }
     setSaving(true)
@@ -144,7 +143,7 @@ const DepartmentModal = ({
       await onSave({ name: name.trim(), type })
       onClose()
     } catch (err: any) {
-      setError(err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
+      showMessageBox(err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'), 'error')
     } finally {
       setSaving(false)
     }
@@ -218,16 +217,6 @@ const DepartmentModal = ({
             })}
           </div>
         </div>
-
-        {error && (
-          <div style={{
-            background: '#FDF5F5', border: `1px solid ${WARNING}40`,
-            borderRadius: 10, padding: '10px 14px',
-            fontSize: 12, color: WARNING, marginBottom: 16,
-          }}>
-            ⚠️ {error}
-          </div>
-        )}
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button

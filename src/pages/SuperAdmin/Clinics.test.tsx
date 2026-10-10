@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import SuperAdminClinics from './Clinics'
+import MessageBoxHost from '../../components/MessageBoxHost'
 import api from '../../api/axios'
 
 vi.mock('../../api/axios', () => ({
@@ -61,6 +62,7 @@ function renderClinics() {
         <Route path="/superadmin/clinics" element={<SuperAdminClinics />} />
         <Route path="/login" element={<div>login page</div>} />
       </Routes>
+      <MessageBoxHost />
     </MemoryRouter>
   )
 }
@@ -214,6 +216,6 @@ describe('SuperAdminClinics', () => {
 
     await user.click(screen.getByRole('button', { name: /deactivate/i }))
 
-    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('alertdialog')).toBeInTheDocument())
   })
 })

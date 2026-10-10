@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../../styles/theme'
+import { showMessageBox } from '../../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -133,7 +134,6 @@ export default function SuperAdminClinics() {
   const [subs, setSubs] = useState<Record<string, SubscriptionRow>>({})
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('')
@@ -204,18 +204,17 @@ export default function SuperAdminClinics() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
 
     const subdomainRegex = /^[a-z0-9._-]+$/i
     if (!subdomainRegex.test(form.subDomain)) {
-      setError(isAr
+      showMessageBox(isAr
         ? 'Subdomain يجب أن يحتوي على أحرف إنجليزية وأرقام ورموز فقط'
-        : 'Subdomain must contain only English letters, numbers, and symbols')
+        : 'Subdomain must contain only English letters, numbers, and symbols', 'warning')
       return
     }
 
     if (!selectedPlan) {
-      setError(isAr ? 'يرجى اختيار خطة الاشتراك' : 'Please select a subscription plan')
+      showMessageBox(isAr ? 'يرجى اختيار خطة الاشتراك' : 'Please select a subscription plan', 'warning')
       return
     }
 
@@ -268,8 +267,7 @@ export default function SuperAdminClinics() {
       fetchClinics()
       fetchSubscriptions()
     } catch (err: any) {
-      setError(err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
-      setTimeout(() => setError(''), 5000)
+      showMessageBox(err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'), 'error')
     } finally {
       setSaving(false)
     }
@@ -280,8 +278,7 @@ export default function SuperAdminClinics() {
       await api.patch(`/clinics/${id}/toggle`)
       setClinics(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c))
     } catch {
-      setError(isAr ? 'حدث خطأ' : 'An error occurred')
-      setTimeout(() => setError(''), 5000)
+      showMessageBox(isAr ? 'حدث خطأ' : 'An error occurred', 'error')
     }
   }
 
@@ -289,7 +286,6 @@ export default function SuperAdminClinics() {
   // لكل نشر جديد للنظام، قبل أول عيادة. تكرارها آمن (idempotent) ولا تكرر الصلاحيات.
   const handleSeedPermissions = async () => {
     setPermsSeeding(true)
-    setError('')
     try {
       await api.post('/auth/seed-permissions')
       setSuccess(isAr
@@ -297,7 +293,7 @@ export default function SuperAdminClinics() {
         : '✅ Permissions initialized successfully. New roles will now be linked to their permissions automatically.')
       setTimeout(() => setSuccess(''), 6000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تهيئة الصلاحيات' : 'Failed to initialize permissions'))
+      showMessageBox(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تهيئة الصلاحيات' : 'Failed to initialize permissions'), 'error')
     } finally {
       setPermsSeeding(false)
     }
@@ -313,7 +309,7 @@ export default function SuperAdminClinics() {
         : `✅ Roles/permissions refreshed for "${clinicName}"`)
       setTimeout(() => setSuccess(''), 5000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر التحديث' : 'Failed to refresh'))
+      showMessageBox(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر التحديث' : 'Failed to refresh'), 'error')
     }
   }
 
@@ -331,7 +327,7 @@ export default function SuperAdminClinics() {
 
   const submitRenew = async () => {
     if (!renewClinic || !renewPlanId) return
-    setRenewSaving(true); setError('')
+    setRenewSaving(true)
     try {
       const res = await api.post(`/subscriptions/${renewClinic.id}/renew`, {
         planId: renewPlanId,
@@ -344,7 +340,7 @@ export default function SuperAdminClinics() {
       setRenewClinic(null)
       fetchSubscriptions()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تجديد الاشتراك' : 'Failed to renew subscription'))
+      showMessageBox(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر تجديد الاشتراك' : 'Failed to renew subscription'), 'error')
     } finally {
       setRenewSaving(false)
     }
@@ -432,12 +428,6 @@ export default function SuperAdminClinics() {
         </div>
 
         {/* Messages */}
-        {error && (
-          <div className="alert-error" role="alert">
-            <span style={{ whiteSpace: 'pre-line' }}>⚠️ {error}</span>
-            <button onClick={() => setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
-          </div>
-        )}
         {success && (
           <div className="alert-success">
             <span style={{ whiteSpace: 'pre-line' }}>✅ {success}</span>

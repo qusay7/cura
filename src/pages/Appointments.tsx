@@ -14,6 +14,7 @@ import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { formatTimeString, getCurrencySymbol } from '../utils/i18n'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -512,7 +513,6 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   const isAr = lang === 'ar'
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [loadingInsurance, setLoadingInsurance] = useState(true)
   const [patientHasInsurance, setPatientHasInsurance] = useState(false)
   const [items, setItems] = useState<InvoiceItem[]>([emptyItem()])
@@ -692,7 +692,7 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
   const removeItemRow = (i: number) => setItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
 
   const submit = async (skip: boolean) => {
-    setSaving(true); setError('')
+    setSaving(true)
     try {
       // ✅ نحفظ أنواع الزيارة الفعلية — سطر لكل بند فاتورة على نفس الموعد
       if (mode === 'checkout') {
@@ -786,7 +786,7 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
         } catch { /* تعذّر التحقق — النافذة تُغلق عادي بدون انتقال إضافي */ }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.quickCheckoutError)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.quickCheckoutError, 'error')
     } finally {
       setSaving(false)
     }
@@ -827,12 +827,6 @@ function PaymentModal({ appointmentId, mode, appointment, lang, t, onClose, onSu
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 14, padding: '8px 12px', background: PRIMARY_SOFT, borderRadius: 10 }}>
             <span style={{ fontSize: 13 }}>👤</span>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: TEXT_DARK }}>{appointment.patientName}</span>
-          </div>
-        )}
-
-        {error && (
-          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: '#EF4444', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>⚠️</span><span>{error}</span>
           </div>
         )}
 

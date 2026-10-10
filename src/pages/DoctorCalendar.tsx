@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
 import { formatTimeString } from "../utils/i18n";
 import { hasPermission, getRole } from "../utils/permissions";
+import { showMessageBox } from "../utils/messageBox";
 
 // ═══════════════════════════════════════════════
 // Types — مطابقة لـ DoctorCalendarDto من الـ API
@@ -226,7 +227,11 @@ export default function DoctorCalendar({
         setDoctors(list);
         if (!doctorId && list.length > 0) setDoctorId(list[0].id);
       })
-      .catch(() => alive && setError(T[getStoredLang()].errorDoctors));
+      .catch(() => {
+        if (!alive) return;
+        setError(T[getStoredLang()].errorDoctors);
+        showMessageBox(T[getStoredLang()].errorDoctors, 'error');
+      });
     return () => {
       alive = false;
     };
@@ -245,6 +250,7 @@ export default function DoctorCalendar({
       setData(res.data);
     } catch {
       setError(T[getStoredLang()].errorCalendar);
+      showMessageBox(T[getStoredLang()].errorCalendar, 'error');
       setData(null);
     } finally {
       setLoading(false);

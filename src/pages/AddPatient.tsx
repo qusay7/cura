@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { PRIMARY_SOFT } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -201,7 +202,6 @@ const inputStyle = (isAr:boolean): React.CSSProperties => ({
 export default function AddPatient() {
   const navigate = useNavigate()
   const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
   const [lang, setLang]         = useState<'ar'|'en'>(getStoredLang())
 
   // ✅ Step: 'form' | 'insurance'
@@ -254,7 +254,7 @@ export default function AddPatient() {
   const handleSubmit = async (e:React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
-    setError(''); setLoading(true)
+    setLoading(true)
     try {
       const payload = Object.fromEntries(Object.entries(form).filter(([_,v])=>v!==''))
       const res = await api.post('/patients', payload)
@@ -262,9 +262,9 @@ export default function AddPatient() {
       setStep('insurance')  // ✅ انتقل لخطوة التأمين
     } catch (err:any) {
       const errData = err.response?.data
-      if (typeof errData==='string') setError(errData)
-      else if (errData?.errors) setError(Object.values(errData.errors).flat().join('، ') as string)
-      else setError(T[lang].error)
+      if (typeof errData==='string') showMessageBox(errData, 'error')
+      else if (errData?.errors) showMessageBox(Object.values(errData.errors).flat().join('، ') as string, 'error')
+      else showMessageBox(T[lang].error, 'error')
     } finally { setLoading(false) }
   }
 
@@ -285,7 +285,7 @@ export default function AddPatient() {
       })
       navigate('/patients')
     } catch (err:any) {
-      setError(err.response?.data || T[lang].error)
+      showMessageBox(err.response?.data || T[lang].error, 'error')
     } finally { setInsLoading(false) }
   }
 
@@ -343,8 +343,6 @@ export default function AddPatient() {
               <input type="checkbox" id="isPrimary" checked={insForm.isPrimary} onChange={e=>setInsForm({...insForm,isPrimary:e.target.checked})} />
               <label htmlFor="isPrimary" style={{fontSize:13,color:TEXT_DARK,cursor:'pointer'}}>{t.insPrimary}</label>
             </div>
-
-            {error && <div style={{background:ERROR_BG,border:`1px solid ${ERROR_TEXT}40`,borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:13,color:ERROR_TEXT}}>⚠️ {error}</div>}
 
             <div style={{display:'flex',gap:10}}>
               <button onClick={handleSaveInsurance} disabled={insLoading||!insForm.insuranceCompanyId||!insForm.policyNumber||!insForm.startDate||!insForm.endDate}
@@ -449,12 +447,6 @@ export default function AddPatient() {
                 style={{...inputStyle(isAr),resize:'vertical'}} />
             </FormSection>
           </div>
-
-          {error && (
-            <div style={{background:ERROR_BG,border:`1px solid ${ERROR_TEXT}40`,borderRadius:12,padding:'12px 16px',marginTop:24,display:'flex',alignItems:'center',gap:10}}>
-              <span>⚠️</span><span style={{fontSize:13,color:ERROR_TEXT}}>{error}</span>
-            </div>
-          )}
 
           <div style={{display:'flex',gap:12,marginTop:24,paddingTop:8}}>
             <button type="submit" disabled={loading}

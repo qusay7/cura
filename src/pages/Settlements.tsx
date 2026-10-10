@@ -4,6 +4,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import { useColumnVisibility, ColumnToggleButton } from '../components/ColumnToggle'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { hasPermission } from '../utils/permissions'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -266,13 +267,12 @@ function PayDueModal({ item, t, isAr, onClose, onSuccess }: { item: any; t: type
   const [amount, setAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
 
   const paidNow = parseFloat(amount) || 0
   const remaining = Math.max(0, item.balance - paidNow)
 
   const submit = async () => {
-    setSaving(true); setError('')
+    setSaving(true)
     try {
       if (item.hasPaymentRecord) {
         await api.put(`/payments/${item.id}`, {
@@ -291,7 +291,7 @@ function PayDueModal({ item, t, isAr, onClose, onSuccess }: { item: any; t: type
       }
       onSuccess()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noData)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noData, 'error')
     } finally {
       setSaving(false)
     }
@@ -303,8 +303,6 @@ function PayDueModal({ item, t, isAr, onClose, onSuccess }: { item: any; t: type
       <div onClick={e => e.stopPropagation()} style={{ background: CARD_BG, borderRadius: 18, padding: 22, maxWidth: 380, width: '100%' }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, marginBottom: 4 }}>💳 {t.payDueTitle}</h3>
         <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>{item.patientName}</p>
-
-        {error && <Alert type="err" text={error} />}
 
         <div style={{ background: PRIMARY_SOFT, borderRadius: 12, padding: 14, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 6 }}>
@@ -371,7 +369,6 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
   const [pending, setPending] = useState<{ total: number; count: number; items: any[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [notes, setNotes] = useState('')
@@ -405,13 +402,13 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
   // ✅ لمواعيد اكتملت قبل ما تُحدَّد نسبة الطبيب — يعيد احتساب حصته الآن بالنسبة الحالية
   const handleRecalculate = async () => {
     if (!partyId) return
-    setRecalculating(true); setError(''); setSuccess('')
+    setRecalculating(true); setSuccess('')
     try {
       const res = await api.post(`/appointments/recalculate-commissions?doctorId=${partyId}`)
       setSuccess(res.data.message)
       fetchPending()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noData)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noData, 'error')
     } finally {
       setRecalculating(false)
     }
@@ -419,7 +416,7 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
 
   const fetchPending = async () => {
     if (!partyId) return
-    setLoading(true); setError(''); setSuccess('')
+    setLoading(true); setSuccess('')
     try {
       const params = new URLSearchParams()
       if (periodStart) params.set('from', periodStart)
@@ -437,7 +434,7 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
       setSelectedIds(new Set(res.data.items.map((it: any) => it.id)))
       setAmountPaidNow('')
     } catch {
-      setError(t.noData)
+      showMessageBox(t.noData, 'warning')
     } finally {
       setLoading(false)
     }
@@ -457,7 +454,7 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
   const handleSettle = async () => {
     if (selectedItems.length === 0) return
     if (!window.confirm(t.confirmSettle)) return
-    setSaving(true); setError('')
+    setSaving(true)
     try {
       const payload: any = {
         doctorId: mode === 'doctor' ? partyId : undefined,
@@ -479,7 +476,7 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
       setNotes('')
       setAmountPaidNow('')
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noPending)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noPending, 'error')
     } finally {
       setSaving(false)
     }
@@ -536,7 +533,6 @@ function PartySettlementTab({ t, isAr, lang, mode }: { t: typeof T['ar']; isAr: 
         )}
       </div>
 
-      {error && <Alert type="err" text={error} />}
       {success && <Alert type="ok" text={success} />}
 
       {loading ? <LoadingBox t={t} /> : pending && (
@@ -643,7 +639,6 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
   const [data, setData] = useState<{ totalAmount: number; count: number; items: any[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   // فورم المخالصة (يظهر بس بحالة "موافَق عليها")
@@ -675,7 +670,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
 
   const fetchClaims = async () => {
     if (!companyId) return
-    setLoading(true); setError(''); setSuccess('')
+    setLoading(true); setSuccess('')
     try {
       const params = new URLSearchParams({ status })
       if (periodStart) params.set('from', periodStart)
@@ -685,7 +680,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
       setSelectedIds(new Set(res.data.items.map((it: any) => it.id)))
       setAmountPaidNow('')
     } catch {
-      setError(t.noClaimsForStatus)
+      showMessageBox(t.noClaimsForStatus, 'warning')
     } finally {
       setLoading(false)
     }
@@ -696,7 +691,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
 
   const handleSubmitBatch = async () => {
     if (!window.confirm(t.confirmSubmitBatch)) return
-    setBusy(true); setError(''); setSuccess('')
+    setBusy(true); setSuccess('')
     try {
       const res = await api.post('/settlements/insurance/submit-batch', {
         insuranceCompanyId: companyId,
@@ -706,7 +701,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
       setSuccess(res.data.message)
       fetchClaims()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noClaimsForStatus)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noClaimsForStatus, 'error')
     } finally {
       setBusy(false)
     }
@@ -726,7 +721,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
   const handleSettle = async () => {
     if (selectedItems.length === 0) return
     if (!window.confirm(t.confirmSettle)) return
-    setBusy(true); setError('')
+    setBusy(true)
     try {
       const res = await api.post('/settlements/insurance', {
         insuranceCompanyId: companyId,
@@ -743,7 +738,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
       setNotes('')
       setAmountPaidNow('')
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noPending)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noPending, 'error')
     } finally {
       setBusy(false)
     }
@@ -768,7 +763,7 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
       setStatusModalClaim(null)
       fetchClaims()
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.noClaimsForStatus)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.noClaimsForStatus, 'error')
     } finally {
       setBusy(false)
     }
@@ -827,7 +822,6 @@ function InsuranceHubTab({ t, isAr, lang }: { t: typeof T['ar']; isAr: boolean; 
             ))}
           </div>
 
-          {error && <Alert type="err" text={error} />}
           {success && <Alert type="ok" text={success} />}
 
           {loading ? <LoadingBox t={t} /> : data && (

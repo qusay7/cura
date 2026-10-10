@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import VisitNoteModal from './VisitNoteModal'
+import MessageBoxHost from '../components/MessageBoxHost'
 import api from '../api/axios'
 
 vi.mock('../api/axios', () => ({
@@ -88,7 +89,7 @@ describe('VisitNoteModal', () => {
     const onClose = vi.fn()
     const onSaved = vi.fn()
     const user = userEvent.setup()
-    render(<VisitNoteModal {...baseProps} onClose={onClose} onSaved={onSaved} />)
+    render(<><VisitNoteModal {...baseProps} onClose={onClose} onSaved={onSaved} /><MessageBoxHost /></>)
 
     await user.click(screen.getByRole('button', { name: /save/i }))
 

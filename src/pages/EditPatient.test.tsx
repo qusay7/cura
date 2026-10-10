@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import EditPatient from './EditPatient'
+import MessageBoxHost from '../components/MessageBoxHost'
 import api from '../api/axios'
 
 vi.mock('../api/axios', () => ({
@@ -38,6 +39,7 @@ function renderEditPatient() {
         <Route path="/patients/:id" element={<div>patient detail page</div>} />
         <Route path="/patients" element={<div>patients list page</div>} />
       </Routes>
+      <MessageBoxHost />
     </MemoryRouter>
   )
 }

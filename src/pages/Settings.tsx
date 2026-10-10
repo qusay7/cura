@@ -3,6 +3,7 @@ import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../styles/theme'
 import { hasPermission } from '../utils/permissions'
 import { COUNTRIES, getCountryByCode } from '../utils/i18n'
+import { showMessageBox } from '../utils/messageBox'
 
 // ✅ غيّر getImageUrl مع debugging:
 const getImageUrl = (path?: string | null) => {
@@ -575,7 +576,6 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<'clinic' | 'account' | 'subscription' | 'whatsapp'>('clinic')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   const user = (() => {
@@ -675,7 +675,7 @@ export default function Settings() {
       const res = await api.post('/whatsapp/connect')
       setWhatsappStatus(res.data.status)
     } catch {
-      setError(t.error)
+      showMessageBox(t.error, 'error')
     } finally {
       setWhatsappConnecting(false)
     }
@@ -714,8 +714,7 @@ export default function Settings() {
       setAccountForm(prev => ({ ...prev, fullName: user.fullName ?? '' }))
     } catch (err) {
       console.error(err)
-      setError(T[lang].error)
-      setTimeout(() => setError(''), 3000)
+      showMessageBox(T[lang].error, 'error')
     } finally {
       setLoading(false)
     }
@@ -734,7 +733,7 @@ export default function Settings() {
 
   const handleLogoUpload = async () => {
     if (!logoFile || !user.clinicId || !hasPermission('settings.edit')) return
-    setUploadingLogo(true); setError(''); setSuccess('')
+    setUploadingLogo(true); setSuccess('')
     try {
       const formData = new FormData()
       formData.append('file', logoFile)
@@ -747,8 +746,7 @@ export default function Settings() {
       setSuccess(T[lang].saveSuccess)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || T[lang].error)
-      setTimeout(() => setError(''), 3000)
+      showMessageBox(err.response?.data?.message || err.response?.data || T[lang].error, 'error')
     } finally {
       setUploadingLogo(false)
     }
@@ -761,7 +759,6 @@ export default function Settings() {
   const handleSaveClinic = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!hasPermission('settings.edit')) return
-    setError('')
     setSuccess('')
     setSaving(true)
     try {
@@ -790,8 +787,7 @@ export default function Settings() {
       setSuccess(T[lang].saveSuccess)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data || T[lang].error)
-      setTimeout(() => setError(''), 3000)
+      showMessageBox(err.response?.data || T[lang].error, 'error')
     } finally {
       setSaving(false)
     }
@@ -799,12 +795,10 @@ export default function Settings() {
 
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setSuccess('')
 
     if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmPassword) {
-      setError(T[lang].passwordMismatch)
-      setTimeout(() => setError(''), 3000)
+      showMessageBox(T[lang].passwordMismatch, 'warning')
       return
     }
 
@@ -828,8 +822,7 @@ export default function Settings() {
       }))
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data || T[lang].error)
-      setTimeout(() => setError(''), 3000)
+      showMessageBox(err.response?.data || T[lang].error, 'error')
     } finally {
       setSaving(false)
     }
@@ -881,7 +874,6 @@ export default function Settings() {
               key={tab.key}
               onClick={() => {
                 setActiveTab(tab.key)
-                setError('')
                 setSuccess('')
               }}
               className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
@@ -892,12 +884,6 @@ export default function Settings() {
         </div>
 
         {/* Messages */}
-        {error && (
-          <div className="alert-error">
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} className="btn-icon">✕</button>
-          </div>
-        )}
         {success && (
           <div className="alert-success">
             <span>✅ {success}</span>

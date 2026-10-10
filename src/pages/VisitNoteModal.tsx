@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useId, isValidElement, cloneElement } from 'react'
 import api from '../api/axios'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { showMessageBox } from '../utils/messageBox'
 
 const PRIMARY = '#5B8C8F'
 const PRIMARY_SOFT = '#E8F0F0'
@@ -8,7 +9,6 @@ const TEXT_DARK = '#2C3E3F'
 const TEXT_MUTED = '#6B8A8C'
 const BORDER = '#DCE5E5'
 const CARD_BG = '#FFFFFF'
-const ERROR_TEXT = '#79674D'
 
 const T = {
   ar: {
@@ -73,7 +73,6 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
   const isEdit = !!existingNote?.id
 
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [form, setForm] = useState({
     diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '', cost: '',
   })
@@ -93,7 +92,6 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
     } else {
       setForm({ diagnosis:'', prescription:'', tests:'', notes:'', nextVisitDate:'', cost:'' })
     }
-    setError('')
   }, [existingNote, isOpen])
 
   if (!isOpen) return null
@@ -105,7 +103,7 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(''); setSaving(true)
+    setSaving(true)
     try {
       const payload = {
         patientId,
@@ -127,7 +125,7 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
       onClose()
     } catch (err: any) {
       const errData = err.response?.data
-      setError(typeof errData === 'string' ? errData : errData?.message || t.error)
+      showMessageBox(typeof errData === 'string' ? errData : errData?.message || t.error, 'error')
     } finally { setSaving(false) }
   }
 
@@ -201,11 +199,6 @@ export default function VisitNoteModal({ isOpen, onClose, onSaved, appointmentId
               </div>
             </div>
 
-            {error && (
-              <div style={{ background: '#FDF5F5', border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '10px 14px', fontSize: 13, color: ERROR_TEXT }}>
-                ⚠️ {error}
-              </div>
-            )}
           </form>
         </div>
 

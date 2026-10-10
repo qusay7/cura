@@ -3,6 +3,7 @@ import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -130,7 +131,6 @@ const inputStyle = (isAr: boolean) => ({
 export default function AddDoctor() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [departments, setDepartments] = useState<Department[]>([])
@@ -176,7 +176,7 @@ export default function AddDoctor() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
-    setError(''); setLoading(true)
+    setLoading(true)
     try {
       const payload: Record<string, any> = {
         fullName: form.fullName,
@@ -193,7 +193,7 @@ export default function AddDoctor() {
       setTimeout(() => navigate('/doctors'), 1200)
     } catch (err: any) {
       const errData = err.response?.data
-      setError(typeof errData === 'string' ? errData : errData?.message || T[lang].error)
+      showMessageBox(typeof errData === 'string' ? errData : errData?.message || T[lang].error, 'error')
     } finally {
       setLoading(false)
     }
@@ -397,12 +397,6 @@ const DepartmentSelect = ({ departments, value, onChange, placeholder, isAr }: {
             {success && (
               <div style={{ background: SUCCESS_BG, border: `1px solid ${SUCCESS}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 16 }}>✅</span><span style={{ fontSize: 13, color: SUCCESS, fontWeight: 600 }}>{success}</span>
-              </div>
-            )}
-
-            {error && (
-              <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span>⚠️</span><span style={{ fontSize: 13, color: ERROR_TEXT }}>{error}</span>
               </div>
             )}
 

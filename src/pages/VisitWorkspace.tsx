@@ -10,6 +10,7 @@ import ProceduresPicker from '../components/ProceduresPicker'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
 import { printSection, escapeHtml } from '../utils/printSection'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -104,7 +105,6 @@ export default function VisitWorkspace() {
   const [saving, setSaving] = useState(false)
   const [checkingIn, setCheckingIn] = useState(false)
   const [nextVisitAutoFilled, setNextVisitAutoFilled] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const attachmentsRef = useRef<PatientAttachmentsTabHandle>(null)
 
@@ -218,7 +218,7 @@ export default function VisitWorkspace() {
   // ✅ طباعة قسم واحد بمعزل عن باقي الصفحة (تشخيص/وصفة/ملاحظات/تقرير) — نافذة
   // منفصلة فيها ترويسة العيادة بس، بدون أي تداخل مع شكل الصفحة الأساسية
   const handlePrintSection = (title: string, text: string) => {
-    if (!text.trim()) { setError(t.noContentToPrint); return }
+    if (!text.trim()) { showMessageBox(t.noContentToPrint, 'warning'); return }
     let clinicId = ''
     try { clinicId = JSON.parse(localStorage.getItem('user') || '{}').clinicId || '' } catch { /* ignore */ }
     if (!clinicId) return
@@ -236,8 +236,8 @@ export default function VisitWorkspace() {
   // زر الحفظ الوحيد يرجّع تلقائياً بكل مرة
   const handleSave = async (andFinish: boolean) => {
     if (!appointment) return
-    if (!appointment.checkInTime) { setError(t.mustCheckInFirst); return }
-    setSaving(true); setError(''); setSuccess('')
+    if (!appointment.checkInTime) { showMessageBox(t.mustCheckInFirst, 'warning'); return }
+    setSaving(true); setSuccess('')
     try {
       const payload = {
         patientId: appointment.patientId,
@@ -266,7 +266,7 @@ export default function VisitWorkspace() {
       if (attachmentsRef.current?.hasPendingFile()) {
         const uploaded = await attachmentsRef.current.uploadPending()
         if (!uploaded) {
-          setError(isAr ? 'تم حفظ الزيارة، لكن تعذّر رفع المرفق' : 'Visit saved, but the attachment failed to upload')
+          showMessageBox(isAr ? 'تم حفظ الزيارة، لكن تعذّر رفع المرفق' : 'Visit saved, but the attachment failed to upload', 'warning')
           return
         }
       }
@@ -287,7 +287,7 @@ export default function VisitWorkspace() {
         setTimeout(() => setSuccess(''), 3000)
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'))
+      showMessageBox(err.response?.data?.message || err.response?.data || (isAr ? 'حدث خطأ' : 'An error occurred'), 'error')
     } finally {
       setSaving(false)
     }
@@ -354,11 +354,6 @@ export default function VisitWorkspace() {
           </div>
         </div>
 
-        {error && (
-          <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#EF4444' }}>
-            ⚠️ {error}
-          </div>
-        )}
         {success && (
           <div style={{ background: SUCCESS_BG, border: '1px solid #86EFAC', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#166534' }}>
             {success}

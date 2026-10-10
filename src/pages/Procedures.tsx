@@ -4,6 +4,7 @@ import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
 import { getCurrencySymbol } from '../utils/i18n'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { showMessageBox } from '../utils/messageBox'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -60,7 +61,6 @@ export default function Procedures() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   const t = T[lang]
@@ -95,24 +95,21 @@ export default function Procedures() {
   const openAdd = () => {
     setEditId(null)
     setForm(emptyForm)
-    setError('')
     setShowForm(true)
   }
 
   const openEdit = (p: ProcedureItem) => {
     setEditId(p.id)
     setForm({ name: p.name, nameEn: p.nameEn || '', defaultPrice: p.defaultPrice?.toString() ?? '' })
-    setError('')
     setShowForm(true)
   }
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setError(t.nameRequired)
+      showMessageBox(t.nameRequired, 'warning')
       return
     }
     setSaving(true)
-    setError('')
     try {
       const payload = {
         name: form.name,
@@ -131,7 +128,7 @@ export default function Procedures() {
       fetchAll()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data || t.errGeneric)
+      showMessageBox(err.response?.data?.message || err.response?.data || t.errGeneric, 'error')
     } finally {
       setSaving(false)
     }
@@ -143,7 +140,7 @@ export default function Procedures() {
       await api.delete(`/procedures/${id}`)
       fetchAll()
     } catch {
-      setError(t.errGeneric)
+      showMessageBox(t.errGeneric, 'error')
     }
   }
 
@@ -184,12 +181,6 @@ export default function Procedures() {
             <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_DARK, marginBottom: 18 }}>
               {editId ? `✏️ ${t.editProcedure}` : `➕ ${t.newProcedure}`}
             </h3>
-
-            {error && (
-              <div style={{ background: ERROR_BG, border: `1px solid ${ERROR_TEXT}40`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: ERROR_TEXT }}>
-                ⚠️ {error}
-              </div>
-            )}
 
             <div className="procedures-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 20 }}>
               <div>

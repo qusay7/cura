@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import QuickVisit from './QuickVisit'
+import MessageBoxHost from '../components/MessageBoxHost'
 import api from '../api/axios'
 import type { Patient, Doctor } from '../types'
 
@@ -76,6 +77,7 @@ function renderQuickVisit() {
         <Route path="/appointments" element={<div>appointments page</div>} />
         <Route path="/dashboard" element={<div>dashboard page</div>} />
       </Routes>
+      <MessageBoxHost />
     </MemoryRouter>
   )
 }

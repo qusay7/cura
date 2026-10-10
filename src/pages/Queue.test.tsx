@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Queue from './Queue'
+import MessageBoxHost from '../components/MessageBoxHost'
 import api from '../api/axios'
 
 vi.mock('../api/axios', () => ({
@@ -69,7 +70,7 @@ describe('Queue', () => {
 
   it('loads and renders the stats and a queue entry', async () => {
     mockQueueGets({ '/queue/today': [queueEntry()] })
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
 
     expect(await screen.findByText('Sara Ahmad')).toBeInTheDocument()
     expect(screen.getByText('Total')).toBeInTheDocument()
@@ -78,14 +79,14 @@ describe('Queue', () => {
 
   it('shows an error when the initial load fails', async () => {
     mockQueueGets({ '/queue/today': new Error('network down') })
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
 
     expect(await screen.findByText('Failed to load data', { exact: false })).toBeInTheDocument()
   })
 
   it('shows the empty state when there are no queue entries', async () => {
     mockQueueGets()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
 
     expect(await screen.findByText('No patients in queue')).toBeInTheDocument()
   })
@@ -95,7 +96,7 @@ describe('Queue', () => {
       '/queue/today': [queueEntry(), queueEntry({ id: 'q2', status: 'completed', patientName: 'Omar Khalil', queueNumber: 2 })],
     })
     const user = userEvent.setup()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
     await screen.findByText('Sara Ahmad')
 
     await user.click(screen.getByRole('button', { name: '✅ Completed' }))
@@ -108,7 +109,7 @@ describe('Queue', () => {
     mockQueueGets({ '/patients': [patient()], '/doctors': [doctor()] })
     mockedApi.post.mockResolvedValueOnce({ data: { message: 'Added!' } })
     const user = userEvent.setup()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
     await screen.findByText('No patients in queue')
 
     await user.click(screen.getByRole('button', { name: /add to queue/i }))
@@ -134,7 +135,7 @@ describe('Queue', () => {
       return Promise.reject(new Error(`unexpected POST ${url}`))
     })
     const user = userEvent.setup()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
     await screen.findByText('No patients in queue')
 
     await user.click(screen.getByRole('button', { name: /add to queue/i }))
@@ -161,7 +162,7 @@ describe('Queue', () => {
     mockQueueGets({ '/queue/today': [queueEntry({ status: 'waiting' })] })
     mockedApi.put.mockResolvedValueOnce({ data: {} })
     const user = userEvent.setup()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
     await screen.findByText('Sara Ahmad')
 
     await user.click(screen.getByRole('button', { name: '📢 Call' }))
@@ -173,7 +174,7 @@ describe('Queue', () => {
     mockQueueGets({ '/queue/today': [queueEntry({ status: 'called' })] })
     mockedApi.put.mockResolvedValueOnce({ data: {} })
     const user = userEvent.setup()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
     await screen.findByText('Sara Ahmad')
 
     await user.click(screen.getByRole('button', { name: /^✅ complete$/i }))
@@ -185,7 +186,7 @@ describe('Queue', () => {
     mockQueueGets({ '/queue/today': [queueEntry({ status: 'waiting' })] })
     mockedApi.put.mockResolvedValueOnce({ data: {} })
     const user = userEvent.setup()
-    render(<Queue />)
+    render(<><Queue /><MessageBoxHost /></>)
     await screen.findByText('Sara Ahmad')
 
     await user.click(screen.getByRole('button', { name: '✕ Cancel' }))
