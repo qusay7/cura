@@ -4,7 +4,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import PrintHeader from '../components/PrintHeader'
 import ExportBar from '../components/ExportBar'
 import { useColumnVisibility, ColumnToggleButton, type ColumnDef } from '../components/ColumnToggle'
-import { hasPermission } from '../utils/permissions'
+import { hasPermission, getRole } from '../utils/permissions'
 import { formatTimeString } from '../utils/i18n'
 
 // ✅ تحسين #11: التحقق الصحيح من اللغة المحفوظة
@@ -352,8 +352,16 @@ export default function Schedules() {
 
   useEffect(() => {
     fetchClinic()
-    api.get('/doctors')
-      .then(r => setDoctors(r.data.filter((d:Doctor)=>d.isActive)))
+    // ✅ طبيب يدير جدوله الخاص (schedules.doctor.editown) ما عنده بالضرورة
+    // صلاحية doctors.view (تصفّح كل أطباء العيادة) — ما يحتاجها هون
+    const isDoctorUser = getRole() === 'Doctor'
+    api.get(isDoctorUser ? '/doctors/me' : '/doctors')
+      .then(r => {
+        const list: Doctor[] = isDoctorUser ? [r.data] : r.data
+        const active = list.filter((d:Doctor)=>d.isActive)
+        setDoctors(active)
+        if (isDoctorUser && active.length === 1) setSel(active[0].id)
+      })
       .catch(err => { console.error('Failed to fetch doctors:', err); showAlert('err', t.errLoad) })
     fetchAbsences()
   }, [])

@@ -8,6 +8,7 @@ import AppointmentCalendar from '../components/AppointmentCalendar'
 import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
+import { getRole } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -431,10 +432,13 @@ export default function EditAppointment() {
       const minLoadingTime = 800
 
       try {
+        // ✅ طبيب يعدّل موعده ما عنده صلاحية doctors.view (تصفّح كل أطباء
+        // العيادة) — ما يحتاجها هون، بس يحتاج سجله الخاص
+        const isDoctorUser = getRole() === 'Doctor'
         const [apptRes, patientsRes, doctorsRes] = await Promise.all([
           api.get(`/appointments/${id}`),
           api.get('/patients'),
-          api.get('/doctors'),
+          api.get(isDoctorUser ? '/doctors/me' : '/doctors'),
         ])
 
         const a = apptRes.data
@@ -450,7 +454,8 @@ export default function EditAppointment() {
           notes: a.notes ?? '',
         })
         setPatients(patientsRes.data)
-        setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
+        const doctorsList: Doctor[] = isDoctorUser ? [doctorsRes.data] : doctorsRes.data
+        setDoctors(doctorsList.filter((d: Doctor) => d.isActive))
       } catch (err) {
         console.error('Error fetching data:', err)
         navigate('/appointments')

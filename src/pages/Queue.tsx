@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
-import { hasPermission } from '../utils/permissions'
+import { hasPermission, getRole } from '../utils/permissions'
 import { isHour12 } from '../utils/i18n'
 
 const getStoredLang = (): 'ar' | 'en' =>
@@ -294,15 +294,23 @@ export default function Queue() {
 
   const fetchAll = useCallback(async () => {
     try {
+      // ✅ طبيب يسجّل مريض بدوره ما عنده صلاحية doctors.view (تصفّح كل أطباء
+      // العيادة) — ما يحتاجها هون، بس يحتاج سجله الخاص
+      const isDoctorUser = getRole() === 'Doctor'
       const [qRes, pRes, dRes, sRes] = await Promise.all([
         api.get('/queue/today'),
         api.get('/patients'),
-        api.get('/doctors'),
+        api.get(isDoctorUser ? '/doctors/me' : '/doctors'),
         api.get('/queue/stats'),
       ])
       setEntries(qRes.data)
       setPatients(pRes.data)
-      setDoctors(dRes.data.filter((d: Doctor) => d.isActive))
+      const doctorsList: Doctor[] = isDoctorUser ? [dRes.data] : dRes.data
+      const activeDoctors = doctorsList.filter((d: Doctor) => d.isActive)
+      setDoctors(activeDoctors)
+      if (isDoctorUser && activeDoctors.length === 1) {
+        setForm(prev => ({ ...prev, doctorId: activeDoctors[0].id }))
+      }
       setStats(sRes.data)
     } catch {
       setError(t.messages.errorLoading)

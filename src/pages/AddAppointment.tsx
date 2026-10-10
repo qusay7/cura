@@ -8,6 +8,7 @@ import AppointmentCalendar from '../components/AppointmentCalendar'
 import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12, getCurrencySymbol } from '../utils/i18n'
+import { getRole } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -301,11 +302,19 @@ export default function AddAppointment() {
     setLoadingData(true)
     setLoadDataFailed(false)
     try {
+      // ✅ طبيب يحجز موعد لحاله ما عنده صلاحية doctors.view (تصفّح كل أطباء
+      // العيادة) — ما يحتاجها هون، بس يحتاج سجله الخاص
+      const isDoctorUser = getRole() === 'Doctor'
       const [patientsRes, doctorsRes, templatesRes] = await Promise.all([
-        api.get('/patients'), api.get('/doctors'), api.get('/treatmentplans/templates'),
+        api.get('/patients'), api.get(isDoctorUser ? '/doctors/me' : '/doctors'), api.get('/treatmentplans/templates'),
       ])
       setPatients(patientsRes.data)
-      setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
+      const doctorsList: Doctor[] = isDoctorUser ? [doctorsRes.data] : doctorsRes.data
+      const activeDoctors = doctorsList.filter((d: Doctor) => d.isActive)
+      setDoctors(activeDoctors)
+      if (isDoctorUser && activeDoctors.length === 1) {
+        setForm(prev => ({ ...prev, doctorId: activeDoctors[0].id }))
+      }
       setTemplates(templatesRes.data)
     } catch (err: any) {
       if (err?.response?.status === 401) navigate('/login')
