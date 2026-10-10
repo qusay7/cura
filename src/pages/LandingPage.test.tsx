@@ -94,7 +94,8 @@ describe('LandingPage', () => {
 
     await user.click(screen.getByRole('button', { name: /yearly/i }))
 
-    expect(screen.getByText('25')).toBeInTheDocument()
+    // ✅ يعرض المبلغ الكامل للسنة (300) بدون قسمته على 12 — طلب صريح من المستخدم
+    expect(screen.getByText('300')).toBeInTheDocument()
   })
 
   it('navigates to the login page from the nav bar', async () => {

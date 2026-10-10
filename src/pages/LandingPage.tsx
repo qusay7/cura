@@ -291,11 +291,12 @@ const T = {
       title:'أسعار شفّافة بلا رسوم مخفية',
       sub:'خطط مرنة تنمو مع عيادتك — جميعها تشمل الدعم الفني المجاني ومدير حساب مخصص',
       monthly:'شهري', yearly:'سنوي', save:'وفّر مقابل الاشتراك السنوي',
-      currency:'د.أ',
+      currency:'د.أ', perMonth:'شهر', perYear:'سنة',
       ctaDefault:'تواصل معنا', ctaFeatured:'اطلب تجربة مجانية',
       loading:'جاري تحميل الخطط...',
       error:'تعذّر تحميل الخطط حالياً، يرجى المحاولة لاحقاً',
       empty:'لا توجد خطط متاحة حالياً',
+      users:'مستخدم', doctors:'طبيب', patients:'مريض', unlimited:'غير محدود',
     },
     faq:{
       eyebrow:'الأسئلة المتكررة',
@@ -381,11 +382,12 @@ const T = {
       title:'Transparent pricing, no hidden fees',
       sub:'Flexible plans that scale with your clinic — all include free technical support and onboarding',
       monthly:'Monthly', yearly:'Yearly', save:'Save with annual billing',
-      currency:'JD',
+      currency:'JD', perMonth:'mo', perYear:'yr',
       ctaDefault:'Contact us', ctaFeatured:'Request free trial',
       loading:'Loading plans...',
       error:'Could not load plans right now, please try again later',
       empty:'No plans available right now',
+      users:'users', doctors:'doctors', patients:'patients', unlimited:'Unlimited',
     },
     faq:{
       eyebrow:'FAQ',
@@ -873,9 +875,16 @@ export default function LandingPage() {
           {!plansLoading && !plansError && plans.length > 0 && (
             <div className="plan-grid" style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(plans.length,3)},1fr)`, gap:24 }}>
               {plans.map((plan) => {
+                // ✅ السنوي يعرض المبلغ الكامل للسنة (بدون قسمته على 12) — طلب صريح
+                // بدل عرض "المعدّل الشهري المكافئ" اللي كان يلخّط على المستخدم
                 const displayPrice = billing==='yearly'
-                  ? Math.round(plan.yearlyPrice / 12)
+                  ? Math.round(plan.yearlyPrice)
                   : Math.round(plan.monthlyPrice)
+                const specs = [
+                  { icon:'👥', val: plan.maxUsers === -1 ? t.pricing.unlimited : plan.maxUsers, label: t.pricing.users },
+                  { icon:'🩺', val: plan.maxDoctors === -1 ? t.pricing.unlimited : plan.maxDoctors, label: t.pricing.doctors },
+                  { icon:'🧍', val: plan.maxPatients === -1 ? t.pricing.unlimited : plan.maxPatients, label: t.pricing.patients },
+                ]
                 return (
                   <div key={plan.id} className={`plan-card${plan.isFeatured?' top':''}`}>
 
@@ -895,8 +904,19 @@ export default function LandingPage() {
                         {displayPrice}
                       </span>
                       <span style={{ fontSize:14, color:plan.isFeatured?'rgba(255,255,255,0.5)':C.muted }}>
-                        {t.pricing.currency}/{isAr?'شهر':'mo'}
+                        {t.pricing.currency}/{billing==='yearly' ? t.pricing.perYear : t.pricing.perMonth}
                       </span>
+                    </div>
+
+                    {/* ✅ تفاصيل الخطة — كم مستخدم/طبيب/مريض تشملهم */}
+                    <div style={{ display:'flex', gap:10, marginBottom:24, paddingBottom:24, borderBottom:`1px solid ${plan.isFeatured?'rgba(255,255,255,0.15)':C.border}`, flexWrap:'wrap' }}>
+                      {specs.map((s,i) => (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, color:plan.isFeatured?'rgba(255,255,255,0.85)':C.dark }}>
+                          <span>{s.icon}</span>
+                          <span style={{ fontWeight:700 }}>{s.val}</span>
+                          <span style={{ color:plan.isFeatured?'rgba(255,255,255,0.55)':C.muted }}>{s.label}</span>
+                        </div>
+                      ))}
                     </div>
 
                     <ul style={{ listStyle:'none', marginBottom:32 }}>
