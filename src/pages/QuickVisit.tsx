@@ -5,6 +5,7 @@ import type { Patient, Doctor } from '../types'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12, getCurrencySymbol } from '../utils/i18n'
+import { getRole } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -463,12 +464,22 @@ export default function QuickVisit() {
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
 
+    // ✅ طبيب يسجّل زيارة سريعة لحاله ما عنده صلاحية doctors.view (تصفّح كل
+    // أطباء العيادة) — ما يحتاجها هون، بس يحتاج سجله الخاص عشان يحجزها تحت اسمه
+    const isDoctorUser = getRole() === 'Doctor'
+
     Promise.all([
-      api.get('/doctors'),
+      api.get(isDoctorUser ? '/doctors/me' : '/doctors'),
       api.get('/patients')
     ])
       .then(([doctorsRes, patientsRes]) => {
-        setDoctors(doctorsRes.data.filter((d: Doctor) => d.isActive))
+        const doctorsList: Doctor[] = isDoctorUser ? [doctorsRes.data] : doctorsRes.data
+        const activeDoctors = doctorsList.filter((d: Doctor) => d.isActive)
+        setDoctors(activeDoctors)
+        // ✅ طبيب عنده خيار واحد بس (حساه) — نختاره تلقائياً بدل ما يضطر يضغط القائمة
+        if (isDoctorUser && activeDoctors.length === 1) {
+          setVisitForm(prev => ({ ...prev, doctorId: activeDoctors[0].id }))
+        }
         setAllPatients(patientsRes.data)
       })
       .catch((err) => {
