@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
 import { formatTimeString } from "../utils/i18n";
-import { hasPermission } from "../utils/permissions";
+import { hasPermission, getRole } from "../utils/permissions";
 
 // ═══════════════════════════════════════════════
 // Types — مطابقة لـ DoctorCalendarDto من الـ API
@@ -210,14 +210,19 @@ export default function DoctorCalendar({
     document.head.appendChild(style);
   }, []);
 
+  // ✅ طبيب يفتح تقويمه الخاص ما عنده صلاحية doctors.view أصلاً (تصفّح كل
+  // أطباء العيادة) — ما يحتاجها هون، بس يحتاج سجله الخاص. GET /doctors/me
+  // يرجّعه بدون أي صلاحية إضافية، بدل GET /doctors اللي كان يرجع 403 له
+  const isDoctorUser = getRole() === "Doctor";
+
   // جلب الأطباء
   useEffect(() => {
     let alive = true;
     api
-      .get("/doctors")
+      .get(isDoctorUser ? "/doctors/me" : "/doctors")
       .then((res) => {
         if (!alive) return;
-        const list: DoctorItem[] = res.data;
+        const list: DoctorItem[] = isDoctorUser ? [res.data] : res.data;
         setDoctors(list);
         if (!doctorId && list.length > 0) setDoctorId(list[0].id);
       })
