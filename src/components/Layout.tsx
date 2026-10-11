@@ -484,7 +484,6 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
         { path: '/appointments', labelAr: 'المواعيد', labelEn: 'Appointments', icon: 'ti-calendar', permission: 'appointments.view', superAdminOnly: false },
         { path: '/daily', labelAr: 'جدول اليوم', labelEn: "Today's Schedule", icon: 'ti-calendar-event', permission: 'daily.view', superAdminOnly: false },
         { path: '/doctors', labelAr: 'الأطباء', labelEn: 'Doctors', icon: 'ti-stethoscope', permission: 'doctors.view', superAdminOnly: false },
-        { path: '/staff', labelAr: 'فريق العمل', labelEn: 'Staff', icon: 'ti-users', permission: 'staff.view', superAdminOnly: false },
         { path: '/schedules', labelAr: 'جداول الدوام', labelEn: 'Schedules', icon: 'ti-calendar-time', permission: 'schedules.clinic.view', superAdminOnly: false },
         { path: '/doctor-calendar', labelAr: 'تقويم الطبيب', labelEn: 'Doctor Calendar', icon: 'ti-calendar-week', permission: 'appointments.view', superAdminOnly: false },
       ],
@@ -492,6 +491,8 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     {
       key: 'clinic', labelAr: 'إدارة العيادة', labelEn: 'Clinic Management', icon: 'ti-building-hospital',
       items: [
+
+        { path: '/staff', labelAr: 'فريق العمل', labelEn: 'Staff', icon: 'ti-users', permission: 'staff.view', superAdminOnly: false },
         { path: '/departments', labelAr: 'الأقسام', labelEn: 'Departments', icon: 'ti-building-hospital', permission: 'departments.manage', superAdminOnly: false, feature: 'multipleDepartments' as const },
         { path: '/treatment-templates', labelAr: 'قوالب الزيارة', labelEn: 'Visit Templates', icon: 'ti-clipboard-list', permission: 'treatmenttemplates.manage', superAdminOnly: false },
         { path: '/diagnosis-templates', labelAr: 'اقتراحات التشخيص والأدوية', labelEn: 'Diagnosis & Medication Suggestions', icon: 'ti-pill', permission: 'diagnosistemplates.manage', superAdminOnly: false },
