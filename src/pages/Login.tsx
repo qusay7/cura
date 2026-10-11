@@ -390,9 +390,12 @@ if (data.role?.toLowerCase() === 'doctor') {
 } else {
   navigate('/dashboard')
 }
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Login error:', err)
-    showMessageBox(isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials', 'error')
+    // ✅ نعرض نص الباك إند الفعلي (مثلاً رسالة قفل الحساب المؤقت) بدل نص ثابت
+    // يطمس أي رسالة غير "بيانات خاطئة" عادية
+    const errData = err.response?.data
+    showMessageBox(typeof errData === 'string' ? errData : (isAr ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials'), 'error')
     setShakeForm(true)
     setTimeout(() => setShakeForm(false), 400)
   } finally {
