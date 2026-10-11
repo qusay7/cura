@@ -420,30 +420,11 @@ if (data.role?.toLowerCase() === 'doctor') {
     </span>
   )
 
-  if (loading) return (
-    <>
-      <LoadingScreen
-        message={isAr ? 'جارٍ تسجيل الدخول...' : 'Signing you in...'}
-        subMessage={isAr ? 'يرجى الانتظار أثناء التحقق من بياناتك' : 'Please wait while we verify your credentials'}
-        fullScreen
-      />
-      {/* ✅ showMessageBox بالـ catch يصير وloading لسا true (قبل finally) —
-          لازم المستمع موجود هنا كمان، وإلا الرسالة (بيانات خطأ/قفل الحساب) تضيع */}
-      <MessageBoxHost />
-    </>
-  )
-
-  // While an URL-provided subdomain is being resolved automatically, show a
-  // minimal loading state instead of flashing the "type your clinic" form.
-  if (autoChecking) return (
-    <>
-      <LoadingScreen
-        message={t.autoChecking}
-        fullScreen
-      />
-      <MessageBoxHost />
-    </>
-  )
+  // ✅ لازم تكون JSX واحدة (return واحد) من جذر الدالة — لو رجّعنا Fragment
+  // مختلف لكل حالة (loading/autoChecking/الرئيسية) بـ"return" منفصل، React يفكّك
+  // الشجرة كاملة ويعيد تركيبها بأي تبديل بين الحالات، فـ MessageBoxHost يُستبدل
+  // بنسخة جديدة فاضية بالضبط وقت ما الرسالة لسا بالطريق — تضيع الرسالة بدون أي خطأ
+  // ظاهر. خلينا نحسب محتوى كل حالة كمتغيّر، والـ return الفعلي الوحيد بالأسفل.
 
   const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
     width:'100%', background:PS, border:`1px solid ${BR}`, borderRadius:12,
@@ -458,6 +439,20 @@ if (data.role?.toLowerCase() === 'doctor') {
   const accentBr = isAdminMode ? GOLDBR : BR
 
   return (
+    <>
+    {loading ? (
+      <LoadingScreen
+        message={isAr ? 'جارٍ تسجيل الدخول...' : 'Signing you in...'}
+        subMessage={isAr ? 'يرجى الانتظار أثناء التحقق من بياناتك' : 'Please wait while we verify your credentials'}
+        fullScreen
+      />
+    ) : autoChecking ? (
+      // أثناء تحليل subdomain من رابط محفوظ تلقائياً — عرض بسيط بدل ما نفلّش فورم إدخال العيادة لحظة
+      <LoadingScreen
+        message={t.autoChecking}
+        fullScreen
+      />
+    ) : (
     <div className="cura-shell" dir={t.dir} style={{ fontFamily:t.font }}>
 
       {/* ══════ LEFT ══════ */}
@@ -701,9 +696,12 @@ if (data.role?.toLowerCase() === 'doctor') {
       <div style={{ position:'fixed', insetInlineEnd:8, insetBlockEnd:6, fontSize:9.5, color:'#B7C6C7', fontFamily:"'Inter',monospace", userSelect:'none', zIndex:1 }}>
         web {__APP_VERSION__}{apiCommit && ` · api ${apiCommit}`}
       </div>
-      {/* ✅ هذي الصفحة الوحيدة برّا Layout.tsx — فتحتاج نسختها الخاصة من
-          MessageBoxHost، وإلا showMessageBox هنا يصيح بدون أي مستمع */}
-      <MessageBoxHost />
     </div>
+    )}
+    {/* ✅ هذي الصفحة الوحيدة برّا Layout.tsx — فتحتاج نسختها الخاصة من
+        MessageBoxHost. نسخة واحدة ثابتة هنا (مش داخل كل فرع) — وإلا React
+        يفكّك/يركّب الشجرة بتبديل loading/autoChecking ويخسر الرسالة الجايّة */}
+    <MessageBoxHost />
+    </>
   )
 }
