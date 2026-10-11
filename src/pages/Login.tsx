@@ -7,6 +7,7 @@ import { LoadingScreen } from '../components/LoadingScreen'
 import { ECGAnimation } from '../components/ECGAnimation'
 import { authService } from '../api/axios'
 import { showMessageBox } from '../utils/messageBox'
+import MessageBoxHost from '../components/MessageBoxHost'
 const translations = {
   en: {
     dir: 'ltr' as const,
@@ -420,20 +421,28 @@ if (data.role?.toLowerCase() === 'doctor') {
   )
 
   if (loading) return (
-    <LoadingScreen
-      message={isAr ? 'جارٍ تسجيل الدخول...' : 'Signing you in...'}
-      subMessage={isAr ? 'يرجى الانتظار أثناء التحقق من بياناتك' : 'Please wait while we verify your credentials'}
-      fullScreen
-    />
+    <>
+      <LoadingScreen
+        message={isAr ? 'جارٍ تسجيل الدخول...' : 'Signing you in...'}
+        subMessage={isAr ? 'يرجى الانتظار أثناء التحقق من بياناتك' : 'Please wait while we verify your credentials'}
+        fullScreen
+      />
+      {/* ✅ showMessageBox بالـ catch يصير وloading لسا true (قبل finally) —
+          لازم المستمع موجود هنا كمان، وإلا الرسالة (بيانات خطأ/قفل الحساب) تضيع */}
+      <MessageBoxHost />
+    </>
   )
 
   // While an URL-provided subdomain is being resolved automatically, show a
   // minimal loading state instead of flashing the "type your clinic" form.
   if (autoChecking) return (
-    <LoadingScreen
-      message={t.autoChecking}
-      fullScreen
-    />
+    <>
+      <LoadingScreen
+        message={t.autoChecking}
+        fullScreen
+      />
+      <MessageBoxHost />
+    </>
   )
 
   const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
@@ -692,6 +701,9 @@ if (data.role?.toLowerCase() === 'doctor') {
       <div style={{ position:'fixed', insetInlineEnd:8, insetBlockEnd:6, fontSize:9.5, color:'#B7C6C7', fontFamily:"'Inter',monospace", userSelect:'none', zIndex:1 }}>
         web {__APP_VERSION__}{apiCommit && ` · api ${apiCommit}`}
       </div>
+      {/* ✅ هذي الصفحة الوحيدة برّا Layout.tsx — فتحتاج نسختها الخاصة من
+          MessageBoxHost، وإلا showMessageBox هنا يصيح بدون أي مستمع */}
+      <MessageBoxHost />
     </div>
   )
 }
