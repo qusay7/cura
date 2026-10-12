@@ -41,6 +41,9 @@ const T = {
     next: 'التالي',
     pageOf: (p: number, total: number) => `صفحة ${p} من ${total}`,
     error: 'تعذّر تحميل سجل التدقيق',
+    from: 'من تاريخ',
+    to: 'إلى تاريخ',
+    clearDates: 'مسح الفترة',
   },
   en: {
     title: 'Audit Log',
@@ -59,6 +62,9 @@ const T = {
     next: 'Next',
     pageOf: (p: number, total: number) => `Page ${p} of ${total}`,
     error: 'Could not load the audit log',
+    from: 'From',
+    to: 'To',
+    clearDates: 'Clear range',
   },
 }
 
@@ -79,6 +85,8 @@ export default function AuditLog() {
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   useEffect(() => {
     api.get('/audit/entities')
@@ -92,7 +100,13 @@ export default function AuditLog() {
   useEffect(() => {
     if (!entityType) return
     setLoading(true)
-    api.get('/audit', { params: { entityType, page, pageSize: 20 } })
+    api.get('/audit', {
+      params: {
+        entityType, page, pageSize: 20,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      },
+    })
       .then(res => {
         setRows(res.data.items)
         setPages(res.data.pages || 1)
@@ -100,7 +114,7 @@ export default function AuditLog() {
       .catch(() => showMessageBox(t.error, 'error'))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityType, page])
+  }, [entityType, page, fromDate, toDate])
 
   const entityLabel = (e: EntityType) => isAr ? e.labelAr : e.labelEn
 
@@ -124,6 +138,28 @@ export default function AuditLog() {
             {entityLabel(e)}
           </button>
         ))}
+      </div>
+
+      {/* فلترة بفترة تاريخية */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.from}</label>
+          <input type="date" value={fromDate} max={toDate || undefined}
+            onChange={e => { setFromDate(e.target.value); setPage(1) }}
+            style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 13, color: TEXT_DARK, fontFamily: 'inherit' }} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.to}</label>
+          <input type="date" value={toDate} min={fromDate || undefined}
+            onChange={e => { setToDate(e.target.value); setPage(1) }}
+            style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${BORDER}`, fontSize: 13, color: TEXT_DARK, fontFamily: 'inherit' }} />
+        </div>
+        {(fromDate || toDate) && (
+          <button onClick={() => { setFromDate(''); setToDate(''); setPage(1) }}
+            style={{ padding: '8px 14px', borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD_BG, color: TEXT_MUTED, fontSize: 12.5, cursor: 'pointer' }}>
+            {t.clearDates}
+          </button>
+        )}
       </div>
 
       <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden' }}>
