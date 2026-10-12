@@ -29,6 +29,7 @@ const Departments         = lazy(() => import('./pages/Departments'))
 const TreatmentTemplates  = lazy(() => import('./pages/TreatmentTemplates'))
 const DiagnosisTemplates  = lazy(() => import('./pages/DiagnosisTemplates'))
 const Procedures          = lazy(() => import('./pages/Procedures'))
+const AuditLog            = lazy(() => import('./pages/AuditLog'))
 const EmergencyCheckIn    = lazy(() => import('./pages/EmergencyCheckIn'))
 const EmergencyDashboard  = lazy(() => import('./pages/EmergencyDashboard'))
 const EmergencyPatientDetail = lazy(() => import('./pages/EmergencyPatientDetail'))
@@ -218,6 +219,15 @@ function App() {
         <Route path="/procedures" element={
           <ProtectedRoute permission="departments.manage">
             <Layout><Procedures /></Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* ── سجل التدقيق — مين أنشأ/عدّل كل سجل ومتى (ClinicAdmin/SuperAdmin فقط
+            فعلياً عبر الباك إند؛ صلاحية settings.view هنا نفس معيار شاشة
+            الصلاحيات /permissions) ── */}
+        <Route path="/audit-log" element={
+          <ProtectedRoute permission="settings.view">
+            <Layout><AuditLog /></Layout>
           </ProtectedRoute>
         } />
 

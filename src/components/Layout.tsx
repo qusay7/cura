@@ -521,6 +521,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
       items: [
         { path: '/users', labelAr: 'المستخدمون', labelEn: 'Users', icon: 'ti-users-group', permission: 'users.view', superAdminOnly: false },
         { path: '/permissions', labelAr: 'الصلاحيات', labelEn: 'Permissions', icon: 'ti-shield-lock', permission: 'settings.view', superAdminOnly: false },
+        { path: '/audit-log', labelAr: 'سجل التدقيق', labelEn: 'Audit Log', icon: 'ti-history', permission: 'settings.view', superAdminOnly: false },
         { path: '/settings', labelAr: 'الإعدادات', labelEn: 'Settings', icon: 'ti-settings', permission: 'settings.view', superAdminOnly: false },
       ],
     },
