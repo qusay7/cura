@@ -20,12 +20,15 @@ interface AuditRow {
   createdByName: string | null
   updatedAt: string | null
   updatedByName: string | null
+  isDeleted: boolean
 }
 
 const T = {
   ar: {
     title: 'سجل التدقيق',
-    subtitle: 'مين أنشأ أو عدّل كل سجل، ومتى',
+    subtitle: 'مين أنشأ أو عدّل كل سجل، ومتى — بما فيها السجلات المحذوفة',
+    deleted: 'محذوف',
+    deletedByPrefix: '🗑️ حذفه: ',
     name: 'العنصر',
     createdBy: 'أنشأه',
     createdAt: 'تاريخ الإنشاء',
@@ -41,7 +44,9 @@ const T = {
   },
   en: {
     title: 'Audit Log',
-    subtitle: 'Who created or last changed each record, and when',
+    subtitle: 'Who created or last changed each record, and when — including deleted ones',
+    deleted: 'Deleted',
+    deletedByPrefix: '🗑️ Deleted by: ',
     name: 'Record',
     createdBy: 'Created by',
     createdAt: 'Created at',
@@ -140,11 +145,25 @@ export default function AuditLog() {
               </thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.id} style={{ borderTop: `1px solid ${BORDER}` }}>
-                    <td style={tdStyle}>{r.name}</td>
+                  <tr key={r.id} style={{ borderTop: `1px solid ${BORDER}`, background: r.isDeleted ? '#FDF5F5' : 'transparent' }}>
+                    <td style={tdStyle}>
+                      {r.name}
+                      {r.isDeleted && (
+                        <span style={{ marginInlineStart: 8, fontSize: 10.5, fontWeight: 700, color: '#C0392B', background: '#FBEAEA', border: '1px solid #F0C4C4', borderRadius: 100, padding: '2px 8px' }}>
+                          {t.deleted}
+                        </span>
+                      )}
+                    </td>
                     <td style={tdStyle}>{r.createdByName || t.noUpdate}</td>
                     <td style={{ ...tdStyle, color: TEXT_MUTED }}>{r.createdAt ? formatDateTime(r.createdAt, lang) : t.noUpdate}</td>
-                    <td style={tdStyle}>{r.updatedByName || t.noUpdate}</td>
+                    <td style={{ ...tdStyle, color: r.isDeleted ? '#C0392B' : undefined, fontWeight: r.isDeleted ? 600 : undefined }}>
+                      {/* ✅ عند الحذف، آخر تعديل = الحذف نفسه (soft-delete عبارة عن
+                          تعديل متتبّع زي أي تعديل ثاني) — نوضّح هذا صراحة بدل عمود
+                          "آخر تعديل بواسطة" العام اللي ما يفرّق بين تعديل وحذف */}
+                      {r.isDeleted
+                        ? `${t.deletedByPrefix}${r.updatedByName || t.noUpdate}`
+                        : (r.updatedByName || t.noUpdate)}
+                    </td>
                     <td style={{ ...tdStyle, color: TEXT_MUTED }}>{r.updatedAt ? formatDateTime(r.updatedAt, lang) : t.noUpdate}</td>
                   </tr>
                 ))}
