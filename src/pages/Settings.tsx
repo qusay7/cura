@@ -2,7 +2,7 @@ import { useState, useEffect, useId, isValidElement, cloneElement } from 'react'
 import api from '../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER } from '../styles/theme'
 import { hasPermission } from '../utils/permissions'
-import { COUNTRIES, getCountryByCode } from '../utils/i18n'
+import { COUNTRIES, getCountryByCode, formatDateTime } from '../utils/i18n'
 import { showMessageBox } from '../utils/messageBox'
 
 // ✅ غيّر getImageUrl مع debugging:
@@ -366,6 +366,13 @@ const T = {
     newPassword: 'كلمة المرور الجديدة',
     confirmPassword: 'تأكيد كلمة المرور',
     changePassword: 'تغيير كلمة المرور',
+    sessions: 'الجلسات النشطة',
+    sessionsEmpty: 'لا توجد جلسات نشطة',
+    sessionsLoading: 'جاري تحميل الجلسات...',
+    sessionActiveSince: 'نشطة منذ',
+    sessionUnknownDevice: 'جهاز غير معروف',
+    sessionRevoke: 'إنهاء الجلسة',
+    sessionRevokeConfirm: 'إنهاء هذه الجلسة؟ أي جهاز يستخدمها رح يحتاج يسجّل دخول من جديد.',
     save: 'حفظ البيانات',
     saving: 'جارٍ الحفظ...',
     currentPlan: 'الخطة الحالية',
@@ -434,6 +441,13 @@ const T = {
     newPassword: 'New Password',
     confirmPassword: 'Confirm Password',
     changePassword: 'Change Password',
+    sessions: 'Active Sessions',
+    sessionsEmpty: 'No active sessions',
+    sessionsLoading: 'Loading sessions...',
+    sessionActiveSince: 'Active since',
+    sessionUnknownDevice: 'Unknown device',
+    sessionRevoke: 'End session',
+    sessionRevokeConfirm: 'End this session? Any device using it will need to log in again.',
     save: 'Save Changes',
     saving: 'Saving...',
     currentPlan: 'Current Plan',
@@ -573,10 +587,15 @@ const SettingsLoadingScreen = ({ msg }: { msg: string }) => (
 
 export default function Settings() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
-  const [activeTab, setActiveTab] = useState<'clinic' | 'account' | 'subscription' | 'whatsapp'>('clinic')
+  const [activeTab, setActiveTab] = useState<'clinic' | 'account' | 'sessions' | 'subscription' | 'whatsapp'>('clinic')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState('')
+
+  // ✅ الجلسات النشطة (الأجهزة المسجّلة دخول) — مبنية على جدول RefreshTokens
+  const [sessions, setSessions] = useState<{ id: string; userAgent: string | null; ipAddress: string | null; createdAt: string; expiresAt: string }[]>([])
+  const [sessionsLoading, setSessionsLoading] = useState(false)
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
 
   const user = (() => {
     try { return JSON.parse(localStorage.getItem('user') || '{}') }
@@ -667,6 +686,29 @@ export default function Settings() {
     const interval = setInterval(poll, 3000)
     return () => { cancelled = true; clearInterval(interval) }
   }, [activeTab])
+
+  // ✅ جلسات المستخدم النشطة — تُجلب بس وقت فتح التبويبة
+  useEffect(() => {
+    if (activeTab !== 'sessions') return
+    setSessionsLoading(true)
+    api.get('/auth/sessions')
+      .then(res => setSessions(res.data))
+      .catch(() => showMessageBox(T[lang].error, 'error'))
+      .finally(() => setSessionsLoading(false))
+  }, [activeTab])
+
+  const handleRevokeSession = async (id: string) => {
+    if (!window.confirm(T[lang].sessionRevokeConfirm)) return
+    setRevokingSessionId(id)
+    try {
+      await api.delete(`/auth/sessions/${id}`)
+      setSessions(prev => prev.filter(s => s.id !== id))
+    } catch {
+      showMessageBox(T[lang].error, 'error')
+    } finally {
+      setRevokingSessionId(null)
+    }
+  }
 
   const handleWhatsappConnect = async () => {
     if (!hasPermission('settings.edit')) return
@@ -839,6 +881,7 @@ export default function Settings() {
   const tabs = [
     { key: 'clinic' as const, label: t.clinic, icon: '🏥' },
     { key: 'account' as const, label: t.account, icon: '👤' },
+    { key: 'sessions' as const, label: t.sessions, icon: '💻' },
     { key: 'subscription' as const, label: t.subscription, icon: '💎' },
     ...(hasPermission('settings.edit') ? [{ key: 'whatsapp' as const, label: t.whatsapp, icon: '💬' }] : []),
   ]
@@ -1055,6 +1098,46 @@ export default function Settings() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* Sessions Tab */}
+        {activeTab === 'sessions' && (
+          <div className="form-card">
+            <h3 className="form-title">💻 {t.sessions}</h3>
+            {sessionsLoading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: TEXT_MUTED, fontSize: 13 }}>{t.sessionsLoading}</div>
+            ) : sessions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: TEXT_MUTED, fontSize: 13 }}>{t.sessionsEmpty}</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {sessions.map(s => (
+                  <div key={s.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                    border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px',
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_DARK, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {s.userAgent || t.sessionUnknownDevice}
+                      </p>
+                      <p style={{ fontSize: 11.5, color: TEXT_MUTED, margin: '4px 0 0' }}>
+                        {t.sessionActiveSince} {formatDateTime(s.createdAt, lang)}
+                        {s.ipAddress ? ` — ${s.ipAddress}` : ''}
+                      </p>
+                    </div>
+                    <button onClick={() => handleRevokeSession(s.id)} disabled={revokingSessionId === s.id}
+                      style={{
+                        flexShrink: 0, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600,
+                        border: '1px solid #F0C4C4', background: '#FBEAEA', color: '#C0392B',
+                        cursor: revokingSessionId === s.id ? 'not-allowed' : 'pointer',
+                        opacity: revokingSessionId === s.id ? 0.6 : 1,
+                      }}>
+                      {t.sessionRevoke}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Subscription Tab */}
