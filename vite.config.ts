@@ -27,7 +27,14 @@ export default defineConfig({
     react(),
 
     VitePWA({
-      registerType: 'autoUpdate',
+      // ✅ 'prompt' (الافتراضي) — السيرفس وركر الجديد يبقى "بالانتظار" لحد ما
+      // المستخدم يوافق على إعادة التحميل (UpdatePrompt.tsx)، بدل تفعيل فوري
+      // صامت ممكن يقاطع نموذج مفتوح وسط التعبئة (حجز موعد، فاتورة...)
+      // ✅ نسجّل الـ service worker بأنفسنا (src/components/UpdatePrompt.tsx)
+      // بدل السكربت الافتراضي المحقون تلقائياً — ذاك يسجّل مرة وحدة بس عند
+      // تحميل الصفحة وما يتحقق من تحديثات بعدها أبداً، فأي نشر جديد ما يوصل
+      // المستخدم إلا لو مسح بيانات المتصفح يدوياً أو أغلق كل التابات وفتحها
+      injectRegister: false,
 
       // بدونها لا يُسجَّل service worker ولا manifest أثناء "vite dev"،
       // فلا يُطلق المتصفح beforeinstallprompt إطلاقاً — يمنع اختبار PWAInstallPrompt محلياً
@@ -81,7 +88,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        skipWaiting: true,
+        // ✅ بدون skipWaiting — السيرفس وركر الجديد يضل "ينتظر" (waiting) لحد
+        // ما المستخدم يضغط تحديث (UpdatePrompt.tsx)، بدل ما يُفعّل نفسه فوراً
+        // ويحدّث كل التابات المفتوحة بصمت وسط أي نموذج مفتوح
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         navigateFallbackDenylist: [/^\/api/],

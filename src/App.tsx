@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import UpdatePrompt from './components/UpdatePrompt'
 import { LoadingScreen } from './components/LoadingScreen'
 
 // ✅ Code splitting — كل صفحة أصبحت ملفاً منفصلاً يُحمَّل فقط عند زيارتها فعلياً،
@@ -325,6 +326,9 @@ function App() {
       </Suspense>
       {/* ✅ PWA Install Prompt */}
       <PWAInstallPrompt />
+      {/* ✅ تنبيه وجود نسخة أحدث — يتحقق كل دقيقة، بدل ما يحتاج المستخدم يمسح
+          بيانات المتصفح يدوياً عشان يشوف أي نشر جديد */}
+      <UpdatePrompt />
     </>
   )
 }
