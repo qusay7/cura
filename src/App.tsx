@@ -244,8 +244,11 @@ function App() {
             <Layout><EmergencyDashboard /></Layout>
           </ProtectedRoute>
         } />
+        {/* ✅ الملف الطبي الكامل (علامات حيوية/تشخيص/إجراءات) — emergency.manage
+            فقط (الطبيب)، بدون queue.manage. الاستقبال/المحاسب يتعاملون مع الدفع
+            والخروج من لوحة الطوارئ مباشرة (معاينة/تسجيل خروج) بدون فتح هذي الصفحة ── */}
         <Route path="/emergency/:id" element={
-          <ProtectedRoute permission={['emergency.manage', 'queue.manage']}>
+          <ProtectedRoute permission={['emergency.manage']}>
             <Layout><EmergencyPatientDetail /></Layout>
           </ProtectedRoute>
         } />
