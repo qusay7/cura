@@ -16,6 +16,8 @@ interface ActiveEntry {
   notes?: string | null
   createdAt: string
   price?: number | null
+  dischargedAt?: string | null
+  hasPayment?: boolean
   amountPaid?: number | null
   isPaid: boolean
   patientId: string
@@ -41,14 +43,16 @@ const T = {
     noDoctor: 'بدون طبيب محدد',
     since: 'منذ',
     preview: '👁️ معاينة', dischargeAction: '🚪 تسجيل خروج', fullFile: '📋 الملف الكامل',
-    previewTitle: 'معاينة الفاتورة', dischargeTitle: 'تسجيل خروج المريض',
+    previewTitle: 'معاينة الفاتورة', dischargeTitle: 'تسجيل خروج المريض', collectTitle: 'تحصيل دفعة متبقية',
     totalAmount: 'المبلغ المستحق', amountPaid: 'المبلغ المدفوع', noCharge: 'لا توجد مستحقات بعد',
     statusPaid: '✅ مدفوعة بالكامل', statusUnpaid: '⏳ غير مدفوعة',
     paymentMethodLabel: 'طريقة الدفع', cash: 'نقدي', card: 'بطاقة',
-    registerPayment: '💳 تسجيل دفعة', savingPayment: 'جارٍ الحفظ...',
+    registerPayment: '💳 تسجيل دفعة', savingPayment: 'جارٍ الحفظ...', collectPayment: '💳 تحصيل دفعة',
     confirmDischarge: '🚪 تأكيد تسجيل الخروج', discharging: 'جارٍ التسجيل...',
     dischargeConfirm: 'هل أنت متأكد من تسجيل خروج هذا المريض؟',
     close: 'إغلاق', cancel: 'إلغاء', errorOccurred: 'حدث خطأ', loadingInfo: 'جارٍ التحميل...',
+    tabIncomplete: 'غير مكتمل / غير مدفوع', tabCompleted: 'مكتمل', tabAll: 'الكل',
+    dischargedAtLabel: 'خرج', noEntriesForTab: 'لا يوجد مرضى بهذا التصنيف',
   },
   en: {
     title: 'Emergency Dashboard', subtitle: 'Active cases — newest first, visible to all on-duty doctors',
@@ -61,14 +65,16 @@ const T = {
     noDoctor: 'No doctor assigned yet',
     since: 'since',
     preview: '👁️ Preview', dischargeAction: '🚪 Discharge', fullFile: '📋 Full file',
-    previewTitle: 'Bill Preview', dischargeTitle: 'Discharge Patient',
+    previewTitle: 'Bill Preview', dischargeTitle: 'Discharge Patient', collectTitle: 'Collect Outstanding Payment',
     totalAmount: 'Amount due', amountPaid: 'Amount paid', noCharge: 'No charges yet',
     statusPaid: '✅ Fully paid', statusUnpaid: '⏳ Not paid',
     paymentMethodLabel: 'Payment method', cash: 'Cash', card: 'Card',
-    registerPayment: '💳 Register Payment', savingPayment: 'Saving...',
+    registerPayment: '💳 Register Payment', savingPayment: 'Saving...', collectPayment: '💳 Collect Payment',
     confirmDischarge: '🚪 Confirm Discharge', discharging: 'Discharging...',
     dischargeConfirm: 'Are you sure you want to discharge this patient?',
     close: 'Close', cancel: 'Cancel', errorOccurred: 'An error occurred', loadingInfo: 'Loading...',
+    tabIncomplete: 'Incomplete / Unpaid', tabCompleted: 'Completed', tabAll: 'All',
+    dischargedAtLabel: 'Discharged', noEntriesForTab: 'No patients in this view',
   },
 }
 
@@ -92,6 +98,9 @@ export default function EmergencyDashboard() {
   const [department, setDepartment] = useState<Department | null>(null)
   const [entries, setEntries] = useState<ActiveEntry[]>([])
   const [loading, setLoading] = useState(true)
+  // ✅ نجيب كل الحالات (status=all) مرة وحدة ونفلتر بالفرونت — عشان التبديل بين
+  // التابات فوري بدون طلب جديد، وعشان "الكل" و"مكتمل" يشوفوا نفس القائمة بالضبط
+  const [filter, setFilter] = useState<'incomplete' | 'completed' | 'all'>('incomplete')
 
   // ✅ معاينة/تسجيل خروج مباشرة من اللوحة — الاستقبال والمحاسب يقدروا يحصّلوا
   // الدفعة ويسجّلوا الخروج من هنا بدون فتح الملف الطبي الكامل (emergency.manage فقط)
@@ -117,7 +126,7 @@ export default function EmergencyDashboard() {
       const dept = (depts as Department[]).find(d => d.type === 1 && d.isActive) || null
       setDepartment(dept)
       if (dept) {
-        const res = await api.get(`/queue/active?departmentId=${dept.id}`)
+        const res = await api.get(`/queue/active?departmentId=${dept.id}&status=all`)
         setEntries(res.data)
       }
     } finally {
@@ -190,6 +199,15 @@ export default function EmergencyDashboard() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: TEXT_MUTED }}>{t.loading}</div>
   )
 
+  const filteredEntries = entries.filter(e => {
+    if (filter === 'completed') return e.status === 'completed'
+    if (filter === 'all') return true
+    return e.status !== 'completed' || !e.isPaid
+  })
+
+  const formatDischargedAt = (iso: string) =>
+    new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).toLocaleString(isAr ? 'ar-SA' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+
   return (
     <div dir={isAr ? 'rtl' : 'ltr'} style={{ fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif", background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -219,30 +237,58 @@ export default function EmergencyDashboard() {
               {t.goToDepartments}
             </button>
           </div>
-        ) : entries.length === 0 ? (
-          <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 40, textAlign: 'center', color: TEXT_MUTED }}>
-            {t.noPatients}
-          </div>
         ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              {([
+                ['incomplete', t.tabIncomplete],
+                ['completed', t.tabCompleted],
+                ['all', t.tabAll],
+              ] as const).map(([key, label]) => (
+                <button key={key} onClick={() => setFilter(key)}
+                  style={{
+                    background: filter === key ? PRIMARY : CARD_BG, color: filter === key ? '#FFF' : TEXT_MUTED,
+                    border: `1px solid ${filter === key ? PRIMARY : BORDER}`, borderRadius: 100, padding: '7px 16px',
+                    fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {filteredEntries.length === 0 ? (
+              <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 40, textAlign: 'center', color: TEXT_MUTED }}>
+                {entries.length === 0 ? t.noPatients : t.noEntriesForTab}
+              </div>
+            ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {entries.map(e => (
+            {filteredEntries.map(e => (
               <div key={e.id}
                 style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap', transition: 'all 0.15s ease' }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK }}>{e.patientName}</span>
                     <span style={{
                       fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 100,
-                      background: e.status === 'waiting' ? '#FFF8E1' : '#EBF4FF',
-                      color: e.status === 'waiting' ? '#F59E0B' : '#3B82F6',
+                      background: e.status === 'waiting' ? '#FFF8E1' : e.status === 'completed' ? '#E8F5E9' : e.status === 'cancelled' ? '#F3F4F6' : '#EBF4FF',
+                      color: e.status === 'waiting' ? '#F59E0B' : e.status === 'completed' ? '#22C55E' : e.status === 'cancelled' ? '#6B7280' : '#3B82F6',
                     }}>
-                      {e.status === 'waiting' ? t.waiting : t.called}
+                      {e.status === 'waiting' ? t.waiting : e.status === 'called' ? t.called : e.status === 'completed' ? `✅ ${t.tabCompleted}` : e.status}
                     </span>
+                    {e.price != null && (
+                      <span style={{
+                        fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 100,
+                        background: e.isPaid ? '#E8F5E9' : '#FFF8E1', color: e.isPaid ? '#22C55E' : '#B8892A',
+                      }}>
+                        {e.isPaid ? t.statusPaid : t.statusUnpaid}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 12, color: TEXT_MUTED, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <span>👨‍⚕️ {e.doctorName || t.noDoctor}</span>
                     <span>🕒 {t.since} {timeAgo(e.createdAt, isAr)}</span>
                     {e.price != null && <span style={{ fontFamily: "'Inter',sans-serif" }}>💰 {e.price} {getCurrencySymbol(lang)}</span>}
+                    {e.dischargedAt && <span>🚪 {t.dischargedAtLabel}: {formatDischargedAt(e.dischargedAt)}</span>}
                   </div>
                   {e.notes && <div style={{ fontSize: 11.5, color: TEXT_MUTED, marginTop: 4, fontStyle: 'italic' }}>{e.notes}</div>}
                 </div>
@@ -258,14 +304,23 @@ export default function EmergencyDashboard() {
                     style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 9, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                     {t.preview}
                   </button>
-                  <button onClick={() => openModal(e, 'discharge')}
-                    style={{ background: '#FFF5F5', color: '#EF4444', border: '1px solid #FCA5A5', borderRadius: 9, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                    {t.dischargeAction}
-                  </button>
+                  {e.status !== 'completed' ? (
+                    <button onClick={() => openModal(e, 'discharge')}
+                      style={{ background: '#FFF5F5', color: '#EF4444', border: '1px solid #FCA5A5', borderRadius: 9, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      {t.dischargeAction}
+                    </button>
+                  ) : e.price != null && !e.isPaid ? (
+                    <button onClick={() => openModal(e, 'discharge')}
+                      style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      {t.collectPayment}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             ))}
           </div>
+            )}
+          </>
         )}
 
         {modalEntry && (
@@ -274,7 +329,7 @@ export default function EmergencyDashboard() {
             <div onClick={ev => ev.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}
               style={{ background: CARD_BG, borderRadius: 16, padding: 22, maxWidth: 360, width: '100%' }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: '0 0 4px' }}>
-                {modalMode === 'preview' ? t.previewTitle : t.dischargeTitle}
+                {modalMode === 'preview' ? t.previewTitle : modalEntry.status === 'completed' ? t.collectTitle : t.dischargeTitle}
               </h3>
               <p style={{ fontSize: 12.5, color: TEXT_MUTED, margin: '0 0 16px' }}>{modalEntry.patientName}</p>
 
@@ -323,14 +378,14 @@ export default function EmergencyDashboard() {
               )}
 
               <div style={{ display: 'flex', gap: 10 }}>
-                {modalMode === 'discharge' ? (
+                {modalMode === 'discharge' && modalEntry.status !== 'completed' ? (
                   <button onClick={handleDischarge} disabled={discharging || modalLoading}
                     style={{ flex: 1, background: '#EF4444', color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '10px', fontSize: 13, fontWeight: 700, cursor: discharging ? 'not-allowed' : 'pointer', opacity: discharging ? 0.7 : 1 }}>
                     {discharging ? t.discharging : t.confirmDischarge}
                   </button>
                 ) : null}
                 <button onClick={closeModal} disabled={savingPayment || discharging}
-                  style={{ flex: modalMode === 'preview' ? 1 : undefined, padding: '10px 18px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, color: TEXT_MUTED, cursor: 'pointer' }}>
+                  style={{ flex: modalMode === 'preview' || modalEntry.status === 'completed' ? 1 : undefined, padding: '10px 18px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, color: TEXT_MUTED, cursor: 'pointer' }}>
                   {modalMode === 'preview' ? t.close : t.cancel}
                 </button>
               </div>
