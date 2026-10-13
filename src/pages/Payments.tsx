@@ -146,6 +146,12 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
   if (expandedId === p.id) { setExpandedId(null); return }
   setExpandedId(p.id)
   if (details[p.id]) return
+  // ✅ دفعة طوارئ — ما إلها موعد (appointmentId فاضي)، فما نحاول نجيب تفاصيل
+  // موعد غير موجود أصلاً؛ نعرضها كدفعة بسيطة بدون بنود فاتورة مفصّلة
+  if (!p.appointmentId) {
+    setDetails(prev => ({ ...prev, [p.id]: { isEmergency: true } }))
+    return
+  }
   try {
     const [appt, note, types] = await Promise.all([
       api.get(`/appointments/${p.appointmentId}`),
@@ -373,10 +379,14 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
           <td key={idx} style={{ padding:'11px 14px', ...cell.style }}>{cell.val}</td>
         ))}
         <td style={{ padding:'11px 14px' }}>
-          <button onClick={e=>{e.stopPropagation();navigate(`/appointments/${p.appointmentId}`)}}
-            style={{ padding:'5px 10px', border:`1px solid ${BORDER}`, borderRadius:8, background:'transparent', color:PRIMARY, fontSize:11, cursor:'pointer' }}>
-            📅
-          </button>
+          {p.appointmentId ? (
+            <button onClick={e=>{e.stopPropagation();navigate(`/appointments/${p.appointmentId}`)}}
+              style={{ padding:'5px 10px', border:`1px solid ${BORDER}`, borderRadius:8, background:'transparent', color:PRIMARY, fontSize:11, cursor:'pointer' }}>
+              📅
+            </button>
+          ) : (
+            <span title={isAr ? 'زيارة طوارئ' : 'Emergency visit'} style={{ fontSize:13 }}>🚑</span>
+          )}
         </td>
       </tr>
       {isOpen && (
@@ -387,6 +397,8 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
               <span style={{ fontSize:12, color:TEXT_MUTED }}>{t.loading}</span>
             ) : d.error ? (
               <span style={{ fontSize:12, color:DANGER }}>{t.noData}</span>
+            ) : d.isEmergency ? (
+              <span style={{ fontSize:12, color:TEXT_MUTED }}>🚑 {isAr ? 'دفعة زيارة طوارئ — بدون بنود فاتورة مفصّلة' : 'Emergency visit payment — no itemized invoice lines'}</span>
             ) : (
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
                 <div>

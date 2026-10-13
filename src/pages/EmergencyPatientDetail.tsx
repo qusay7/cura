@@ -65,6 +65,9 @@ const T = {
     errorOccurred: 'حدث خطأ', loading: 'جارٍ التحميل...', notFound: 'الحالة غير موجودة',
     patient: 'المريض', reading: '🩺 قراءة', procedure: '💉 إجراء', attachment: '📎 مرفق', unknown: 'غير معروف',
     xray: 'أشعة', lab: 'تحليل مخبري', other: 'أخرى',
+    paymentPaid: '✅ مدفوعة', paymentAmount: 'المبلغ المدفوع', registerPayment: '💳 تسجيل دفعة',
+    paymentMethodLabel: 'طريقة الدفع', cash: 'نقدي', card: 'بطاقة', confirmPayment: 'تأكيد الدفع',
+    cancel: 'إلغاء', savingPayment: 'جارٍ الحفظ...',
   },
   en: {
     back: '← Emergency Dashboard',
@@ -83,6 +86,9 @@ const T = {
     errorOccurred: 'An error occurred', loading: 'Loading...', notFound: 'Case not found',
     patient: 'Patient', reading: '🩺 Reading', procedure: '💉 Procedure', attachment: '📎 Attachment', unknown: 'Unknown',
     xray: 'X-Ray', lab: 'Lab Result', other: 'Other',
+    paymentPaid: '✅ Paid', paymentAmount: 'Amount Paid', registerPayment: '💳 Register Payment',
+    paymentMethodLabel: 'Payment Method', cash: 'Cash', card: 'Card', confirmPayment: 'Confirm Payment',
+    cancel: 'Cancel', savingPayment: 'Saving...',
   },
 }
 
@@ -135,6 +141,15 @@ export default function EmergencyPatientDetail() {
   const [discharging, setDischarging] = useState(false)
   const [showSickLeave, setShowSickLeave] = useState(false)
 
+  // ✅ فوترة الطوارئ — تسجّل دفعة حقيقية (PaymentDetail/Invoice) مربوطة بزيارة
+  // الطوارئ عبر QueueEntryId، تماماً زي أي موعد عادي — تظهر بصفحة الفواتير
+  // وتقارير الإيرادات تلقائياً بدون أي كود إضافي (نفس النظام، مو نظام موازٍ)
+  const [payment, setPayment] = useState<{ hasPayment: boolean; amountPaid?: number; isPaid?: boolean } | null>(null)
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [savingPayment, setSavingPayment] = useState(false)
+
   useEffect(() => {
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', handleLangChange)
@@ -147,12 +162,14 @@ export default function EmergencyPatientDetail() {
       const entryRes = await api.get(`/queue/${id}`)
       setEntry(entryRes.data)
 
-      const [timelineRes, attachmentsRes] = await Promise.all([
+      const [timelineRes, attachmentsRes, paymentRes] = await Promise.all([
         api.get(`/visitnotes/queue/${id}/timeline`),
         api.get(`/attachments/patient/${entryRes.data.patientId}`).catch(() => ({ data: [] })),
+        api.get(`/payments/queue/${id}`).catch(() => ({ data: { hasPayment: false } })),
       ])
       setTimeline(timelineRes.data)
       setAttachments((attachmentsRes.data as AttachmentTimelineItem[]).filter(a => a.queueEntryId === id))
+      setPayment(paymentRes.data)
     } catch {
       setNotFound(true)
     } finally {
@@ -213,6 +230,30 @@ export default function EmergencyPatientDetail() {
     } catch (err: any) {
       showMessageBox(err.response?.data || t.errorOccurred, 'error')
       setDischarging(false)
+    }
+  }
+
+  const openPaymentForm = () => {
+    setPaymentAmount(entry?.price != null ? String(entry.price) : '')
+    setPaymentMethod('cash')
+    setShowPaymentForm(true)
+  }
+
+  const handleRegisterPayment = async () => {
+    if (!entry) return
+    setSavingPayment(true)
+    try {
+      await api.post('/payments', {
+        queueEntryId: entry.id,
+        amountPaid: parseFloat(paymentAmount) || 0,
+        paymentMethod,
+      })
+      setShowPaymentForm(false)
+      fetchAll()
+    } catch (err: any) {
+      showMessageBox(err.response?.data || t.errorOccurred, 'error')
+    } finally {
+      setSavingPayment(false)
     }
   }
 
@@ -279,8 +320,20 @@ export default function EmergencyPatientDetail() {
                 <span>🕒 {t.since} {formatDateTime(entry.createdAt)}</span>
               </div>
               {entry.price != null && (
-                <div style={{ fontSize: 13, fontWeight: 700, color: PRIMARY, marginTop: 8, fontFamily: "'Inter',sans-serif" }}>
-                  💰 {entry.price} {getCurrencySymbol(lang)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>
+                    💰 {entry.price} {getCurrencySymbol(lang)}
+                  </span>
+                  {payment?.hasPayment ? (
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#22C55E', background: '#E8F5E9', borderRadius: 100, padding: '3px 10px' }}>
+                      {t.paymentPaid} ({payment.amountPaid} {getCurrencySymbol(lang)})
+                    </span>
+                  ) : (
+                    <button onClick={openPaymentForm}
+                      style={{ background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 9, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      {t.registerPayment}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -423,6 +476,37 @@ export default function EmergencyPatientDetail() {
             lang={lang}
             onClose={() => setShowSickLeave(false)}
           />
+        )}
+
+        {showPaymentForm && (
+          <div onClick={() => !savingPayment && setShowPaymentForm(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(20,30,30,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
+            <div onClick={e => e.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}
+              style={{ background: CARD_BG, borderRadius: 16, padding: 22, maxWidth: 360, width: '100%' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: TEXT_DARK, margin: '0 0 16px' }}>{t.registerPayment}</h3>
+
+              <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, display: 'block', marginBottom: 6 }}>{t.paymentAmount}</label>
+              <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)}
+                style={{ ...inputStyle, marginBottom: 14 }} />
+
+              <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, display: 'block', marginBottom: 6 }}>{t.paymentMethodLabel}</label>
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} style={{ ...inputStyle, marginBottom: 18 }}>
+                <option value="cash">{t.cash}</option>
+                <option value="card">{t.card}</option>
+              </select>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={handleRegisterPayment} disabled={savingPayment}
+                  style={{ flex: 1, background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '10px', fontSize: 13, fontWeight: 700, cursor: savingPayment ? 'not-allowed' : 'pointer', opacity: savingPayment ? 0.7 : 1 }}>
+                  {savingPayment ? t.savingPayment : t.confirmPayment}
+                </button>
+                <button onClick={() => setShowPaymentForm(false)} disabled={savingPayment}
+                  style={{ padding: '10px 18px', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, color: TEXT_MUTED, cursor: 'pointer' }}>
+                  {t.cancel}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* السجل الزمني الكامل — دمج القراءات + الإجراءات + المرفقات بقصة واحدة */}
