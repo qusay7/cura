@@ -8,6 +8,7 @@ import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '.
 import { getCurrencySymbol } from '../utils/i18n'
 import { printSection, escapeHtml } from '../utils/printSection'
 import { showMessageBox } from '../utils/messageBox'
+import { hasPermission } from '../utils/permissions'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -68,6 +69,7 @@ const T = {
     paymentPaid: '✅ مدفوعة', paymentAmount: 'المبلغ المدفوع', registerPayment: '💳 تسجيل دفعة',
     paymentMethodLabel: 'طريقة الدفع', cash: 'نقدي', card: 'بطاقة', confirmPayment: 'تأكيد الدفع',
     cancel: 'إلغاء', savingPayment: 'جارٍ الحفظ...',
+    editDischargedBanner: '⚠️ هذا المريض مسجّل خروجه — أنت تعدّل الملف بصلاحية خاصة (تعديل بعد الخروج)',
   },
   en: {
     back: '← Emergency Dashboard',
@@ -89,6 +91,7 @@ const T = {
     paymentPaid: '✅ Paid', paymentAmount: 'Amount Paid', registerPayment: '💳 Register Payment',
     paymentMethodLabel: 'Payment Method', cash: 'Cash', card: 'Card', confirmPayment: 'Confirm Payment',
     cancel: 'Cancel', savingPayment: 'Saving...',
+    editDischargedBanner: '⚠️ This patient has been discharged — you are editing with a special permission (edit after discharge)',
   },
 }
 
@@ -303,6 +306,7 @@ export default function EmergencyPatientDetail() {
   )
 
   const isDischarged = entry.status === 'completed' && !!entry.dischargedAt
+  const canEditDischarged = hasPermission('emergency.editdischarged')
 
   // ✅ الفرق محسوب بالترتيب التصاعدي (الأقدم أول) عشان كل قراءة تُقارَن باللي قبلها فعلياً
   const deltaMap = computeDeltas([...timeline].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()))
@@ -383,8 +387,13 @@ export default function EmergencyPatientDetail() {
           )}
         </div>
 
-        {!isDischarged && (
+        {(!isDischarged || canEditDischarged) && (
           <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 18, padding: 20, marginBottom: 18 }}>
+            {isDischarged && (
+              <div style={{ background: '#FFF8E1', border: '1px solid #FCD34D', borderRadius: 10, padding: '9px 14px', marginBottom: 16, fontSize: 12, fontWeight: 600, color: '#92400E' }}>
+                {t.editDischargedBanner}
+              </div>
+            )}
             {/* 🩺 العلامات الحيوية — أول شي يشوفه الطبيب، وكل حفظ يسجّل قراءة جديدة
                 (ما بيستبدل القديمة) عشان تقدر تراقب المريض بأكثر من قراءة بالوقت */}
             <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
