@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import ProceduresPicker from '../components/ProceduresPicker'
@@ -257,6 +257,23 @@ export default function EmergencyPatientDetail() {
     }
   }
 
+  // ✅ ProceduresPicker يحسب إجماليه داخلياً من بنوده، وهذا بالضبط سعر زيارة
+  // الطوارئ بالباك إند (ما عندها بنود زيارة أساساً — فقط إجراءات). بدون هذا،
+  // entry.price يبقى كما كان وقت فتح الصفحة فلا تظهر شارة "مستحقات" ولا زر
+  // الدفع بعد إضافة أول إجراء، لحد ما تُعاد تحميل الصفحة.
+  // ✅ أول نداء لـ onTotalChange بيجي فوراً عند التركيب بقيمة 0 (قبل ما جلب
+  // الإجراءات الفعلية يكتمل) — نتجاهله عشان ما يصفّر سعر زيارة أصلاً عندها
+  // مستحقات لحظة فتح الصفحة، وناخذ بالتحديثات الحقيقية بعده فقط
+  const proceduresLoadedForRef = useRef<string | null>(null)
+  const handleProceduresTotalChange = (total: number) => {
+    if (!id) return
+    if (proceduresLoadedForRef.current !== id) {
+      proceduresLoadedForRef.current = id
+      return
+    }
+    setEntry(prev => (prev ? { ...prev, price: total } : prev))
+  }
+
   const formatDateTime = (iso: string) =>
     new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).toLocaleString(isAr ? 'ar-SA' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -392,7 +409,7 @@ export default function EmergencyPatientDetail() {
             </div>
 
             {/* 💉 الإجراءات — تتكرر بأي وقت، كل واحد موثّق بوقته وطبيبه */}
-            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} onItemsChange={setProcedureItems} />
+            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} onItemsChange={setProcedureItems} onTotalChange={handleProceduresTotalChange} />
 
             {/* 🩺 التشخيص والوصفة — بالنهاية، كل واحد بزر طباعة مستقل */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14, marginTop: 16 }}>
