@@ -162,12 +162,18 @@ export default function EmergencyPatientDetail() {
       const entryRes = await api.get(`/queue/${id}`)
       setEntry(entryRes.data)
 
-      const [timelineRes, attachmentsRes, paymentRes] = await Promise.all([
+      const [timelineRes, proceduresRes, attachmentsRes, paymentRes] = await Promise.all([
         api.get(`/visitnotes/queue/${id}/timeline`),
+        // ✅ لازم تُجلب هون مباشرة، مو بس عبر ProceduresPicker's onItemsChange —
+        // هذا المكوّن نفسه يختفي كلياً بعد تسجيل الخروج (!isDischarged)، فلو
+        // بقي procedureItems معتمد عليه بس، تختفي الإجراءات من السجل الزمني
+        // لأي مريض مسجّل خروجه فعلاً، رغم إنها لسا موجودة بالداتابيز
+        api.get(`/queue/${id}/procedures`).catch(() => ({ data: [] })),
         api.get(`/attachments/patient/${entryRes.data.patientId}`).catch(() => ({ data: [] })),
         api.get(`/payments/queue/${id}`).catch(() => ({ data: { hasPayment: false } })),
       ])
       setTimeline(timelineRes.data)
+      setProcedureItems(proceduresRes.data)
       setAttachments((attachmentsRes.data as AttachmentTimelineItem[]).filter(a => a.queueEntryId === id))
       setPayment(paymentRes.data)
     } catch {
