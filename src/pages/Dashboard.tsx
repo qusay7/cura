@@ -101,6 +101,7 @@ const T = {
   ar: {
     title: 'لوحة التحكم', plan: 'الباقة', loading: 'جارٍ التحميل...',
     patients: 'المرضى', doctors: 'الأطباء',
+    patientsThisMonth: 'مرضى جدد هذا الشهر',
     todayAppts: 'مواعيد اليوم', upcomingAppts: 'القادمة',
     subscription: 'الباقة الحالية', remaining: 'متبقي',
     day: 'يوم', usage: 'نسبة الاستخدام',
@@ -126,6 +127,7 @@ const T = {
   en: {
     title: 'Dashboard', plan: 'Plan', loading: 'Loading...',
     patients: 'Patients', doctors: 'Doctors',
+    patientsThisMonth: 'New patients this month',
     todayAppts: "Today's Appts", upcomingAppts: 'Upcoming',
     subscription: 'Current Plan', remaining: 'Remaining',
     day: 'days', usage: 'Usage', daysLeft: 'Days Left', welcome: 'Welcome back',
@@ -622,7 +624,7 @@ useEffect(() => {
                 {[
                   { label: t.plan, value: sub.planName, suffix: '', isText: true },
                   { label: t.daysLeft, value: `${sub.daysRemaining}`, suffix: t.day, isText: false },
-                  { label: t.patients, value: `${sub.currentPatients}`, suffix: `/ ${sub.maxPatients === -1 ? '∞' : sub.maxPatients}`, isText: false },
+                  { label: t.patientsThisMonth, value: `${sub.currentPatients}`, suffix: `/ ${sub.maxPatients === -1 ? '∞' : sub.maxPatients}`, isText: false },
                   { label: t.doctors, value: `${sub.currentDoctors}`, suffix: `/ ${sub.maxDoctors === -1 ? '∞' : sub.maxDoctors}`, isText: false },
                 ].map((item, i) => (
                   <div key={i} style={{ background: PRIMARY_SOFT, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 14px' }}>
@@ -636,7 +638,7 @@ useEffect(() => {
               </div>
               <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 14 }}>📊 {t.usage}</p>
-                <ProgressBar label={t.patients} current={sub.currentPatients} max={sub.maxPatients} />
+                <ProgressBar label={t.patientsThisMonth} current={sub.currentPatients} max={sub.maxPatients} />
                 <ProgressBar label={t.doctors} current={sub.currentDoctors} max={sub.maxDoctors} />
               </div>
             </div>

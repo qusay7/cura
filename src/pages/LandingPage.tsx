@@ -299,7 +299,7 @@ const T = {
       loading:'جاري تحميل الخطط...',
       error:'تعذّر تحميل الخطط حالياً، يرجى المحاولة لاحقاً',
       empty:'لا توجد خطط متاحة حالياً',
-      users:'مستخدم', doctors:'طبيب', patients:'مريض', unlimited:'غير محدود',
+      users:'مستخدم', doctors:'طبيب', patients:'مريض', patientsPerMonth:'مريض جديد/شهر', unlimited:'غير محدود',
     },
     faq:{
       eyebrow:'الأسئلة المتكررة',
@@ -390,7 +390,7 @@ const T = {
       loading:'Loading plans...',
       error:'Could not load plans right now, please try again later',
       empty:'No plans available right now',
-      users:'users', doctors:'doctors', patients:'patients', unlimited:'Unlimited',
+      users:'users', doctors:'doctors', patients:'patients', patientsPerMonth:'new patients/mo', unlimited:'Unlimited',
     },
     faq:{
       eyebrow:'FAQ',
@@ -888,7 +888,7 @@ export default function LandingPage() {
                 const specs = [
                   { icon:'👥', val: plan.maxUsers === -1 ? t.pricing.unlimited : plan.maxUsers, label: t.pricing.users },
                   { icon:'🩺', val: plan.maxDoctors === -1 ? t.pricing.unlimited : plan.maxDoctors, label: t.pricing.doctors },
-                  { icon:'🧍', val: plan.maxPatients === -1 ? t.pricing.unlimited : plan.maxPatients, label: t.pricing.patients },
+                  { icon:'🧍', val: plan.maxPatients === -1 ? t.pricing.unlimited : plan.maxPatients, label: plan.maxPatients === -1 ? t.pricing.patients : t.pricing.patientsPerMonth },
                 ]
                 // ✅ نسخة إنجليزية اختيارية لكل حقل — نرجع للعربي لو مش معبّاة، بنفس
                 // اتفاقية NameEn المستخدمة بباقي الكيانات بالتطبيق

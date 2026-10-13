@@ -383,6 +383,7 @@ const T = {
     yearly: 'سنوي',
     day: 'يوم',
     patients: 'المرضى',
+    patientsThisMonth: 'مرضى جدد هذا الشهر',
     doctors: 'الأطباء',
     users: 'المستخدمين',
     noSubscription: 'لا يوجد اشتراك نشط',
@@ -458,6 +459,7 @@ const T = {
     yearly: 'Yearly',
     day: 'days',
     patients: 'Patients',
+    patientsThisMonth: 'New patients this month',
     doctors: 'Doctors',
     users: 'Users',
     noSubscription: 'No active subscription',
@@ -1167,7 +1169,7 @@ export default function Settings() {
                   </div>
 
                   <div style={{ paddingTop: 20, marginTop: 8, borderTop: `1px solid ${BORDER}` }}>
-                    <UsageBar label={t.patients} current={subscription.currentPatients} max={subscription.maxPatients} lang={lang} />
+                    <UsageBar label={t.patientsThisMonth} current={subscription.currentPatients} max={subscription.maxPatients} lang={lang} />
                     <UsageBar label={t.doctors} current={subscription.currentDoctors} max={subscription.maxDoctors} lang={lang} />
                     <UsageBar label={t.users} current={subscription.currentUsers} max={subscription.maxUsers} lang={lang} />
                   </div>
