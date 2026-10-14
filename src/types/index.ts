@@ -44,6 +44,7 @@ export interface Doctor {
   departmentId?: string
   departmentName?: string
   workType?: 'appointments' | 'queue' | 'both' // ✅ أضف
+  isEmergencyDoctor?: boolean
 }
 
 export interface Appointment {

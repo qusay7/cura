@@ -456,7 +456,9 @@ export default function EditAppointment() {
         })
         setPatients(patientsRes.data)
         const doctorsList: Doctor[] = isDoctorUser ? [doctorsRes.data] : doctorsRes.data
-        setDoctors(doctorsList.filter((d: Doctor) => d.isActive))
+        // ✅ طبيب الطوارئ ما يظهر لإعادة التعيين — إلا لو هو الطبيب المعيّن
+        // أصلاً على هذا الموعد، عشان القائمة ما تخفي قيمته الحالية
+        setDoctors(doctorsList.filter((d: Doctor) => d.isActive && (!d.isEmergencyDoctor || d.id === a.doctorId)))
       } catch (err) {
         console.error('Error fetching data:', err)
         navigate('/appointments')

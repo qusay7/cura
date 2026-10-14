@@ -310,7 +310,10 @@ export default function AddAppointment() {
       ])
       setPatients(patientsRes.data)
       const doctorsList: Doctor[] = isDoctorUser ? [doctorsRes.data] : doctorsRes.data
-      const activeDoctors = doctorsList.filter((d: Doctor) => d.isActive)
+      // ✅ طبيب الطوارئ يتابع مرضاه عبر لوحة الطوارئ (تسجيل دخول بدون موعد)،
+      // ما يظهر هون أبداً — حتى لو workType عنده "queue" (مش كل طبيب طابور
+      // بالضرورة طبيب طوارئ، بس كل طبيب طوارئ ما لازم يظهر بحجز المواعيد)
+      const activeDoctors = doctorsList.filter((d: Doctor) => d.isActive && !d.isEmergencyDoctor)
       setDoctors(activeDoctors)
       if (isDoctorUser && activeDoctors.length === 1) {
         setForm(prev => ({ ...prev, doctorId: activeDoctors[0].id }))
