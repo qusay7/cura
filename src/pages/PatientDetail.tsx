@@ -59,9 +59,13 @@ const T = {
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات', yearsOld: 'سنة',
     // Tabs
     tabInfo: '📋 البيانات', tabInsurance: '🏥 التأمين', tabAttachments: '📎 المرفقات', tabHistory: '🩺 سجل الزيارات',
+    tabUpcoming: '📅 المواعيد القادمة',
     print: 'طباعة',
     exportPdf: 'تصدير PDF',
     exportExcel: 'تصدير Excel',
+    noUpcoming: 'لا توجد مواعيد قادمة لهذا المريض', loadingAppointments: 'جارٍ التحميل...',
+    doctor: 'الطبيب', date: 'التاريخ', type: 'النوع', statusLabel: 'الحالة', editReschedule: '✏️ تعديل/إعادة جدولة',
+    statusScheduled: 'مجدول', statusConfirmed: 'مؤكد',
   },
   en: {
     back: 'Back', edit: 'Edit', delete: 'Delete',
@@ -80,9 +84,13 @@ const T = {
     loadingSub: 'Please wait while we load patient information', yearsOld: 'years',
     // Tabs
     tabInfo: '📋 Info', tabInsurance: '🏥 Insurance', tabAttachments: '📎 Attachments', tabHistory: '🩺 Visit History',
+    tabUpcoming: '📅 Upcoming Appointments',
      print: 'Print',
     exportPdf: 'Export PDF',
     exportExcel: 'Export Excel',
+    noUpcoming: 'No upcoming appointments for this patient', loadingAppointments: 'Loading...',
+    doctor: 'Doctor', date: 'Date', type: 'Type', statusLabel: 'Status', editReschedule: '✏️ Edit / Reschedule',
+    statusScheduled: 'Scheduled', statusConfirmed: 'Confirmed',
   },
 }
 
@@ -93,6 +101,11 @@ interface PatientDetail {
   email: string | null; emergencyContact: string | null; emergencyPhone: string | null
   allergies: string | null; chronicDiseases: string | null; occupation: string | null
   maritalStatus: string | null; notes: string | null; stopped: boolean; createdAt: string
+}
+
+interface PatientAppointment {
+  id: string; appointmentDate: string; doctorId: string | null; doctorName: string | null
+  type: string | null; status: string; price: number | null
 }
 
 const calculateAge = (dateOfBirth?: string | null): number | null => {
@@ -171,8 +184,10 @@ export default function PatientDetail() {
   const [patient, setPatient] = useState<PatientDetail|null>(null)
   const [loading, setLoading]  = useState(true)
   const [lang, setLang]        = useState<'ar'|'en'>(getStoredLang())
-  const [activeTab, setActiveTab] = useState<'info'|'insurance'|'attachments'>('info')  // ✅ تبويبات
+  const [activeTab, setActiveTab] = useState<'info'|'insurance'|'attachments'|'upcoming'>('info')  // ✅ تبويبات
   const [toastError, setToastError] = useState('')
+  const [upcomingAppointments, setUpcomingAppointments] = useState<PatientAppointment[] | null>(null)
+  const [loadingAppointments, setLoadingAppointments] = useState(false)
 
   useEffect(() => {
     if (!toastError) return
@@ -205,6 +220,17 @@ export default function PatientDetail() {
     }
     fetchPatient()
   }, [id, navigate])
+
+  // ✅ يُجلب مرة وحدة عند أول فتح للتبويب (مو مع كل تبديل تبويب) — ونفلتر
+  // "القادمة" بالفرونت: تاريخها لسا ما جا وحالتها مجدول/مؤكد (مو ملغي/مكتمل)
+  useEffect(() => {
+    if (activeTab !== 'upcoming' || upcomingAppointments !== null || !id) return
+    setLoadingAppointments(true)
+    api.get(`/appointments/patient/${id}`)
+      .then(res => setUpcomingAppointments(res.data))
+      .catch(() => setUpcomingAppointments([]))
+      .finally(() => setLoadingAppointments(false))
+  }, [activeTab, upcomingAppointments, id])
 
   const handleDelete = async () => {
     const t = T[lang]
@@ -360,6 +386,9 @@ export default function PatientDetail() {
           <button className={`ptab-btn${activeTab==='attachments'?' active':''}`} onClick={()=>setActiveTab('attachments')}>
             {t.tabAttachments}
           </button>
+          <button className={`ptab-btn${activeTab==='upcoming'?' active':''}`} onClick={()=>setActiveTab('upcoming')}>
+            {t.tabUpcoming}
+          </button>
           <button className="ptab-btn" onClick={()=>navigate(`/patients/${id}/visit-notes`)}>
             {t.tabHistory}
           </button>
@@ -428,6 +457,52 @@ export default function PatientDetail() {
         {/* ✅ Tab: Attachments */}
         {activeTab==='attachments' && (
           <PatientAttachmentsTab patientId={patient.id} lang={lang} />
+        )}
+
+        {/* ✅ Tab: Upcoming Appointments — تعديلها يفتح صفحة التعديل الموجودة
+            أصلاً (EditAppointment)، اللي تجلب فعلياً مواعيد الطبيب المتاحة
+            (schedules/available-slots) عند تغيير التاريخ — مافي داعي لبناء
+            منطق جدولة جديد هون */}
+        {activeTab==='upcoming' && (
+          <div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:20, padding:20 }}>
+            {loadingAppointments ? (
+              <p style={{ fontSize:13, color:TEXT_MUTED, textAlign:'center', padding:'20px 0' }}>{t.loadingAppointments}</p>
+            ) : (() => {
+              const now = new Date()
+              const upcoming = (upcomingAppointments || [])
+                .filter(a => (a.status === 'scheduled' || a.status === 'confirmed') && new Date(a.appointmentDate) >= now)
+                .sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
+              if (upcoming.length === 0) return (
+                <p style={{ fontSize:13, color:TEXT_MUTED, textAlign:'center', padding:'20px 0' }}>{t.noUpcoming}</p>
+              )
+              return (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {upcoming.map(a => (
+                    <div key={a.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, background:'#F8FAFA', border:`1px solid ${BORDER}`, borderRadius:14, padding:'14px 16px' }}>
+                      <div>
+                        <div style={{ fontSize:13.5, fontWeight:700, color:TEXT_DARK, marginBottom:4 }}>
+                          {new Date(a.appointmentDate).toLocaleString(isAr ? 'ar-SA' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </div>
+                        <div style={{ fontSize:12, color:TEXT_MUTED, display:'flex', gap:10, flexWrap:'wrap' }}>
+                          <span>👨‍⚕️ {a.doctorName || '—'}</span>
+                          {a.type && <span>🩺 {a.type}</span>}
+                          <span style={{ fontWeight:600, color: a.status === 'confirmed' ? SUCCESS : PRIMARY }}>
+                            {a.status === 'confirmed' ? t.statusConfirmed : t.statusScheduled}
+                          </span>
+                        </div>
+                      </div>
+                      {hasPermission('appointments.edit') && (
+                        <button onClick={() => navigate(`/appointments/${a.id}/edit`)}
+                          style={{ background:PRIMARY, color:'#FFF', border:'none', borderRadius:10, padding:'8px 16px', fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+                          {t.editReschedule}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
         )}
 
       </div>
