@@ -40,6 +40,9 @@ const T = {
      print: 'طباعة',
     exportPdf: 'تصدير PDF',
     exportExcel: 'تصدير Excel',
+    clickHint: 'اضغط لعرض التفاصيل بالجدول',
+    showingAll: '📌 يعرض الجدول: كل الدفعات', showingUnpaid: '📌 يعرض الجدول: الدفعات غير المكتملة (المستحق على المرضى)',
+    showingPaid: '📌 يعرض الجدول: الدفعات المسدّدة بالكامل', showingMonth: '📌 يعرض الجدول: دفعات هذا الشهر',
   },
   en: {
     title:'Payments', subtitle:'Manage and track visit payments',
@@ -61,6 +64,9 @@ const T = {
     print: 'Print',
     exportPdf: 'Export PDF',
     exportExcel: 'Export Excel',
+    clickHint: 'Click to see details in the table',
+    showingAll: '📌 Showing: all payments', showingUnpaid: '📌 Showing: incomplete payments (owed by patients)',
+    showingPaid: '📌 Showing: fully paid payments', showingMonth: '📌 Showing: this month\'s payments',
   },
 }
 
@@ -125,14 +131,21 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
     } catch {}
   }
 
-  const fetchData = async () => {
+  // ✅ overrides اختيارية — لما نفلتر برمجياً (كليك على بطاقة إحصائية) ونحتاج
+  // نرسل القيم الجديدة فوراً بدل ما ننتظر دورة render عشان الـ state يتحدّث
+  // (setFilterPaid/setFrom/setTo غير متزامنة، لو اعتمدنا على الـ state المحلي
+  // هون كنا بنرسل القيم القديمة بالطلب التالي مباشرة)
+  const fetchData = async (overrides?: { filterPaid?: string; from?: string; to?: string; page?: number }) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page: String(page), pageSize:'20' })
-      if (filterPaid==='paid')   params.set('isPaid','true')
-      if (filterPaid==='unpaid') params.set('isPaid','false')
-      if (fromDate) params.set('from', fromDate)
-      if (toDate)   params.set('to', toDate)
+      const fp = overrides?.filterPaid ?? filterPaid
+      const fd = overrides?.from ?? fromDate
+      const td = overrides?.to ?? toDate
+      const params = new URLSearchParams({ page: String(overrides?.page ?? page), pageSize:'20' })
+      if (fp==='paid')   params.set('isPaid','true')
+      if (fp==='unpaid') params.set('isPaid','false')
+      if (fd) params.set('from', fd)
+      if (td) params.set('to', td)
       const r = await api.get(`/payments?${params}`)
       setData(r.data)
     } catch (err:any) {
@@ -142,6 +155,21 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
 
   const applyFilter = () => { setPage(1); fetchData() }
   const resetFilter = () => { setFilterPaid(''); setFrom(''); setTo(''); setPage(1); setTimeout(fetchData,0) }
+
+  // ✅ كليك على بطاقة إحصائية بالأعلى → يفلتر الجدول تلقائياً ويمرّر له، عشان
+  // توضيح "هذا الرقم من وين" يصير بالضغط مباشرة بدل الشرح بالكلام
+  const jumpToFilter = (opts: { paid?: '' | 'paid' | 'unpaid'; monthOnly?: boolean }) => {
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const newFrom = opts.monthOnly ? `${todayStr.slice(0, 7)}-01` : ''
+    const newTo = opts.monthOnly ? todayStr : ''
+    const newPaid = opts.paid ?? ''
+    setFilterPaid(newPaid)
+    setFrom(newFrom)
+    setTo(newTo)
+    setPage(1)
+    fetchData({ filterPaid: newPaid, from: newFrom, to: newTo, page: 1 })
+    document.getElementById('payments-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const toggleRow = async (p:any) => {
   if (expandedId === p.id) { setExpandedId(null); return }
   setExpandedId(p.id)
@@ -192,16 +220,19 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
           <p style={{ fontSize:13, color:TEXT_MUTED, margin:'6px 0 0' }}>{t.subtitle}</p>
         </div>
 
-        {/* Stats */}
+        {/* Stats — كل بطاقة قابلة للضغط، تفلتر الجدول تلقائياً وتنزل له */}
         {stats && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:24 }}>
             {[
-              { icon:'💰', label:t.totalRevenue,     val:`${fmt(stats.totalRevenue)} ${t.riyal}`,    color:TEXT_DARK },
-              { icon:'✅', label:t.totalCollected,    val:`${fmt(stats.totalCollected)} ${t.riyal}`,  color:SUCCESS },
-              { icon:'🏥', label:t.pendingInsurance,  val:`${fmt(stats.pendingInsurance)} ${t.riyal}`,color:'#1D4ED8' },
-              { icon:'⏳', label:t.patientOwes,       val:`${fmt(stats.patientOwes)} ${t.riyal}`,    color:DANGER },
+              { icon:'💰', label:t.totalRevenue,     val:`${fmt(stats.totalRevenue)} ${t.riyal}`,    color:TEXT_DARK, onClick:()=>jumpToFilter({}) },
+              { icon:'✅', label:t.totalCollected,    val:`${fmt(stats.totalCollected)} ${t.riyal}`,  color:SUCCESS,   onClick:()=>jumpToFilter({}) },
+              { icon:'🏥', label:t.pendingInsurance,  val:`${fmt(stats.pendingInsurance)} ${t.riyal}`,color:'#1D4ED8', onClick:()=>jumpToFilter({}) },
+              { icon:'⏳', label:t.patientOwes,       val:`${fmt(stats.patientOwes)} ${t.riyal}`,    color:DANGER,    onClick:()=>jumpToFilter({ paid:'unpaid' }) },
             ].map((s,i)=>(
-              <div key={i} style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:16, padding:18 }}>
+              <div key={i} onClick={s.onClick} title={t.clickHint}
+                style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:16, padding:18, cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow=`0 4px 14px ${BORDER}`; e.currentTarget.style.transform='translateY(-2px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none'; e.currentTarget.style.transform='none'}}>
                 <div style={{ fontSize:24, marginBottom:8 }}>{s.icon}</div>
                 <p style={{ fontSize:22, fontWeight:700, color:s.color, margin:0, fontFamily:"'Inter',monospace" }}>{s.val}</p>
                 <p style={{ fontSize:11, color:TEXT_MUTED, margin:'4px 0 0' }}>{s.label}</p>
@@ -214,12 +245,15 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
         {stats && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:24 }}>
             {[
-              { icon:'📅', label:t.monthRevenue,   val:`${fmt(stats.monthRevenue)} ${t.riyal}`,   color:PRIMARY },
-              { icon:'📥', label:t.monthCollected, val:`${fmt(stats.monthCollected)} ${t.riyal}`, color:SUCCESS },
-              { icon:'✔️', label:t.paidCount,      val:String(stats.paidCount),                   color:SUCCESS },
-              { icon:'❌', label:t.unpaidCount,    val:String(stats.unpaidCount),                  color:DANGER },
+              { icon:'📅', label:t.monthRevenue,   val:`${fmt(stats.monthRevenue)} ${t.riyal}`,   color:PRIMARY,  onClick:()=>jumpToFilter({ monthOnly:true }) },
+              { icon:'📥', label:t.monthCollected, val:`${fmt(stats.monthCollected)} ${t.riyal}`, color:SUCCESS,  onClick:()=>jumpToFilter({ monthOnly:true }) },
+              { icon:'✔️', label:t.paidCount,      val:String(stats.paidCount),                   color:SUCCESS,  onClick:()=>jumpToFilter({ paid:'paid' }) },
+              { icon:'❌', label:t.unpaidCount,    val:String(stats.unpaidCount),                  color:DANGER,   onClick:()=>jumpToFilter({ paid:'unpaid' }) },
             ].map((s,i)=>(
-              <div key={i} style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:16, padding:18 }}>
+              <div key={i} onClick={s.onClick} title={t.clickHint}
+                style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:16, padding:18, cursor:'pointer', transition:'box-shadow 0.15s, transform 0.15s' }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow=`0 4px 14px ${BORDER}`; e.currentTarget.style.transform='translateY(-2px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow='none'; e.currentTarget.style.transform='none'}}>
                 <div style={{ fontSize:24, marginBottom:8 }}>{s.icon}</div>
                 <p style={{ fontSize:22, fontWeight:700, color:s.color, margin:0 }}>{s.val}</p>
                 <p style={{ fontSize:11, color:TEXT_MUTED, margin:'4px 0 0' }}>{s.label}</p>
@@ -337,8 +371,17 @@ const { visibleKeys, toggle } = useColumnVisibility('payments-table', columnDefs
   <ColumnToggleButton columns={columnDefs} visibleKeys={visibleKeys} onToggle={toggle} isRtl={isAr} />
 </div>
 
+{/* ✅ توضيح الفلتر الفعّال حالياً — يتحدّث تلقائياً لما يُضغط على بطاقة إحصائية
+    أو يُغيَّر الفلتر يدوياً، عشان يكون واضح ليش الجدول عم يعرض هذي النتائج بالذات */}
+<p style={{ fontSize:12.5, color:TEXT_MUTED, margin:'0 0 10px', fontWeight:600 }}>
+  {filterPaid==='unpaid' ? t.showingUnpaid
+    : filterPaid==='paid' ? t.showingPaid
+    : (fromDate || toDate) ? t.showingMonth
+    : t.showingAll}
+</p>
+
 {/* جدول المدفوعات */}
-<div style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:18, overflow:'hidden' }}>
+<div id="payments-table" style={{ background:CARD_BG, border:`1px solid ${BORDER}`, borderRadius:18, overflow:'hidden' }}>
           {loading ? (
             <div style={{ textAlign:'center', padding:60, color:TEXT_MUTED }}>{t.loading}</div>
           ) : data?.payments?.length > 0 ? (
