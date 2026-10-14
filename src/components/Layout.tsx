@@ -532,6 +532,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
         { path: '/superadmin/clinics', labelAr: 'العيادات', labelEn: 'Clinics', icon: 'ti-building-hospital', permission: null, superAdminOnly: true },
         { path: '/superadmin/plans', labelAr: 'الخطط', labelEn: 'Plans', icon: 'ti-diamond', permission: null, superAdminOnly: true },
         { path: '/superadmin/error-logs', labelAr: 'سجل الأخطاء', labelEn: 'Error Logs', icon: 'ti-bug', permission: null, superAdminOnly: true },
+        { path: '/superadmin/workload-report', labelAr: 'حجم عمل العيادات', labelEn: 'Clinic Workload', icon: 'ti-report-analytics', permission: null, superAdminOnly: true },
       ],
     },
   ]

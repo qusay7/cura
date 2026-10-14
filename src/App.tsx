@@ -37,6 +37,7 @@ const ClinicPermissions   = lazy(() => import('./pages/ClinicPermissions'))
 const Reports             = lazy(() => import('./pages/Reports'))
 const ActivityLog         = lazy(() => import('./pages/ActivityLog'))
 const SuperAdminClinics   = lazy(() => import('./pages/SuperAdmin/Clinics'))
+const SuperAdminWorkloadReport = lazy(() => import('./pages/SuperAdmin/WorkloadReport'))
 const SuperAdminPlans     = lazy(() => import('./pages/SuperAdmin/Plans'))
 const ErrorLogs           = lazy(() => import('./pages/SuperAdmin/ErrorLogs'))
 const Queue               = lazy(() => import('./pages/Queue'))
@@ -289,6 +290,11 @@ function App() {
         <Route path="/superadmin/plans" element={
           <ProtectedRoute role="SuperAdmin">
             <Layout><SuperAdminPlans /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/superadmin/workload-report" element={
+          <ProtectedRoute role="SuperAdmin">
+            <Layout><SuperAdminWorkloadReport /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/superadmin/error-logs" element={
