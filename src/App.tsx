@@ -35,6 +35,7 @@ const EmergencyDashboard  = lazy(() => import('./pages/EmergencyDashboard'))
 const EmergencyPatientDetail = lazy(() => import('./pages/EmergencyPatientDetail'))
 const ClinicPermissions   = lazy(() => import('./pages/ClinicPermissions'))
 const Reports             = lazy(() => import('./pages/Reports'))
+const ActivityLog         = lazy(() => import('./pages/ActivityLog'))
 const SuperAdminClinics   = lazy(() => import('./pages/SuperAdmin/Clinics'))
 const SuperAdminPlans     = lazy(() => import('./pages/SuperAdmin/Plans'))
 const ErrorLogs           = lazy(() => import('./pages/SuperAdmin/ErrorLogs'))
@@ -257,6 +258,11 @@ function App() {
         <Route path="/reports" element={
           <ProtectedRoute permission="reports.view">
             <Layout><Reports /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/activity-log" element={
+          <ProtectedRoute permission="reports.view">
+            <Layout><ActivityLog /></Layout>
           </ProtectedRoute>
         } />
 

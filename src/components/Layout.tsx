@@ -514,6 +514,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
         { path: '/payments', labelAr: 'المدفوعات', labelEn: 'Payments', icon: 'ti-cash', permission: 'payments.view', superAdminOnly: false },
         { path: '/settlements', labelAr: 'التسويات المالية', labelEn: 'Settlements', icon: 'ti-cash-banknote', permission: 'settlements.manage', superAdminOnly: false },
         { path: '/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: 'ti-chart-bar', permission: 'reports.view', superAdminOnly: false },
+        { path: '/activity-log', labelAr: 'سجل الحركة اليومية', labelEn: 'Daily Activity Log', icon: 'ti-list-details', permission: 'reports.view', superAdminOnly: false },
       ],
     },
     {
