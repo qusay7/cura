@@ -53,6 +53,7 @@ const T = {
     print: 'طباعة',
     exportPdf: 'تصدير PDF',
     exportExcel: 'تصدير Excel',
+    openEmergency: '🚨 فتح لوحة الطوارئ',
     types: {
       0: 'عام',
       1: 'طوارئ',
@@ -81,6 +82,7 @@ const T = {
     print: 'Print',
     exportPdf: 'Export PDF',
     exportExcel: 'Export Excel',
+    openEmergency: '🚨 Open Emergency Dashboard',
     types: {
       0: 'General',
       1: 'Emergency',
@@ -248,18 +250,23 @@ const DepartmentModal = ({
 }
 
 const DeptCard = ({
-  dept, lang, onEdit, onDelete, onToggle
+  dept, lang, onEdit, onDelete, onToggle, onOpenEmergency
 }: {
   dept: Department
   lang: 'ar' | 'en'
   onEdit: () => void
   onDelete: () => void
   onToggle: () => void
+  onOpenEmergency: () => void
 }) => {
   const t = T[lang]
   const isAr = lang === 'ar'
   const icon = t.typeIcons[dept.type as keyof typeof t.typeIcons] || '📋'
   const typeName = t.types[dept.type as keyof typeof t.types] || ''
+  // ✅ قسم من نوع "طوارئ" — فتحه مباشرة ينقل للوحة الطوارئ الفعلية بدل ما يبقى
+  // مجرّد تصنيف بدون أي أثر عملي؛ تحتاج نفس صلاحيات مسار اللوحة نفسه
+  const isEmergencyDept = dept.type === 1
+    && (hasPermission('emergency.checkin') || hasPermission('emergency.manage') || hasPermission('queue.manage'))
 
   return (
     <div className="dept-card" style={{
@@ -316,6 +323,17 @@ const DeptCard = ({
             {dept.doctorsCount} {t.doctors}
           </span>
         </div>
+      )}
+
+      {isEmergencyDept && dept.isActive && (
+        <button onClick={onOpenEmergency}
+          style={{
+            width: '100%', background: '#FFF5F5', border: '1px solid #FCA5A5',
+            borderRadius: 12, padding: '10px', fontSize: 13, fontWeight: 700,
+            color: '#EF4444', cursor: 'pointer', marginBottom: 16,
+          }}>
+          {t.openEmergency}
+        </button>
       )}
 
       {hasPermission('departments.manage') && (
@@ -656,6 +674,7 @@ export default function Departments() {
                 onEdit={() => { setEditingDept(dept); setModalOpen(true) }}
                 onDelete={() => handleDelete(dept.id)}
                 onToggle={() => handleToggle(dept.id)}
+                onOpenEmergency={() => navigate('/emergency/dashboard')}
               />
             ))}
           </div>
