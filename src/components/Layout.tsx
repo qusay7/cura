@@ -456,9 +456,9 @@ const T = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, onStartTour, enableTourTargets }: {
+const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, onStartTour, enableTourTargets }: {
   lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void
-  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean
+  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean
   onStartTour?: () => void
   // ✅ القائمة تُرسم مرتين (نسخة الموبايل المخفية + نسخة سطح المكتب) — نضع
   // data-tour على نسخة سطح المكتب فقط، وإلا كان querySelector يلتقط نسخة
@@ -503,8 +503,8 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     {
       key: 'emergency', labelAr: 'الطوارئ', labelEn: 'Emergency', icon: 'ti-ambulance',
       items: [
-        { path: '/emergency/check-in', labelAr: 'تسجيل دخول', labelEn: 'Check-In', icon: 'ti-ambulance', permission: ['emergency.checkin', 'emergency.manage', 'queue.manage'], superAdminOnly: false },
-        { path: '/emergency/dashboard', labelAr: 'لوحة الطوارئ', labelEn: 'Emergency Dashboard', icon: 'ti-urgent', permission: ['emergency.checkin', 'emergency.manage', 'queue.manage'], superAdminOnly: false },
+        { path: '/emergency/check-in', labelAr: 'تسجيل دخول', labelEn: 'Check-In', icon: 'ti-ambulance', permission: ['emergency.checkin', 'emergency.manage', 'queue.manage'], superAdminOnly: false, feature: 'activeEmergencyDept' as const },
+        { path: '/emergency/dashboard', labelAr: 'لوحة الطوارئ', labelEn: 'Emergency Dashboard', icon: 'ti-urgent', permission: ['emergency.checkin', 'emergency.manage', 'queue.manage'], superAdminOnly: false, feature: 'activeEmergencyDept' as const },
       ],
     },
     {
@@ -537,7 +537,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     },
   ]
 
-  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' }) => {
+  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
     if (item.permission !== null) {
@@ -548,6 +548,8 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     // رد /dashboard تبقى ظاهرة عشان ما تومض (تختفي وتظهر) بأول تحميل للصفحة
     if (item.feature === 'multipleDepartments' && hasMultipleDepartments === false) return false
     if (item.feature === 'electronicInvoicing' && hasElectronicInvoicing === false) return false
+    // ✅ نفس منطق الإخفاء المتأخر — بس لو تأكدنا إنه ما في قسم طوارئ فعّال أصلاً
+    if (item.feature === 'activeEmergencyDept' && hasActiveEmergencyDept === false) return false
     return true
   }
 
@@ -738,6 +740,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<'ar' | 'en'>(getStoredLang)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
+  const [hasActiveEmergencyDept, setHasActiveEmergencyDept] = useState<boolean | undefined>(undefined)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showTour, setShowTour] = useState(false)
@@ -791,6 +794,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     api.get('/dashboard').then(r => { if (r.data?.subscription) setSubscription(r.data.subscription) }).catch(() => {})
   }, [])
 
+  // ✅ قسم الطوارئ "تصنيف" بدون أي أثر عملي إذا ما كان مفعّلاً فعلياً — عيادة
+  // أسنان مثلاً ما عندها قسم طوارئ أصلاً، فرابط الطوارئ يبقى يظهر بدون داعٍ.
+  // type === 1 يطابق DepartmentType.Emergency بالباك إند
+  useEffect(() => {
+    api.get('/departments').then(r => {
+      setHasActiveEmergencyDept((r.data as { type: number; isActive: boolean }[]).some(d => d.type === 1 && d.isActive))
+    }).catch(() => {})
+  }, [])
+
   // ✅ يجيب إشعارات جرس الواجهة الحقيقية عند التحميل، ويحدّثها كل دقيقة
   useEffect(() => {
     const fetchNotifications = () => {
@@ -834,6 +846,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
         <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
+          hasActiveEmergencyDept={hasActiveEmergencyDept}
           onStartTour={() => { setMobileMenuOpen(false); setShowTour(true) }} />
       </div>
 
@@ -841,6 +854,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <Sidebar lang={lang} isAr={isAr}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
+          hasActiveEmergencyDept={hasActiveEmergencyDept}
           onStartTour={() => setShowTour(true)} enableTourTargets />
       </aside>
 
@@ -917,9 +931,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="main-content">
         {children}
       </main>
-
       </div>
-
       {showTour && <OnboardingTour steps={TOUR_STEPS} isAr={isAr} onFinish={finishTour} />}
       <MessageBoxHost />
     </div>

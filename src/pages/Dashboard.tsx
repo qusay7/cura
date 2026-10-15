@@ -374,6 +374,9 @@ export default function Dashboard() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [doctorsToday, setDoctorsToday] = useState<DoctorTodayAppointment[]>([])
   const [receptionOverview, setReceptionOverview] = useState<ReceptionOverview | null>(null)
+  // ✅ غير معرّف = لسا ما وصل الرد، نعرض البطاقة افتراضياً عشان ما تومض لمن
+  // عندهم قسم طوارئ فعلاً؛ false صراحة = تأكدنا إنه ما في قسم طوارئ فعّال
+  const [hasActiveEmergencyDept, setHasActiveEmergencyDept] = useState<boolean | undefined>(undefined)
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const isSuperAdmin = user.role === 'SuperAdmin'
@@ -404,6 +407,9 @@ useEffect(() => {
       .catch(() => {}),
     api.get('/appointments/reception-overview')
       .then(r => setReceptionOverview(r.data))
+      .catch(() => {}),
+    api.get('/departments')
+      .then(r => setHasActiveEmergencyDept((r.data as { type: number; isActive: boolean }[]).some(d => d.type === 1 && d.isActive)))
       .catch(() => {}),
   ])
     .then(([r]) => setData(r.data))
@@ -446,7 +452,7 @@ useEffect(() => {
 
         {/* ✅ دخول سريع للطوارئ من الصفحة الرئيسية — بارز وبلون مختلف عشان يُلاحظ فوراً.
             queue.manage تبقى مقبولة كـ fallback لأي حساب فُعّلت له قبل فصل صلاحيات الطوارئ */}
-        {(hasPermission('emergency.checkin') || hasPermission('emergency.manage') || hasPermission('queue.manage')) && (
+        {(hasPermission('emergency.checkin') || hasPermission('emergency.manage') || hasPermission('queue.manage')) && hasActiveEmergencyDept !== false && (
           <div onClick={() => navigate('/emergency/dashboard')}
             style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: 18, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
