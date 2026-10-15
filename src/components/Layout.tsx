@@ -456,9 +456,9 @@ const T = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, hasActiveLabDept, hasActivePharmacyDept, onStartTour, enableTourTargets }: {
+const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, hasActiveLabDept, hasActiveRadiologyDept, hasActivePharmacyDept, hasActiveNursingDept, onStartTour, enableTourTargets }: {
   lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void
-  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean; hasActiveLabDept?: boolean; hasActivePharmacyDept?: boolean
+  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean; hasActiveLabDept?: boolean; hasActiveRadiologyDept?: boolean; hasActivePharmacyDept?: boolean; hasActiveNursingDept?: boolean
   onStartTour?: () => void
   // ✅ القائمة تُرسم مرتين (نسخة الموبايل المخفية + نسخة سطح المكتب) — نضع
   // data-tour على نسخة سطح المكتب فقط، وإلا كان querySelector يلتقط نسخة
@@ -514,9 +514,21 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
       ],
     },
     {
+      key: 'radiology', labelAr: 'الأشعة', labelEn: 'Radiology', icon: 'ti-radioactive',
+      items: [
+        { path: '/radiology', labelAr: 'طابور الأشعة', labelEn: 'Radiology Queue', icon: 'ti-radioactive', permission: 'radiology.manage', superAdminOnly: false, feature: 'activeRadiologyDept' as const },
+      ],
+    },
+    {
       key: 'pharmacy', labelAr: 'الصيدلية', labelEn: 'Pharmacy', icon: 'ti-pill',
       items: [
         { path: '/pharmacy', labelAr: 'طابور الصيدلية', labelEn: 'Pharmacy Queue', icon: 'ti-pill', permission: 'pharmacy.manage', superAdminOnly: false, feature: 'activePharmacyDept' as const },
+      ],
+    },
+    {
+      key: 'nursing', labelAr: 'التمريض', labelEn: 'Nursing', icon: 'ti-stethoscope',
+      items: [
+        { path: '/nursing', labelAr: 'طابور التمريض', labelEn: 'Nursing Queue', icon: 'ti-stethoscope', permission: 'nursing.manage', superAdminOnly: false, feature: 'activeNursingDept' as const },
       ],
     },
     {
@@ -549,7 +561,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     },
   ]
 
-  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' | 'activeLabDept' | 'activePharmacyDept' }) => {
+  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' | 'activeLabDept' | 'activeRadiologyDept' | 'activePharmacyDept' | 'activeNursingDept' }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
     if (item.permission !== null) {
@@ -563,7 +575,9 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     // ✅ نفس منطق الإخفاء المتأخر — بس لو تأكدنا إنه ما في قسم طوارئ/مختبر فعّال أصلاً
     if (item.feature === 'activeEmergencyDept' && hasActiveEmergencyDept === false) return false
     if (item.feature === 'activeLabDept' && hasActiveLabDept === false) return false
+    if (item.feature === 'activeRadiologyDept' && hasActiveRadiologyDept === false) return false
     if (item.feature === 'activePharmacyDept' && hasActivePharmacyDept === false) return false
+    if (item.feature === 'activeNursingDept' && hasActiveNursingDept === false) return false
     return true
   }
 
@@ -756,7 +770,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
   const [hasActiveEmergencyDept, setHasActiveEmergencyDept] = useState<boolean | undefined>(undefined)
   const [hasActiveLabDept, setHasActiveLabDept] = useState<boolean | undefined>(undefined)
+  const [hasActiveRadiologyDept, setHasActiveRadiologyDept] = useState<boolean | undefined>(undefined)
   const [hasActivePharmacyDept, setHasActivePharmacyDept] = useState<boolean | undefined>(undefined)
+  const [hasActiveNursingDept, setHasActiveNursingDept] = useState<boolean | undefined>(undefined)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showTour, setShowTour] = useState(false)
@@ -810,15 +826,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     api.get('/dashboard').then(r => { if (r.data?.subscription) setSubscription(r.data.subscription) }).catch(() => {})
   }, [])
 
-  // ✅ قسم الطوارئ/المختبر "تصنيف" بدون أي أثر عملي إذا ما كان مفعّلاً فعلياً —
-  // عيادة أسنان مثلاً ما عندها قسم طوارئ أصلاً، فالرابط يبقى يظهر بدون داعٍ.
-  // type === 1 يطابق DepartmentType.Emergency، و4 يطابق DepartmentType.Laboratory
+  // ✅ قسم الطوارئ/المختبر/الأشعة/الصيدلية/التمريض "تصنيف" بدون أي أثر عملي
+  // إذا ما كان مفعّلاً فعلياً — عيادة أسنان مثلاً ما عندها قسم طوارئ أصلاً،
+  // فالرابط يبقى يظهر بدون داعٍ. type يطابق DepartmentType: Emergency=1،
+  // Pharmacy=2، Radiology=3، Laboratory=4، Nursing=6
   useEffect(() => {
     api.get('/departments').then(r => {
       const depts = r.data as { type: number; isActive: boolean }[]
       setHasActiveEmergencyDept(depts.some(d => d.type === 1 && d.isActive))
       setHasActiveLabDept(depts.some(d => d.type === 4 && d.isActive))
+      setHasActiveRadiologyDept(depts.some(d => d.type === 3 && d.isActive))
       setHasActivePharmacyDept(depts.some(d => d.type === 2 && d.isActive))
+      setHasActiveNursingDept(depts.some(d => d.type === 6 && d.isActive))
     }).catch(() => {})
   }, [])
 
@@ -865,7 +884,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
         <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
-          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept} hasActivePharmacyDept={hasActivePharmacyDept}
+          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept} hasActiveRadiologyDept={hasActiveRadiologyDept} hasActivePharmacyDept={hasActivePharmacyDept} hasActiveNursingDept={hasActiveNursingDept}
           onStartTour={() => { setMobileMenuOpen(false); setShowTour(true) }} />
       </div>
 
@@ -873,7 +892,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <Sidebar lang={lang} isAr={isAr}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
-          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept} hasActivePharmacyDept={hasActivePharmacyDept}
+          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept} hasActiveRadiologyDept={hasActiveRadiologyDept} hasActivePharmacyDept={hasActivePharmacyDept} hasActiveNursingDept={hasActiveNursingDept}
           onStartTour={() => setShowTour(true)} enableTourTargets />
       </aside>
 

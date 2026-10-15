@@ -526,6 +526,7 @@ export default function VisitWorkspace() {
 
             {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} />}
             {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} />}
+            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="radiology" />}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={() => handleSave(false)} disabled={saving || !appointment?.checkInTime}

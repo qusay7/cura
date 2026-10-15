@@ -7,11 +7,13 @@ interface LabOrderWidgetProps {
   appointmentId?: string
   queueEntryId?: string
   lang: 'ar' | 'en'
+  category?: 'lab' | 'radiology'
 }
 
 interface LabOrderItem {
   id: string
   testName: string
+  category: 'lab' | 'radiology'
   status: 'ordered' | 'in_progress' | 'completed' | 'cancelled'
   resultNotes: string | null
   orderedAt: string
@@ -19,23 +21,34 @@ interface LabOrderItem {
   queueEntryId: string | null
 }
 
+const COPY = {
+  lab: {
+    ar: { title: '🧪 التحاليل المخبرية', placeholder: 'اسم التحليل (مثال: CBC، سكر صائم...)', noItems: 'لا توجد تحاليل مطلوبة لهذي الزيارة' },
+    en: { title: '🧪 Lab Tests', placeholder: 'Test name (e.g. CBC, Fasting Sugar...)', noItems: 'No tests ordered for this visit' },
+  },
+  radiology: {
+    ar: { title: '🩻 فحوصات الأشعة', placeholder: 'اسم الفحص (مثال: أشعة صدر، سونار...)', noItems: 'لا توجد فحوصات مطلوبة لهذي الزيارة' },
+    en: { title: '🩻 Imaging', placeholder: 'Scan name (e.g. Chest X-ray, Ultrasound...)', noItems: 'No imaging ordered for this visit' },
+  },
+}
+
 const T = {
   ar: {
-    title: '🧪 التحاليل المخبرية', placeholder: 'اسم التحليل (مثال: CBC، سكر صائم...)', order: '+ طلب',
-    ordering: 'جارٍ الطلب...', noItems: 'لا توجد تحاليل مطلوبة لهذي الزيارة',
+    order: '+ طلب', ordering: 'جارٍ الطلب...',
     statusOrdered: '⏳ مطلوب', statusInProgress: '🔬 جاري', statusCompleted: '✅ مكتمل', statusCancelled: '✕ ملغي',
   },
   en: {
-    title: '🧪 Lab Tests', placeholder: 'Test name (e.g. CBC, Fasting Sugar...)', order: '+ Order',
-    ordering: 'Ordering...', noItems: 'No tests ordered for this visit',
+    order: '+ Order', ordering: 'Ordering...',
     statusOrdered: '⏳ Ordered', statusInProgress: '🔬 In Progress', statusCompleted: '✅ Completed', statusCancelled: '✕ Cancelled',
   },
 }
 
 // ✅ يُستخدم بزيارة موعد عادي أو طوارئ (appointmentId/queueEntryId) — نفس مبدأ
-// ProceduresPicker: مكوّن مستقل يجلب ويعرض ويضيف بحاله، بدون اعتماد على صفحة الأب
-export default function LabOrderWidget({ patientId, appointmentId, queueEntryId, lang }: LabOrderWidgetProps) {
+// ProceduresPicker: مكوّن مستقل يجلب ويعرض ويضيف بحاله، بدون اعتماد على صفحة الأب.
+// category يفرّق بين طلب مختبر وطلب أشعة (نفس الكيان بالباك اند، LabOrder.Category)
+export default function LabOrderWidget({ patientId, appointmentId, queueEntryId, lang, category = 'lab' }: LabOrderWidgetProps) {
   const t = T[lang]
+  const c = COPY[category][lang]
   const isAr = lang === 'ar'
 
   const [items, setItems] = useState<LabOrderItem[]>([])
@@ -46,18 +59,18 @@ export default function LabOrderWidget({ patientId, appointmentId, queueEntryId,
   const fetchItems = () => {
     api.get(`/laborders/patient/${patientId}`)
       .then(res => setItems((res.data as LabOrderItem[]).filter(o =>
-        (appointmentId && o.appointmentId === appointmentId) || (queueEntryId && o.queueEntryId === queueEntryId)
+        o.category === category && ((appointmentId && o.appointmentId === appointmentId) || (queueEntryId && o.queueEntryId === queueEntryId))
       )))
       .catch(() => {})
   }
 
-  useEffect(() => { fetchItems() }, [patientId, appointmentId, queueEntryId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchItems() }, [patientId, appointmentId, queueEntryId, category]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOrder = async () => {
     if (!testName.trim()) return
     setOrdering(true); setError('')
     try {
-      await api.post('/laborders', { patientId, appointmentId, queueEntryId, testName: testName.trim() })
+      await api.post('/laborders', { patientId, appointmentId, queueEntryId, testName: testName.trim(), category })
       setTestName('')
       fetchItems()
     } catch {
@@ -79,10 +92,10 @@ export default function LabOrderWidget({ patientId, appointmentId, queueEntryId,
 
   return (
     <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.title}</label>
+      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{c.title}</label>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginBottom: 12 }}>
-        <input value={testName} onChange={e => setTestName(e.target.value)} placeholder={t.placeholder}
+        <input value={testName} onChange={e => setTestName(e.target.value)} placeholder={c.placeholder}
           style={{ padding: '9px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG }} />
         <button type="button" onClick={handleOrder} disabled={!testName.trim() || ordering}
           style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 12, fontWeight: 600, cursor: testName.trim() ? 'pointer' : 'not-allowed', opacity: testName.trim() ? 1 : 0.5 }}>
@@ -93,7 +106,7 @@ export default function LabOrderWidget({ patientId, appointmentId, queueEntryId,
       {error && <p style={{ fontSize: 11, color: '#EF4444', margin: '0 0 10px' }}>⚠️ {error}</p>}
 
       {items.length === 0 ? (
-        <p style={{ fontSize: 11.5, color: TEXT_MUTED, fontStyle: 'italic', margin: 0 }}>{t.noItems}</p>
+        <p style={{ fontSize: 11.5, color: TEXT_MUTED, fontStyle: 'italic', margin: 0 }}>{c.noItems}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {items.map(item => (
