@@ -7,6 +7,7 @@ import PatientAttachmentsTab, { type PatientAttachmentsTabHandle } from '../comp
 import VoiceRecorder from '../components/VoiceRecorder'
 import SickLeaveCertificate from '../components/SickLeaveCertificate'
 import ProceduresPicker from '../components/ProceduresPicker'
+import LabOrderWidget from '../components/LabOrderWidget'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { isHour12 } from '../utils/i18n'
 import { printSection, escapeHtml } from '../utils/printSection'
@@ -524,6 +525,7 @@ export default function VisitWorkspace() {
             </div>
 
             {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} />}
+            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} />}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={() => handleSave(false)} disabled={saving || !appointment?.checkInTime}

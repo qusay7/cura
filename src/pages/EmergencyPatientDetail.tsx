@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import ProceduresPicker from '../components/ProceduresPicker'
+import LabOrderWidget from '../components/LabOrderWidget'
 import PatientAttachmentsTab from '../components/PatientAttachmentsTab'
 import SickLeaveCertificate from '../components/SickLeaveCertificate'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
@@ -425,6 +426,7 @@ export default function EmergencyPatientDetail() {
 
             {/* 💉 الإجراءات — تتكرر بأي وقت، كل واحد موثّق بوقته وطبيبه */}
             <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} onItemsChange={setProcedureItems} onTotalChange={handleProceduresTotalChange} />
+            <LabOrderWidget patientId={entry.patientId} queueEntryId={entry.id} lang={lang} />
 
             {/* 🩺 التشخيص والوصفة — بالنهاية، كل واحد بزر طباعة مستقل */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14, marginTop: 16 }}>

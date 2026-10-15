@@ -456,9 +456,9 @@ const T = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, onStartTour, enableTourTargets }: {
+const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, hasActiveLabDept, onStartTour, enableTourTargets }: {
   lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void
-  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean
+  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean; hasActiveLabDept?: boolean
   onStartTour?: () => void
   // ✅ القائمة تُرسم مرتين (نسخة الموبايل المخفية + نسخة سطح المكتب) — نضع
   // data-tour على نسخة سطح المكتب فقط، وإلا كان querySelector يلتقط نسخة
@@ -508,6 +508,12 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
       ],
     },
     {
+      key: 'lab', labelAr: 'المختبر', labelEn: 'Laboratory', icon: 'ti-microscope',
+      items: [
+        { path: '/lab', labelAr: 'طابور المختبر', labelEn: 'Lab Queue', icon: 'ti-microscope', permission: 'lab.manage', superAdminOnly: false, feature: 'activeLabDept' as const },
+      ],
+    },
+    {
       key: 'finance', labelAr: 'المالية', labelEn: 'Finance', icon: 'ti-cash',
       items: [
         { path: '/invoices', labelAr: 'الفواتير', labelEn: 'Invoices', icon: 'ti-file-invoice', permission: 'payments.view', superAdminOnly: false, feature: 'electronicInvoicing' as const },
@@ -537,7 +543,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     },
   ]
 
-  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' }) => {
+  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' | 'activeLabDept' }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
     if (item.permission !== null) {
@@ -548,8 +554,9 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     // رد /dashboard تبقى ظاهرة عشان ما تومض (تختفي وتظهر) بأول تحميل للصفحة
     if (item.feature === 'multipleDepartments' && hasMultipleDepartments === false) return false
     if (item.feature === 'electronicInvoicing' && hasElectronicInvoicing === false) return false
-    // ✅ نفس منطق الإخفاء المتأخر — بس لو تأكدنا إنه ما في قسم طوارئ فعّال أصلاً
+    // ✅ نفس منطق الإخفاء المتأخر — بس لو تأكدنا إنه ما في قسم طوارئ/مختبر فعّال أصلاً
     if (item.feature === 'activeEmergencyDept' && hasActiveEmergencyDept === false) return false
+    if (item.feature === 'activeLabDept' && hasActiveLabDept === false) return false
     return true
   }
 
@@ -741,6 +748,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
   const [hasActiveEmergencyDept, setHasActiveEmergencyDept] = useState<boolean | undefined>(undefined)
+  const [hasActiveLabDept, setHasActiveLabDept] = useState<boolean | undefined>(undefined)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showTour, setShowTour] = useState(false)
@@ -794,12 +802,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     api.get('/dashboard').then(r => { if (r.data?.subscription) setSubscription(r.data.subscription) }).catch(() => {})
   }, [])
 
-  // ✅ قسم الطوارئ "تصنيف" بدون أي أثر عملي إذا ما كان مفعّلاً فعلياً — عيادة
-  // أسنان مثلاً ما عندها قسم طوارئ أصلاً، فرابط الطوارئ يبقى يظهر بدون داعٍ.
-  // type === 1 يطابق DepartmentType.Emergency بالباك إند
+  // ✅ قسم الطوارئ/المختبر "تصنيف" بدون أي أثر عملي إذا ما كان مفعّلاً فعلياً —
+  // عيادة أسنان مثلاً ما عندها قسم طوارئ أصلاً، فالرابط يبقى يظهر بدون داعٍ.
+  // type === 1 يطابق DepartmentType.Emergency، و4 يطابق DepartmentType.Laboratory
   useEffect(() => {
     api.get('/departments').then(r => {
-      setHasActiveEmergencyDept((r.data as { type: number; isActive: boolean }[]).some(d => d.type === 1 && d.isActive))
+      const depts = r.data as { type: number; isActive: boolean }[]
+      setHasActiveEmergencyDept(depts.some(d => d.type === 1 && d.isActive))
+      setHasActiveLabDept(depts.some(d => d.type === 4 && d.isActive))
     }).catch(() => {})
   }, [])
 
@@ -846,7 +856,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
         <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
-          hasActiveEmergencyDept={hasActiveEmergencyDept}
+          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept}
           onStartTour={() => { setMobileMenuOpen(false); setShowTour(true) }} />
       </div>
 
@@ -854,7 +864,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <Sidebar lang={lang} isAr={isAr}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
-          hasActiveEmergencyDept={hasActiveEmergencyDept}
+          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept}
           onStartTour={() => setShowTour(true)} enableTourTargets />
       </aside>
 
