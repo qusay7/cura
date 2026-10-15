@@ -456,9 +456,9 @@ const T = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, hasActiveLabDept, onStartTour, enableTourTargets }: {
+const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDepartments, hasActiveEmergencyDept, hasActiveLabDept, hasActivePharmacyDept, onStartTour, enableTourTargets }: {
   lang: 'ar' | 'en'; isAr: boolean; onNavigate?: () => void
-  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean; hasActiveLabDept?: boolean
+  hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean; hasActiveEmergencyDept?: boolean; hasActiveLabDept?: boolean; hasActivePharmacyDept?: boolean
   onStartTour?: () => void
   // ✅ القائمة تُرسم مرتين (نسخة الموبايل المخفية + نسخة سطح المكتب) — نضع
   // data-tour على نسخة سطح المكتب فقط، وإلا كان querySelector يلتقط نسخة
@@ -514,6 +514,12 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
       ],
     },
     {
+      key: 'pharmacy', labelAr: 'الصيدلية', labelEn: 'Pharmacy', icon: 'ti-pill',
+      items: [
+        { path: '/pharmacy', labelAr: 'طابور الصيدلية', labelEn: 'Pharmacy Queue', icon: 'ti-pill', permission: 'pharmacy.manage', superAdminOnly: false, feature: 'activePharmacyDept' as const },
+      ],
+    },
+    {
       key: 'finance', labelAr: 'المالية', labelEn: 'Finance', icon: 'ti-cash',
       items: [
         { path: '/invoices', labelAr: 'الفواتير', labelEn: 'Invoices', icon: 'ti-file-invoice', permission: 'payments.view', superAdminOnly: false, feature: 'electronicInvoicing' as const },
@@ -543,7 +549,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     },
   ]
 
-  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' | 'activeLabDept' }) => {
+  const canSee = (item: { path: string; permission: string | string[] | null; superAdminOnly: boolean; feature?: 'multipleDepartments' | 'electronicInvoicing' | 'activeEmergencyDept' | 'activeLabDept' | 'activePharmacyDept' }) => {
     if (user.role === 'SuperAdmin') return item.superAdminOnly || item.path === '/dashboard'
     if (item.superAdminOnly) return false
     if (item.permission !== null) {
@@ -557,6 +563,7 @@ const Sidebar = ({ lang, isAr, onNavigate, hasElectronicInvoicing, hasMultipleDe
     // ✅ نفس منطق الإخفاء المتأخر — بس لو تأكدنا إنه ما في قسم طوارئ/مختبر فعّال أصلاً
     if (item.feature === 'activeEmergencyDept' && hasActiveEmergencyDept === false) return false
     if (item.feature === 'activeLabDept' && hasActiveLabDept === false) return false
+    if (item.feature === 'activePharmacyDept' && hasActivePharmacyDept === false) return false
     return true
   }
 
@@ -749,6 +756,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<{ planName: string; hasElectronicInvoicing?: boolean; hasMultipleDepartments?: boolean } | null>(null)
   const [hasActiveEmergencyDept, setHasActiveEmergencyDept] = useState<boolean | undefined>(undefined)
   const [hasActiveLabDept, setHasActiveLabDept] = useState<boolean | undefined>(undefined)
+  const [hasActivePharmacyDept, setHasActivePharmacyDept] = useState<boolean | undefined>(undefined)
   const [currentDateTime, setCurrentDateTime] = useState({ date: '', time: '' })
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showTour, setShowTour] = useState(false)
@@ -810,6 +818,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       const depts = r.data as { type: number; isActive: boolean }[]
       setHasActiveEmergencyDept(depts.some(d => d.type === 1 && d.isActive))
       setHasActiveLabDept(depts.some(d => d.type === 4 && d.isActive))
+      setHasActivePharmacyDept(depts.some(d => d.type === 2 && d.isActive))
     }).catch(() => {})
   }, [])
 
@@ -856,7 +865,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className={`sidebar-mobile ${mobileMenuOpen ? 'open' : ''}`}>
         <Sidebar lang={lang} isAr={isAr} onNavigate={() => setMobileMenuOpen(false)}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
-          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept}
+          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept} hasActivePharmacyDept={hasActivePharmacyDept}
           onStartTour={() => { setMobileMenuOpen(false); setShowTour(true) }} />
       </div>
 
@@ -864,7 +873,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <Sidebar lang={lang} isAr={isAr}
           hasElectronicInvoicing={subscription?.hasElectronicInvoicing} hasMultipleDepartments={subscription?.hasMultipleDepartments}
-          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept}
+          hasActiveEmergencyDept={hasActiveEmergencyDept} hasActiveLabDept={hasActiveLabDept} hasActivePharmacyDept={hasActivePharmacyDept}
           onStartTour={() => setShowTour(true)} enableTourTargets />
       </aside>
 

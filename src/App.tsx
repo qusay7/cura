@@ -33,6 +33,7 @@ const AuditLog            = lazy(() => import('./pages/AuditLog'))
 const EmergencyCheckIn    = lazy(() => import('./pages/EmergencyCheckIn'))
 const EmergencyDashboard  = lazy(() => import('./pages/EmergencyDashboard'))
 const LabQueue            = lazy(() => import('./pages/LabQueue'))
+const PharmacyQueue       = lazy(() => import('./pages/PharmacyQueue'))
 const EmergencyPatientDetail = lazy(() => import('./pages/EmergencyPatientDetail'))
 const ClinicPermissions   = lazy(() => import('./pages/ClinicPermissions'))
 const Reports             = lazy(() => import('./pages/Reports'))
@@ -250,6 +251,11 @@ function App() {
         <Route path="/lab" element={
           <ProtectedRoute permission="lab.manage">
             <Layout><LabQueue /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/pharmacy" element={
+          <ProtectedRoute permission="pharmacy.manage">
+            <Layout><PharmacyQueue /></Layout>
           </ProtectedRoute>
         } />
         {/* ✅ الملف الطبي الكامل (علامات حيوية/تشخيص/إجراءات) — emergency.manage
