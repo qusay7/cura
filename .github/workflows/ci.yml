@@ -29,3 +29,20 @@ jobs:
       - name: Run tests (non-blocking — known pre-existing failures)
         run: npm run test
         continue-on-error: true
+
+  # ✅ CD — ينفّذ deploy.ps1 الموجود فعلياً على السيرفر، بدون أي تغيير عليه.
+  # يشتغل فقط بعد نجاح build-and-test، وفقط على push حقيقي لـ main (لا PR)،
+  # وفقط على الـ self-hosted runner المثبّت على سيرفر الإنتاج (deploy.ps1
+  # يتحكم بخدمة Windows محلية، فلا يمكن تشغيله على runner سحابي من GitHub).
+  # environment: production يفرض موافقة يدوية (Settings → Environments →
+  # production → Required reviewers) قبل تنفيذ أي خطوة هنا — خط الرجعة: لو
+  # صار خطأ، لا توافق، أو عطّل الـ workflow من تبويب Actions بضغطة واحدة
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [self-hosted, clinicsaas-frontend]
+    environment: production
+    steps:
+      - name: Run deploy.ps1
+        shell: powershell
+        run: C:\Users\Qusai\cura\deploy.ps1
