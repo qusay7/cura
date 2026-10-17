@@ -15,6 +15,12 @@ Stop-Service $serviceName -Force -ErrorAction SilentlyContinue
 
 Step "Pulling latest code from main"
 Set-Location $root
+# ✅ git refuses to operate on a repo owned by a different Windows account
+# than the one running it ("dubious ownership") - hits this folder whenever
+# an account other than the one that originally cloned it (e.g. the CD
+# runner's SYSTEM account vs. Qusai) runs git here. --add is a no-op if the
+# entry already exists, so this is safe to run on every invocation.
+git config --global --add safe.directory "$($root -replace '\\','/')"
 git pull origin main
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`nGIT PULL FAILED - stopping here. The server likely still has uncommitted local changes (check 'git status'). Deploying now would silently rebuild the OLD code." -ForegroundColor Red
