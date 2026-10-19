@@ -4,6 +4,24 @@ import {
 } from 'lucide-react'
 import { useEffect } from 'react'
 
+// 📸 لقطات حقيقية من النظام (ليست تصاميم توضيحية) — عيادة اختبار حقيقية
+import apptAr from '../../assets/features/appointments-ar.png'
+import apptEn from '../../assets/features/appointments-en.png'
+import recordAr from '../../assets/features/patient-record-ar.png'
+import recordEn from '../../assets/features/patient-record-en.png'
+import visitAr from '../../assets/features/visit-notes-ar.png'
+import visitEn from '../../assets/features/visit-notes-en.png'
+import queueAr from '../../assets/features/queue-ar.png'
+import queueEn from '../../assets/features/queue-en.png'
+import billingAr from '../../assets/features/billing-ar.png'
+import billingEn from '../../assets/features/billing-en.png'
+import reportsAr from '../../assets/features/reports-ar.png'
+import reportsEn from '../../assets/features/reports-en.png'
+import deptAr from '../../assets/features/departments-ar.png'
+import deptEn from '../../assets/features/departments-en.png'
+import dashAr from '../../assets/features/dashboard-ar.png'
+import dashEn from '../../assets/features/dashboard-en.png'
+
 // ✅ محتوى مؤقت (placeholder) — استبدله باقتباسات وأسماء عيادات حقيقية قبل النشر الفعلي
 export const SHOW_TESTIMONIALS = false
 
@@ -215,6 +233,7 @@ body { background: ${C.cream}; -webkit-font-smoothing: antialiased; }
   .mobile-menu-btn{ display:inline-flex !important; }
   .stats-grid     { grid-template-columns:repeat(2,1fr) !important; }
   .feat-grid      { grid-template-columns:1fr !important; }
+  .feat-img-grid  { grid-template-columns:1fr !important; }
 }
 `
 
@@ -277,14 +296,14 @@ export const T = {
       sub:'من أوّل موعد حتى آخر فاتورة — Cura يُغطّي كل خطوة في رحلة مريضك',
       seeAll:'استعرض كل المميزات بالتفصيل ←',
       items:[
-        { Icon:Calendar,     title:'جدولة المواعيد',   desc:'تقويم ذكي يُقلّل الغياب ويملأ الفراغات تلقائياً — مع تذكيرات فورية للمرضى.' },
-        { Icon:FolderOpen,   title:'ملف المريض الموحّد', desc:'سجل طبي شامل يضمّ التاريخ المرضي والوصفات والفحوصات والتشخيصات بأثر رجعي.' },
-        { Icon:Stethoscope,  title:'ملاحظات الزيارة',  desc:'تشخيص دقيق، وصفة طبية، طلبات مختبر وأشعة — كلّها في نقرة واحدة عند كل زيارة.' },
-        { Icon:ListOrdered,  title:'إدارة قوائم الدور', desc:'نظام انتظار ذكي يتتبّع الدور في الوقت الفعلي ويُعلم الطاقم بأي تغيير.' },
-        { Icon:CreditCard,   title:'الفواتير والإيصالات', desc:'إصدار فواتير احترافية بنقرة واحدة مع دعم مباشر لمنظومة الفوترة الإلكترونية الأردنية.' },
-        { Icon:BarChart3,    title:'تقارير الأداء',    desc:'لوحة بيانات تفصيلية للإيرادات والمرضى والأطباء تساعدك في اتخاذ قرارات مبنية على البيانات.' },
-        { Icon:Building2,    title:'تعدد الأقسام',     desc:'قسّم عيادتك إلى أقسام طبية مستقلة — لكل منها فريقه وصلاحياته الخاصة.' },
-        { Icon:Globe,        title:'واجهة ثنائية اللغة', desc:'دعم كامل للغتين العربية والإنجليزية مع اتجاه RTL مدمج من اليوم الأول.' },
+        { Icon:Calendar,     title:'جدولة المواعيد',   desc:'تقويم ذكي يُقلّل الغياب ويملأ الفراغات تلقائياً — مع تذكيرات فورية للمرضى.', image:apptAr },
+        { Icon:FolderOpen,   title:'ملف المريض الموحّد', desc:'سجل طبي شامل يضمّ التاريخ المرضي والوصفات والفحوصات والتشخيصات بأثر رجعي.', image:recordAr },
+        { Icon:Stethoscope,  title:'ملاحظات الزيارة',  desc:'تشخيص دقيق، وصفة طبية، طلبات مختبر وأشعة — كلّها في نقرة واحدة عند كل زيارة.', image:visitAr },
+        { Icon:ListOrdered,  title:'إدارة قوائم الدور', desc:'نظام انتظار ذكي يتتبّع الدور في الوقت الفعلي ويُعلم الطاقم بأي تغيير.', image:queueAr },
+        { Icon:CreditCard,   title:'الفواتير والإيصالات', desc:'إصدار فواتير احترافية بنقرة واحدة مع دعم مباشر لمنظومة الفوترة الإلكترونية الأردنية.', image:billingAr },
+        { Icon:BarChart3,    title:'تقارير الأداء',    desc:'لوحة بيانات تفصيلية للإيرادات والمرضى والأطباء تساعدك في اتخاذ قرارات مبنية على البيانات.', image:reportsAr },
+        { Icon:Building2,    title:'تعدد الأقسام',     desc:'قسّم عيادتك إلى أقسام طبية مستقلة — لكل منها فريقه وصلاحياته الخاصة.', image:deptAr },
+        { Icon:Globe,        title:'واجهة ثنائية اللغة', desc:'دعم كامل للغتين العربية والإنجليزية مع اتجاه RTL مدمج من اليوم الأول.', image:dashAr },
       ],
     },
     // ⚠️ محتوى مؤقت (placeholder) — استبدله باقتباسات وأسماء عيادات حقيقية قبل النشر الفعلي
@@ -374,14 +393,14 @@ export const T = {
       sub:'From first appointment to final invoice — Cura covers every step of your patient journey',
       seeAll:'See all features in detail →',
       items:[
-        { Icon:Calendar,    title:'Appointment Scheduling', desc:'Smart calendar that cuts no-shows and fills gaps automatically with instant patient reminders.' },
-        { Icon:FolderOpen,  title:'Unified Patient Records',  desc:'Comprehensive medical history, prescriptions, lab results, and diagnoses — all in one place.' },
-        { Icon:Stethoscope, title:'Visit Notes',             desc:'Diagnosis, prescription, lab orders, and imaging requests captured in a single click per visit.' },
-        { Icon:ListOrdered, title:'Queue Management',        desc:'Real-time walk-in queue system that keeps staff and patients informed at every step.' },
-        { Icon:CreditCard,  title:'Billing & Receipts',     desc:'One-click professional invoices with direct Jordan national e-invoicing integration.' },
-        { Icon:BarChart3,   title:'Performance Analytics',  desc:'Revenue, patient, and physician dashboards that turn clinic data into actionable decisions.' },
-        { Icon:Building2,   title:'Multi-Department',        desc:'Independent departments with dedicated teams, permissions, and workflows under one roof.' },
-        { Icon:Globe,       title:'Dual-Language Support',    desc:'Full Arabic and English support with native RTL layout built in from day one.' },
+        { Icon:Calendar,    title:'Appointment Scheduling', desc:'Smart calendar that cuts no-shows and fills gaps automatically with instant patient reminders.', image:apptEn },
+        { Icon:FolderOpen,  title:'Unified Patient Records',  desc:'Comprehensive medical history, prescriptions, lab results, and diagnoses — all in one place.', image:recordEn },
+        { Icon:Stethoscope, title:'Visit Notes',             desc:'Diagnosis, prescription, lab orders, and imaging requests captured in a single click per visit.', image:visitEn },
+        { Icon:ListOrdered, title:'Queue Management',        desc:'Real-time walk-in queue system that keeps staff and patients informed at every step.', image:queueEn },
+        { Icon:CreditCard,  title:'Billing & Receipts',     desc:'One-click professional invoices with direct Jordan national e-invoicing integration.', image:billingEn },
+        { Icon:BarChart3,   title:'Performance Analytics',  desc:'Revenue, patient, and physician dashboards that turn clinic data into actionable decisions.', image:reportsEn },
+        { Icon:Building2,   title:'Multi-Department',        desc:'Independent departments with dedicated teams, permissions, and workflows under one roof.', image:deptEn },
+        { Icon:Globe,       title:'Dual-Language Support',    desc:'Full Arabic and English support with native RTL layout built in from day one.', image:dashEn },
       ],
     },
     // ⚠️ Placeholder content — replace with real quotes and clinic names before going live

@@ -34,15 +34,19 @@ export default function FeaturesPage() {
             <p style={{ fontSize:16, color:C.muted, maxWidth:560, margin:'0 auto', lineHeight:1.75 }}>{t.feats.sub}</p>
           </div>
 
-          <div className="feat-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:20 }}>
+          <div className="feat-img-grid" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:28 }}>
             {t.feats.items.map((f,i) => (
-              <div key={i} className="feat-card fu" style={{ animationDelay:`${i*0.05}s` }}>
-                <div style={{ width:50, height:50, background:C.tealSoft, borderRadius:15, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:18 }}>
-                  <f.Icon size={22} color={C.teal} strokeWidth={1.8} />
+              <div key={i} className="feat-card fu" style={{ animationDelay:`${i*0.05}s`, padding:24 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+                  <div style={{ width:42, height:42, background:C.tealSoft, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <f.Icon size={19} color={C.teal} strokeWidth={1.8} />
+                  </div>
+                  <h3 style={{ fontSize:15.5, fontWeight:700, color:C.dark, margin:0, lineHeight:1.3 }}>{f.title}</h3>
                 </div>
-                <h3 style={{ fontSize:15, fontWeight:700, color:C.dark, marginBottom:10, lineHeight:1.3 }}>{f.title}</h3>
-                <p style={{ fontSize:13, color:C.muted, lineHeight:1.7, margin:0 }}>{f.desc}</p>
-                {/* 📸 لقطة حقيقية من النظام تُضاف هنا لكل ميزة بعد توفّرها */}
+                <p style={{ fontSize:13, color:C.muted, lineHeight:1.7, margin:'0 0 16px' }}>{f.desc}</p>
+                {/* 📸 لقطة حقيقية من النظام — عيادة اختبار فعلية، وليست تصميماً توضيحياً */}
+                <img src={f.image} alt={f.title} loading="lazy"
+                  style={{ width:'100%', borderRadius:12, border:`1px solid ${C.border}`, boxShadow:'0 4px 16px rgba(0,0,0,0.06)', display:'block' }} />
               </div>
             ))}
           </div>
