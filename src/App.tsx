@@ -51,6 +51,7 @@ const LandingPage         = lazy(() => import('./pages/LandingPage'))
 const FeaturesPage        = lazy(() => import('./pages/FeaturesPage'))
 const PricingPage         = lazy(() => import('./pages/PricingPage'))
 const FaqPage             = lazy(() => import('./pages/FaqPage'))
+const AboutPage           = lazy(() => import('./pages/AboutPage'))
 const Insurance           = lazy(() => import('./pages/Insurance'))
 const Payments            = lazy(() => import('./pages/Payments'))
 const Staff               = lazy(() => import('./pages/Staff'))
@@ -96,6 +97,7 @@ function App() {
         <Route path="/features" element={<FeaturesPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/faq" element={<FaqPage />} />
+        <Route path="/about" element={<AboutPage />} />
         {/* ── عام ── */}
        <Route path="/login/:subdomain?" element={<Login />} />
 

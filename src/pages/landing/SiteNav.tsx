@@ -51,6 +51,7 @@ export default function SiteNav({ lang, setLang }: { lang: Lang; setLang: (l: La
     { label:t.nav.features, path:'/features' },
     { label:t.nav.pricing,  path:'/pricing'  },
     { label:t.nav.faq,      path:'/faq'      },
+    { label:t.nav.about,    path:'/about'    },
   ]
 
   return (

@@ -65,6 +65,32 @@
     <meta name="twitter:title" content="برنامج إدارة العيادات الطبية | CURA" />
     <meta name="twitter:description" content="نظّم مواعيد المرضى وملفاتهم وفواتير العيادة مع CURA، نظام إدارة عيادات بواجهة عربية وإنجليزية." />
     <meta name="twitter:image" content="https://cura100.com/icons/icon-512x512.png" />
+
+    <!-- 🔎 Organization schema — هوية الشركة موحّدة بكل الموقع، مش خاصة بصفحة
+         وحدة، فمكانها الطبيعي هنا بدل حقنها بـ JS لكل مسار. معلومات حقيقية فقط:
+         لا اسم قانوني مسجّل بعد (Cura فقط)، لا تقييم/رقم عملاء مُدّعى -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Cura",
+      "url": "https://cura100.com",
+      "logo": "https://cura100.com/icons/icon-512x512.png",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "شارع الجامعة",
+        "addressLocality": "عمان",
+        "addressCountry": "JO"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+962-7961-39705",
+        "contactType": "customer support",
+        "email": "infocura100@gmail.com",
+        "availableLanguage": ["Arabic", "English"]
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
