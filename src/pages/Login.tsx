@@ -8,6 +8,7 @@ import { ECGAnimation } from '../components/ECGAnimation'
 import { authService } from '../api/axios'
 import { showMessageBox } from '../utils/messageBox'
 import MessageBoxHost from '../components/MessageBoxHost'
+import { usePageMeta } from '../hooks/usePageMeta'
 const translations = {
   en: {
     dir: 'ltr' as const,
@@ -289,18 +290,10 @@ export default function Login() {
   // ✅ كانت هذي الصفحة تظهر بنفس عنوان ووصف الصفحة الرئيسية (index.html) —
   // محتوى مكرّر بنظر Google. عنوان خاص بها + noindex (صفحة دخول بدون محتوى
   // يستحق الظهور بنتائج البحث، لكن نُبقي follow عشان لا نقطع تدفّق الروابط)
-  useEffect(() => {
-    const prevTitle = document.title
-    document.title = isAr ? 'تسجيل الدخول — CURA' : 'Sign In — CURA'
-    const meta = document.createElement('meta')
-    meta.name = 'robots'
-    meta.content = 'noindex, follow'
-    document.head.appendChild(meta)
-    return () => {
-      document.title = prevTitle
-      meta.remove()
-    }
-  }, [isAr])
+  usePageMeta({
+    title: isAr ? 'تسجيل الدخول — CURA' : 'Sign In — CURA',
+    robots: 'noindex, follow',
+  })
 
   useEffect(() => {
     const id = 'cura-login-css'

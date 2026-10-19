@@ -48,6 +48,9 @@ const Queue               = lazy(() => import('./pages/Queue'))
 const AppointmentDetail   = lazy(() => import('./pages/AppointmentDetail'))
 const PatientVisitNotes   = lazy(() => import('./pages/PatientVisitNotes'))
 const LandingPage         = lazy(() => import('./pages/LandingPage'))
+const FeaturesPage        = lazy(() => import('./pages/FeaturesPage'))
+const PricingPage         = lazy(() => import('./pages/PricingPage'))
+const FaqPage             = lazy(() => import('./pages/FaqPage'))
 const Insurance           = lazy(() => import('./pages/Insurance'))
 const Payments            = lazy(() => import('./pages/Payments'))
 const Staff               = lazy(() => import('./pages/Staff'))
@@ -90,6 +93,9 @@ function App() {
       <Suspense fallback={<LoadingScreen fullScreen />}>
       <Routes>
         <Route path="/" element={<RootRoute />} />
+        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/faq" element={<FaqPage />} />
         {/* ── عام ── */}
        <Route path="/login/:subdomain?" element={<Login />} />
 
