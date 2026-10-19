@@ -15,7 +15,7 @@ const translations = {
     sub: 'Sign in to your account',
     headline: ['Smarter clinic management.', 'Better patient outcomes.'],
     desc: 'Appointments, patients, and billing — all in one elegant, intelligent workspace.',
-    stats: ['Clinics', 'Uptime', 'Support'],
+    stats: ['Bilingual', 'No Install', 'Free Trial'],
     lEmail: 'EMAIL OR USERNAME',
     ePh: 'email or username',
     lPass: 'PASSWORD',
@@ -52,7 +52,7 @@ const translations = {
     sub: 'تسجيل الدخول إلى حسابك',
     headline: ['إدارة عيادة أكثر ذكاء.', 'نتائج أفضل للمرضى.'],
     desc: 'المواعيد، المرضى، والفواتير — كل شيء في مكان واحد ذكي.',
-    stats: ['عيادة', 'استمرارية', 'دعم فني'],
+    stats: ['ثنائي اللغة', 'بدون تثبيت', 'تجربة مجانية'],
     lEmail: 'البريد أو اسم المستخدم',
     ePh: 'البريد أو اسم المستخدم',
     lPass: 'كلمة المرور',
@@ -286,6 +286,22 @@ export default function Login() {
     api.get('/version').then(res => setApiCommit(res.data?.commit || '')).catch(() => {})
   }, [])
 
+  // ✅ كانت هذي الصفحة تظهر بنفس عنوان ووصف الصفحة الرئيسية (index.html) —
+  // محتوى مكرّر بنظر Google. عنوان خاص بها + noindex (صفحة دخول بدون محتوى
+  // يستحق الظهور بنتائج البحث، لكن نُبقي follow عشان لا نقطع تدفّق الروابط)
+  useEffect(() => {
+    const prevTitle = document.title
+    document.title = isAr ? 'تسجيل الدخول — CURA' : 'Sign In — CURA'
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, follow'
+    document.head.appendChild(meta)
+    return () => {
+      document.title = prevTitle
+      meta.remove()
+    }
+  }, [isAr])
+
   useEffect(() => {
     const id = 'cura-login-css'
     if (!document.getElementById(id)) {
@@ -476,7 +492,7 @@ if (data.role?.toLowerCase() === 'doctor') {
         <p style={{ fontSize:14, color:TM, lineHeight:1.65, marginBottom:'2rem', maxWidth:'90%' }}>{t.desc}</p>
 
         <div className="cura-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, maxWidth:'90%', marginBottom:'1rem' }}>
-          {[{n:'500+',l:t.stats[0]},{n:'99.9%',l:t.stats[1]},{n:'24/7',l:t.stats[2]}].map(s=>(
+          {[{n:isAr?'عربي / إنجليزي':'AR / EN',l:t.stats[0]},{n:isAr?'سحابي':'Cloud',l:t.stats[1]},{n:isAr?'مجانية':'Free',l:t.stats[2]}].map(s=>(
             <div key={s.l} style={{ background:PS, border:`1px solid ${BR}`, borderRadius:12, padding:12 }}>
               <div style={{ fontSize:22, fontWeight:700, color:TD }}>{s.n}</div>
               <div style={{ fontSize:10, color:TM, marginTop:4, letterSpacing:'0.5px', textTransform:'uppercase' }}>{s.l}</div>

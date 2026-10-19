@@ -257,11 +257,13 @@ const T = {
       pat_label:'مريض جديد',
       pat_name:'ليلى محمود',
     },
+    // ✅ استُبدلت الأرقام المُلفّقة (عدد عيادات/مرضى/تقييم) بميزات حقيقية
+    // بدون ادعاءات رقمية — لا يوجد عملاء فعليون بعد لتوثيقها
     stats:[
-      { val:'+500',   label:'عيادة نشطة' },
-      { val:'+50K',   label:'مريض مسجّل' },
-      { val:'99.9%',  label:'وقت التشغيل' },
-      { val:'4.9 ★',  label:'رضا العملاء' },
+      { val:'عربي / إنجليزي', label:'واجهة ثنائية اللغة بدعم RTL كامل' },
+      { val:'سحابي',          label:'يعمل من أي متصفح بدون تثبيت' },
+      { val:'تعدد الأقسام',   label:'لكل قسم فريقه وصلاحياته الخاصة' },
+      { val:'تجربة مجانية',   label:'ابدأ اليوم بدون أي التزام' },
     ],
     feats:{
       eyebrow:'المميزات',
@@ -272,7 +274,7 @@ const T = {
         { Icon:FolderOpen,   title:'ملف المريض الموحّد', desc:'سجل طبي شامل يضمّ التاريخ المرضي والوصفات والفحوصات والتشخيصات بأثر رجعي.' },
         { Icon:Stethoscope,  title:'ملاحظات الزيارة',  desc:'تشخيص دقيق، وصفة طبية، طلبات مختبر وأشعة — كلّها في نقرة واحدة عند كل زيارة.' },
         { Icon:ListOrdered,  title:'إدارة قوائم الدور', desc:'نظام انتظار ذكي يتتبّع الدور في الوقت الفعلي ويُعلم الطاقم بأي تغيير.' },
-        { Icon:CreditCard,   title:'الفواتير والإيصالات', desc:'إصدار فواتير احترافية بنقرة واحدة مع دعم قادم للفوترة الإلكترونية الأردنية.' },
+        { Icon:CreditCard,   title:'الفواتير والإيصالات', desc:'إصدار فواتير احترافية بنقرة واحدة مع دعم مباشر لمنظومة الفوترة الإلكترونية الأردنية.' },
         { Icon:BarChart3,    title:'تقارير الأداء',    desc:'لوحة بيانات تفصيلية للإيرادات والمرضى والأطباء تساعدك في اتخاذ قرارات مبنية على البيانات.' },
         { Icon:Building2,    title:'تعدد الأقسام',     desc:'قسّم عيادتك إلى أقسام طبية مستقلة — لكل منها فريقه وصلاحياته الخاصة.' },
         { Icon:Globe,        title:'واجهة ثنائية اللغة', desc:'دعم كامل للغتين العربية والإنجليزية مع اتجاه RTL مدمج من اليوم الأول.' },
@@ -316,7 +318,7 @@ const T = {
     },
     cta:{
       title:'جاهز لتحويل تجربة مرضاك؟',
-      sub:'انضم إلى أكثر من 500 عيادة تثق في Cura يومياً',
+      sub:'نظام واحد لتنظيم المواعيد والمرضى والفواتير — ابدأ بإدارة عيادتك بطريقة أكثر تنظيماً',
       btn:'تواصل معنا لبدء تجربتك المجانية',
     },
     footer:{
@@ -348,11 +350,13 @@ const T = {
       pat_label:'New Patient',
       pat_name:'Layla Mahmoud',
     },
+    // ✅ Fabricated numbers (clinic/patient counts, rating) replaced with real,
+    // non-numeric features - no real customers yet to back those claims up
     stats:[
-      { val:'500+',  label:'Active Clinics' },
-      { val:'50K+',  label:'Patients Served' },
-      { val:'99.9%', label:'Uptime SLA' },
-      { val:'4.9 ★', label:'Customer Rating' },
+      { val:'AR / EN',    label:'Fully bilingual, native RTL support' },
+      { val:'Cloud',      label:'Runs in any browser, nothing to install' },
+      { val:'Multi-Dept', label:'Independent teams & permissions per department' },
+      { val:'Free Trial', label:'Start today, no commitment' },
     ],
     feats:{
       eyebrow:'Features',
@@ -363,7 +367,7 @@ const T = {
         { Icon:FolderOpen,  title:'Unified Patient Records',  desc:'Comprehensive medical history, prescriptions, lab results, and diagnoses — all in one place.' },
         { Icon:Stethoscope, title:'Visit Notes',             desc:'Diagnosis, prescription, lab orders, and imaging requests captured in a single click per visit.' },
         { Icon:ListOrdered, title:'Queue Management',        desc:'Real-time walk-in queue system that keeps staff and patients informed at every step.' },
-        { Icon:CreditCard,  title:'Billing & Receipts',     desc:'One-click professional invoices with Jordan national e-invoicing integration coming soon.' },
+        { Icon:CreditCard,  title:'Billing & Receipts',     desc:'One-click professional invoices with direct Jordan national e-invoicing integration.' },
         { Icon:BarChart3,   title:'Performance Analytics',  desc:'Revenue, patient, and physician dashboards that turn clinic data into actionable decisions.' },
         { Icon:Building2,   title:'Multi-Department',        desc:'Independent departments with dedicated teams, permissions, and workflows under one roof.' },
         { Icon:Globe,       title:'Dual-Language Support',    desc:'Full Arabic and English support with native RTL layout built in from day one.' },
@@ -407,7 +411,7 @@ const T = {
     },
     cta:{
       title:'Ready to transform your patient experience?',
-      sub:'Join 500+ clinics that rely on Cura every day',
+      sub:'One system for appointments, patients, and billing — start running your clinic more efficiently',
       btn:'Contact us to start your free trial',
     },
     footer:{
