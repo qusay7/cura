@@ -80,7 +80,7 @@ describe('PricingPage', () => {
 
     await screen.findByText('Standard')
     expect(screen.getByText('⭐ Most Popular')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Request free trial' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Request your free month' })).toBeInTheDocument()
   })
 
   it('switches the displayed price when Yearly billing is selected', async () => {
