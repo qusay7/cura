@@ -51,7 +51,7 @@ export default defineConfig({
       manifest: {
         name: 'CURA — Clinic Management',
         short_name: 'CURA',
-        description: 'نظام إدارة العيادات الذكي',
+        description: 'نظّم مواعيد المرضى وملفاتهم وفواتير العيادة مع CURA، نظام إدارة عيادات بواجهة عربية وإنجليزية.',
         lang: 'ar',
         dir: 'rtl',
         theme_color: '#5B8C8F',
