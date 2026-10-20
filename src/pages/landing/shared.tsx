@@ -268,7 +268,7 @@ export const T = {
       eyebrow:'منصة إدارة العيادات الطبية',
       h1:  'إدارة عيادة أكثر ذكاء.',
       h1b: 'نتائج أفضل للمرضى.',
-      sub:'منصة Cura المتكاملة تجمع بين ملفات المرضى وحجز المواعيد وقوائم الانتظار وتقارير الإيرادات — في واجهة واحدة سهلة الاستخدام، مصمّمة للعيادات في الأردن والعالم العربي.',
+      sub:'Cura نظام إدارة عيادات متكامل يساعدك على تنظيم مواعيد المرضى، الفوترة الإلكترونية، وملفات الأطباء والمرضى — في واجهة واحدة سهلة الاستخدام، مصمّمة للعيادات في الأردن والعالم العربي.',
       cta1:'ابدأ تجربتك المجانية ←',
       cta2:'استعرض المميزات',
       card_title:'مواعيد اليوم',
@@ -293,7 +293,7 @@ export const T = {
     feats:{
       eyebrow:'المميزات',
       title:'كل ما تحتاجه عيادتك في منصة واحدة',
-      sub:'من أوّل موعد حتى آخر فاتورة — Cura يُغطّي كل خطوة في رحلة مريضك',
+      sub:'من تنظيم المواعيد إلى الفوترة الإلكترونية — نظام Cura لإدارة العيادات يُغطّي كل خطوة في رحلة مريضك وطبيبك',
       seeAll:'استعرض كل المميزات بالتفصيل ←',
       items:[
         { Icon:Calendar,     title:'جدولة المواعيد',   desc:'تقويم ذكي يُقلّل الغياب ويملأ الفراغات تلقائياً — مع تذكيرات فورية للمرضى.', image:apptAr },
@@ -320,7 +320,7 @@ export const T = {
     pricing:{
       eyebrow:'الأسعار',
       title:'أسعار شفّافة بلا رسوم مخفية',
-      sub:'خطط مرنة تنمو مع عيادتك — جميعها تشمل الدعم الفني المجاني ومدير حساب مخصص',
+      sub:'خطط مرنة تنمو مع عيادتك لتستخدم نظام Cura الكامل لإدارة العيادات — جميعها تشمل الدعم الفني المجاني ومدير حساب مخصص',
       teaser:'خطط تبدأ بأسعار تناسب العيادات الصغيرة، وتنمو مع احتياجاتك — بدون رسوم مخفية وبدون التزام طويل.',
       seeAll:'استعرض كل الخطط والأسعار ←',
       monthly:'شهري', yearly:'سنوي', save:'وفّر مقابل الاشتراك السنوي',
@@ -333,7 +333,7 @@ export const T = {
     },
     faq:{
       eyebrow:'الأسئلة المتكررة',
-      title:'كل ما تحتاج معرفته',
+      title:'كل ما تحتاج معرفته عن نظام Cura لإدارة العيادات',
       sub:'إن لم تجد إجابتك هنا، راسلنا مباشرة عبر واتساب وسنساعدك',
       seeAll:'استعرض كل الأسئلة الشائعة ←',
       items:[
@@ -365,7 +365,7 @@ export const T = {
       eyebrow:'Clinic Management Platform',
       h1:  'Smarter clinic management.',
       h1b: 'Better patient outcomes.',
-      sub:'Cura brings patient records, appointment scheduling, walk-in queues, and revenue analytics together in one intuitive platform — built for clinics across Jordan and the Arab world.',
+      sub:'Cura is a clinic management system that brings patient records, appointment scheduling, e-invoicing, and revenue analytics together in one intuitive platform — built for doctors and clinics across Jordan and the Arab world.',
       cta1:'Start free trial →',
       cta2:'Explore features',
       card_title:"Today's Appointments",
@@ -390,7 +390,7 @@ export const T = {
     feats:{
       eyebrow:'Features',
       title:'Everything your clinic needs, nothing it doesn\'t',
-      sub:'From first appointment to final invoice — Cura covers every step of your patient journey',
+      sub:'From appointment scheduling to e-invoicing — Cura\'s clinic management software covers every step of your patient and doctor journey',
       seeAll:'See all features in detail →',
       items:[
         { Icon:Calendar,    title:'Appointment Scheduling', desc:'Smart calendar that cuts no-shows and fills gaps automatically with instant patient reminders.', image:apptEn },
@@ -417,7 +417,7 @@ export const T = {
     pricing:{
       eyebrow:'Pricing',
       title:'Transparent pricing, no hidden fees',
-      sub:'Flexible plans that scale with your clinic — all include free technical support and onboarding',
+      sub:'Flexible plans for Cura\'s complete clinic management software that scale with your clinic — all include free technical support and onboarding',
       teaser:'Plans start small for solo clinics and grow with your needs — no hidden fees, no long-term lock-in.',
       seeAll:'See all plans and pricing →',
       monthly:'Monthly', yearly:'Yearly', save:'Save with annual billing',
@@ -430,7 +430,7 @@ export const T = {
     },
     faq:{
       eyebrow:'FAQ',
-      title:'Everything you need to know',
+      title:'Everything you need to know about Cura\'s clinic management system',
       sub:"Can't find your answer? Message us directly on WhatsApp and we'll help",
       seeAll:'See all FAQs →',
       items:[
