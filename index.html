@@ -5,8 +5,10 @@
     <!-- ⚠️ /icons/favicon.svg ليس شعار Cura الحقيقي — شكل بنفسجي عام غير مرتبط
          بالعلامة التجارية إطلاقاً (كان كذلك من البداية). ملفات icon-*.png هي
          الشعار الصحيح فعلياً (نفس تصميم logo.png بألوان العلامة التجارية) -->
-    <link rel="icon" type="image/png" sizes="72x72" href="/icons/icon-72x72.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <!-- ✅ Google يفضّل مقاسات مضاعفة لـ48px (96, 144...) لأيقونة نتائج البحث —
+         72 و192 ليسا كذلك -->
+    <link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="/icons/icon-144x144.png" />
 
     <!-- ⚡ خطوط Google — كانت كل صفحة تستدعي @import منفصل (تقريباً نفس الخطوط
          بأوزان متفاوتة) داخل <style> تُحقن بالجافاسكربت، مما يؤخّر اكتشاف
