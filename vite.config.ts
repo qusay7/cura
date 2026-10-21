@@ -43,9 +43,8 @@ export default defineConfig({
       },
 
       includeAssets: [
-        'favicon.ico',
-        'apple-touch-icon.png',
-        'logo.png',
+        'icons/favicon.svg',
+        'icons/icon-192x192.png',
       ],
 
       manifest: {
