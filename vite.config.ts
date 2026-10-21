@@ -43,7 +43,7 @@ export default defineConfig({
       },
 
       includeAssets: [
-        'icons/favicon.svg',
+        'icons/icon-72x72.png',
         'icons/icon-192x192.png',
       ],
 
