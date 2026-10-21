@@ -352,7 +352,7 @@ export const T = {
     },
     footer:{
       tagline:'منصة إدارة عيادات مصمّمة للعالم العربي',
-      info:'هاتف  +962 7961 39705 | بريد إلكتروني: infocura100@gmail.com',
+      info:'هاتف  +962 7961 39705 | بريد إلكتروني: info@cura100.com',
       rights:'© 2026 Cura. جميع الحقوق محفوظة.',
       links:['المميزات','الأسعار','سياسة الخصوصية','شروط الاستخدام'],
     },
@@ -449,7 +449,7 @@ export const T = {
     },
     footer:{
       tagline:'Clinic management built for the Arab world',
-      info:'Phone  +962 7961 39705 | Email: infocura100@gmail.com',
+      info:'Phone  +962 7961 39705 | Email: info@cura100.com',
       rights:'© 2026 Cura. All rights reserved.',
       links:['Features','Pricing','Privacy Policy','Terms of Service'],
     },
