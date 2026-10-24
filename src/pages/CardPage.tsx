@@ -96,6 +96,9 @@ export default function CardPage() {
       : "The digital business card for Cura's co-founders, Qusai Yousef and Zainab Aqil - reach out directly or request a free demo.",
     canonical: CARD_URL,
     ogImage: `${WEBSITE}/icons/icon-512x512.png`,
+    // ✅ صفحة للمشاركة المباشرة (QR/NFC/واتساب)، لا للظهور بنتائج بحث عامة عن
+    // "Cura" — نفس منطق noindex بصفحة الدخول
+    robots: 'noindex, follow',
   })
 
   const demoWhatsapp = `https://wa.me/${PEOPLE[0].phoneIntl}?text=${encodeURIComponent(
