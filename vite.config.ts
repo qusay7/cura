@@ -1,8 +1,30 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'child_process'
+
+// ✅ Cloudflare يطبّق مدة كاش افتراضية (4 ساعات) على ملفات .js لما السيرفر
+// الأصلي ما يحدد Cache-Control بوضوح - sw.js بالتحديد اسمه ثابت (ما يتغير مع
+// كل نشر زي باقي الحزم المُهشّرة)، فلو تخزّن لأي مدة، الزوار الجدد يوصلهم
+// service worker قديم ما يعرف أصلاً إنه في نسخة أحدث (نفس المشكلة اللي صارت
+// مع صفحة /card بعد نشرها). "no-cache" هون يفرض على Cloudflare تفقّد
+// الأصل بكل زيارة (via ETag) قبل ما يستخدم أي نسخة مخزّنة - حل دائم بدل
+// تفريغ الكاش يدوياً بعد كل نشر مستقبلي
+function noCacheServiceWorker(): Plugin {
+  const NO_CACHE_PATHS = /^\/(sw\.js|registerSW\.js|manifest\.webmanifest)(\?.*)?$/
+  return {
+    name: 'no-cache-service-worker',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && NO_CACHE_PATHS.test(req.url)) {
+          res.setHeader('Cache-Control', 'no-cache')
+        }
+        next()
+      })
+    },
+  }
+}
 
 // ✅ نأخذ رقم النسخة من الـ commit الحقيقي وقت البناء — مش رقم يدوي بينسى تحديثه،
 // هيك بنعرف بالضبط شو الكود المنشور فعلياً بأي بيئة (تفادياً لالتباس صار سابقاً)
@@ -25,6 +47,7 @@ export default defineConfig({
 
   plugins: [
     react(),
+    noCacheServiceWorker(),
 
     VitePWA({
       // ✅ 'prompt' (الافتراضي) — السيرفس وركر الجديد يبقى "بالانتظار" لحد ما
