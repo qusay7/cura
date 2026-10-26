@@ -3,7 +3,9 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { Phone, Mail, MessageCircle, Download, Globe } from 'lucide-react'
 import { C, T, type Lang, useLandingStyles } from './landing/shared'
 import { usePageMeta } from '../hooks/usePageMeta'
-import logo from '../assets/logo.png'
+// ✅ لوجو مخصّص لهذي الصفحة بس — المستخدم طلب تحديثه هون تحديداً بدون لمس
+// لوجو الموقع العام (favicon/PWA/باقي الصفحات)
+import logo from '../assets/logo-card.png'
 
 // ✅ أرقام حقيقية مؤكدة من المستخدم — قصي: نفس رقم العمل العام بالموقع،
 // زينب: رقمها الشخصي. صيغة دولية بدون + أو صفر بداية (مطلوبة لروابط wa.me)
