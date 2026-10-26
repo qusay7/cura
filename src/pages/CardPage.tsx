@@ -21,7 +21,7 @@ const PEOPLE = [
   {
     key: 'zainab',
     name: 'Zainab Aqil',
-    nameAr: 'زينب عقيل',
+    nameAr: 'زينب عقل',
     phoneDisplay: '+962 795 460 456',
     phoneTel: '+962795460456',
     phoneIntl: '962795460456',
@@ -92,9 +92,9 @@ export default function CardPage() {
   const isAr = lang === 'ar'
 
   usePageMeta({
-    title: isAr ? 'بطاقة عمل Cura — قصي يوسف وزينب عقيل' : 'Cura Business Card — Qusai Yousef & Zainab Aqil',
+    title: isAr ? 'بطاقة عمل Cura — قصي يوسف وزينب عقل' : 'Cura Business Card — Qusai Yousef & Zainab Aqil',
     description: isAr
-      ? 'بطاقة العمل الرقمية لمؤسسَي Cura، قصي يوسف وزينب عقيل — تواصل معنا مباشرة أو اطلب عرضاً تجريبياً مجانياً.'
+      ? 'بطاقة العمل الرقمية لمؤسسَي Cura، قصي يوسف وزينب عقل — تواصل معنا مباشرة أو اطلب عرضاً تجريبياً مجانياً.'
       : "The digital business card for Cura's co-founders, Qusai Yousef and Zainab Aqil - reach out directly or request a free demo.",
     canonical: CARD_URL,
     ogImage: `${WEBSITE}/icons/icon-512x512.png`,
