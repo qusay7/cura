@@ -23,6 +23,7 @@ const mockedApi = vi.mocked(api, true)
 const LOADING_TIMEOUT = { timeout: 2000 }
 
 const patientRecord = (overrides: Partial<Record<string, unknown>> = {}) => ({
+  patientNumber: 1000001,
   fullName: 'Sara Ahmad',
   phone: '0501234567',
   gender: 'female',
@@ -92,7 +93,9 @@ describe('EditPatient', () => {
     await user.clear(nameInput)
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
-    expect(await screen.findByText(/required/i)).toBeInTheDocument()
+    // ✅ أكثر من عنصر يحتوي كلمة "required" الآن (الخطأ تحت الحقل + تنبيه عام
+    // فوق النموذج) — نستهدف رسالة الحقل المحدّدة تجنباً لتعارض أكثر من عنصر
+    expect(await screen.findByText('Full Name is required')).toBeInTheDocument()
     expect(mockedApi.put).not.toHaveBeenCalled()
   })
 
@@ -114,6 +117,30 @@ describe('EditPatient', () => {
       )
     )
     expect(await screen.findByText('patient detail page')).toBeInTheDocument()
+  })
+
+  it('requires the patient number and sends the edited value as a plain number', async () => {
+    mockedApi.get.mockResolvedValueOnce({ data: patientRecord() })
+    const user = userEvent.setup()
+    renderEditPatient()
+    const numberInput = await screen.findByDisplayValue('1000001', {}, LOADING_TIMEOUT)
+
+    // فاضي → يرفض الحفظ
+    await user.clear(numberInput)
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    expect(await screen.findByText('Patient number is required')).toBeInTheDocument()
+    expect(mockedApi.put).not.toHaveBeenCalled()
+
+    // رقم جديد → يُرسل كرقم (int) مو كنص
+    mockedApi.put.mockResolvedValueOnce({ data: {} })
+    await user.type(numberInput, '1000042')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    await waitFor(() =>
+      expect(mockedApi.put).toHaveBeenCalledWith(
+        '/patients/pat-1',
+        expect.objectContaining({ patientNumber: 1000042 })
+      )
+    )
   })
 
   it('shows the server error message when saving fails', async () => {

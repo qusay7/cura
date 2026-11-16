@@ -70,6 +70,8 @@ const T = {
     saving: 'جارٍ الحفظ...',
     loadingMessage: 'جاري تحميل بيانات المريض',
     loadingSub: 'يرجى الانتظار أثناء تحميل المعلومات',
+    patientNumber: 'رقم المريض',
+    patientNumberPlaceholder: 'مثال: 1000001',
     fullName: 'الاسم الكامل',
     fullNamePlaceholder: 'أدخل الاسم الكامل للمريض',
     phone: 'الهاتف',
@@ -122,6 +124,8 @@ const T = {
     saving: 'Saving...',
     loadingMessage: 'Loading Patient Data',
     loadingSub: 'Please wait while we load patient information',
+    patientNumber: 'Patient Number',
+    patientNumberPlaceholder: 'e.g. 1000001',
     fullName: 'Full Name',
     fullNamePlaceholder: 'Enter patient\'s full name',
     phone: 'Phone',
@@ -313,6 +317,7 @@ export default function EditPatient() {
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
 
   const [form, setForm] = useState({
+    patientNumber: '',
     fullName: '',
     phone: '',
     phone2: '',
@@ -362,6 +367,7 @@ export default function EditPatient() {
         const response = await api.get(`/patients/${id}`)
         const p = response.data
         setForm({
+          patientNumber: p.patientNumber != null ? String(p.patientNumber) : '',
           fullName: p.fullName ?? '',
           phone: p.phone ?? '',
           phone2: p.phone2 ?? '',
@@ -415,6 +421,13 @@ export default function EditPatient() {
       errors.fullName = t.fullName + ' ' + ('required' in t ? 'مطلوب' : 'is required')
     }
 
+    const patientNumberValue = Number(form.patientNumber)
+    if (!form.patientNumber.trim()) {
+      errors.patientNumber = isAr ? 'رقم المريض مطلوب' : 'Patient number is required'
+    } else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0) {
+      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً أكبر من صفر' : 'Patient number must be a whole number greater than zero'
+    }
+
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errors.email = 'البريد الإلكتروني غير صالح'
     }
@@ -429,17 +442,22 @@ export default function EditPatient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
+      // ✅ التحقق الحمر تحت كل خانة ممكن ما يُلاحظ لو الخانة برا الشاشة المرئية
+      // حالياً — تنبيه واضح فوق الفورم كامل يضمن إن المستخدم يشوفه فوراً
+      showMessageBox(isAr ? 'يرجى تعبئة الخانات الإجبارية المطلوبة' : 'Please fill in the required fields', 'error')
       return
     }
 
     setSaving(true)
 
     try {
-      const payload = Object.fromEntries(
+      const payload: Record<string, unknown> = Object.fromEntries(
         Object.entries(form).filter(([_, v]) => v !== '' && v !== false)
       )
+      // ✅ الباك اند يتوقع رقم صحيح (int)، مو نص — الحقل مربوط بـ input نصي كبقية الحقول
+      if (payload.patientNumber !== undefined) payload.patientNumber = Number(payload.patientNumber)
       await api.put(`/patients/${id}`, payload)
       navigate(`/patients/${id}`)
     } catch (err: any) {
@@ -572,6 +590,29 @@ export default function EditPatient() {
             
             {/* Basic Information Section */}
             <FormSection title={t.basicInfo}>
+              <FormField label={t.patientNumber} required error={validationErrors.patientNumber}>
+                <input
+                  type="number"
+                  name="patientNumber"
+                  value={form.patientNumber}
+                  onChange={handleChange}
+                  placeholder={t.patientNumberPlaceholder}
+                  className="form-input"
+                  style={{
+                    width: '100%',
+                    background: CARD_BG,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    fontSize: 14,
+                    fontFamily: isAr ? "'Cairo', sans-serif" : "'Inter', sans-serif",
+                    color: TEXT_DARK,
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              </FormField>
+
               <FormField label={t.fullName} required error={validationErrors.fullName}>
                 <input
                   name="fullName"
