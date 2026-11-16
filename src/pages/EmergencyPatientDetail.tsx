@@ -60,7 +60,7 @@ const T = {
     noEntries: 'لا توجد سجلات بعد',
     vitals: '🩺 العلامات الحيوية', bloodPressure: 'ضغط الدم', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'سكر الدم', heartRate: 'النبض', respiratoryRate: 'التنفس',
-    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات المطلوبة', notes: 'ملاحظات إضافية',
+    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات', notes: 'ملاحظات إضافية',
     report: '📄 تقرير الحالة', reportNotes: 'ملاحظات وتقييم إضافي', reportCompiledTitle: 'الملخص',
     sickLeave: '🩺 إجازة مرضية', print: '🖨️', noContentToPrint: 'لا يوجد محتوى للطباعة بعد',
     save: '💾 حفظ السجل', saving: 'جارٍ الحفظ...',
@@ -82,7 +82,7 @@ const T = {
     noEntries: 'No entries yet',
     vitals: '🩺 Vital Signs', bloodPressure: 'Blood Pressure', bloodPressurePlaceholder: '120/80',
     bloodSugar: 'Blood Sugar', heartRate: 'Heart Rate', respiratoryRate: 'Resp. Rate',
-    diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Requested Tests', notes: 'Additional Notes',
+    diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Tests', notes: 'Additional Notes',
     report: '📄 Status Report', reportNotes: 'Additional Notes & Assessment', reportCompiledTitle: 'Summary',
     sickLeave: '🩺 Sick Leave', print: '🖨️', noContentToPrint: 'Nothing to print yet',
     save: '💾 Save Entry', saving: 'Saving...',
@@ -96,7 +96,7 @@ const T = {
   },
 }
 
-const emptyEntryForm = { bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', diagnosis: '', prescription: '', tests: '', notes: '', reportNotes: '' }
+const emptyEntryForm = { bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', diagnosis: '', prescription: '', notes: '', reportNotes: '' }
 
 // ✅ "140/90" → 140 — نقارن الانقباضي فقط بين قراءة وأللي قبلها، كفاية لإظهار الاتجاه
 const parseSystolic = (bp?: string | null): number | null => {
@@ -217,7 +217,6 @@ export default function EmergencyPatientDetail() {
         respiratoryRate: form.respiratoryRate ? parseInt(form.respiratoryRate) : null,
         diagnosis: form.diagnosis || null,
         prescription: form.prescription || null,
-        tests: form.tests || null,
         notes: form.notes || null,
         reportNotes: form.reportNotes || null,
       })
@@ -449,12 +448,6 @@ export default function EmergencyPatientDetail() {
                 <textarea value={form.prescription} onChange={e => setForm({ ...form, prescription: e.target.value })} rows={3}
                   style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, resize: 'vertical', boxSizing: 'border-box' }} />
               </div>
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.tests}</label>
-              <input value={form.tests} onChange={e => setForm({ ...form, tests: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK, boxSizing: 'border-box' }} />
             </div>
 
             <div style={{ marginBottom: 16 }}>

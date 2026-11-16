@@ -28,7 +28,7 @@ const T = {
   ar: {
     back: 'رجوع', loading: 'جاري التحميل...',
     currentVisit: '🩺 الزيارة الحالية', visitType: 'قالب خطة العلاج (اختياري)', bookingType: 'نوع الزيارة المحدّد بالحجز',
-    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية', tests: 'الفحوصات المطلوبة',
+    diagnosis: 'التشخيص', prescription: 'الوصفة الطبية',
     notes: 'ملاحظات إضافية', nextVisit: 'موعد الزيارة القادمة (اختياري)',
     save: 'حفظ الزيارة', saveAndFinish: 'حفظ وإنهاء', saving: 'جارٍ الحفظ...', saved: 'تم حفظ الزيارة بنجاح ✅',
     history: '📋 السجل المرضي السابق', noHistory: 'لا يوجد سجل زيارات سابقة لهذا المريض',
@@ -47,7 +47,7 @@ const T = {
   en: {
     back: 'Back', loading: 'Loading...',
     currentVisit: '🩺 Current Visit', visitType: 'Treatment Plan Template (optional)', bookingType: 'Visit type set at booking',
-    diagnosis: 'Diagnosis', prescription: 'Prescription', tests: 'Requested Tests',
+    diagnosis: 'Diagnosis', prescription: 'Prescription',
     notes: 'Additional Notes', nextVisit: 'Next Visit Date (optional)',
     save: 'Save Visit', saveAndFinish: 'Save & Finish', saving: 'Saving...', saved: 'Visit saved successfully ✅',
     history: '📋 Previous Medical History', noHistory: 'No previous visit history for this patient',
@@ -70,7 +70,6 @@ interface HistoryItem {
   appointmentId: string | null
   diagnosis: string | null
   prescription: string | null
-  tests: string | null
   notes: string | null
   createdAt: string
   doctorName: string | null
@@ -99,7 +98,8 @@ export default function VisitWorkspace() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [existingNoteId, setExistingNoteId] = useState<string | null>(null)
 
-  const [form, setForm] = useState({ diagnosis: '', prescription: '', tests: '', notes: '', nextVisitDate: '', bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', reportNotes: '' })
+  const [form, setForm] = useState({ diagnosis: '', prescription: '', notes: '', nextVisitDate: '', bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', reportNotes: '' })
+  const [labRefreshTick, setLabRefreshTick] = useState(0)
   const [showSickLeave, setShowSickLeave] = useState(false)
   const [templates, setTemplates] = useState<VisitTemplate[]>([])
   const [templateId, setTemplateId] = useState('')
@@ -155,7 +155,6 @@ export default function VisitWorkspace() {
           setForm({
             diagnosis: noteRes.data.diagnosis || '',
             prescription: noteRes.data.prescription || '',
-            tests: noteRes.data.tests || '',
             notes: noteRes.data.notes || '',
             nextVisitDate: noteRes.data.nextVisitDate ? noteRes.data.nextVisitDate.split('T')[0] : '',
             bloodPressure: noteRes.data.bloodPressure || '',
@@ -234,6 +233,23 @@ export default function VisitWorkspace() {
 
   // ✅ زرّين منفصلين: "حفظ" يبقى بالصفحة (الطبيب يقدر يكمل تعبئة الزيارة بدون ما
   // يُرمى برّا كل مرة يحفظ)، و"حفظ وإنهاء" يحفظ ويرجع لجدول اليوم — بدل ما كان
+  // ✅ اقتراح تحليل/أشعة من قائمة التشخيص — ينشئ طلب فعلي (مش نص) ويحدّث
+  // قائمة 🧪/🩻 تحت مباشرة عبر labRefreshTick
+  const insertSuggestedTest = async (test: { testName: string; category: 'lab' | 'radiology' }) => {
+    if (!appointment) return
+    try {
+      await api.post('/laborders', {
+        patientId: appointment.patientId,
+        appointmentId,
+        testName: test.testName,
+        category: test.category,
+      })
+      setLabRefreshTick(n => n + 1)
+    } catch {
+      showMessageBox(isAr ? 'فشل طلب التحليل' : 'Failed to order the test', 'error')
+    }
+  }
+
   // زر الحفظ الوحيد يرجّع تلقائياً بكل مرة
   const handleSave = async (andFinish: boolean) => {
     if (!appointment) return
@@ -246,7 +262,6 @@ export default function VisitWorkspace() {
         doctorId: appointment.doctorId,
         diagnosis: form.diagnosis || null,
         prescription: form.prescription || null,
-        tests: form.tests || null,
         notes: form.notes || null,
         nextVisitDate: form.nextVisitDate || null,
         bloodPressure: form.bloodPressure || null,
@@ -442,7 +457,7 @@ export default function VisitWorkspace() {
                   value={form.diagnosis}
                   onChange={v => setForm({ ...form, diagnosis: v })}
                   onInsertPrescriptionText={text => setForm(f => ({ ...f, prescription: f.prescription ? `${f.prescription}\n${text}` : text }))}
-                  onInsertTestText={text => setForm(f => ({ ...f, tests: f.tests ? `${f.tests}, ${text}` : text }))}
+                  onInsertTest={insertSuggestedTest}
                   isAr={isAr}
                 />
               </div>
@@ -457,12 +472,7 @@ export default function VisitWorkspace() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>{t.tests}</label>
-                <input value={form.tests} onChange={e => setForm({ ...form, tests: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: TEXT_DARK }} />
-              </div>
+            <div style={{ marginBottom: 14 }}>
               <div>
                 {upcomingAppointment ? (
                   <>
@@ -526,8 +536,8 @@ export default function VisitWorkspace() {
             </div>
 
             {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} />}
-            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} />}
-            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="radiology" />}
+            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} refreshTrigger={labRefreshTick} />}
+            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="radiology" refreshTrigger={labRefreshTick} />}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={() => handleSave(false)} disabled={saving || !appointment?.checkInTime}

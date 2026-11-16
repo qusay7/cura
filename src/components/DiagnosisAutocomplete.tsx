@@ -23,16 +23,17 @@ interface DiagnosisAutocompleteProps {
   value: string
   onChange: (value: string) => void
   onInsertPrescriptionText: (text: string) => void
-  // ✅ اختياري — بدونه (مثلاً صفحات لسا ما ربطت حقل الفحوصات) الزر البسيط
-  // يختفي بس باقي الميزات (الأدوية) تشتغل عادي
-  onInsertTestText?: (text: string) => void
+  // ✅ اختياري — بدونه (مثلاً صفحات لسا ما ربطت طلبات التحاليل/الأشعة) قسم
+  // الاقتراحات يختفي بس باقي الميزات (الأدوية) تشتغل عادي. ينشئ طلب تحليل/أشعة
+  // حقيقي (مش نص) — السبب والفئة (lab/radiology) موجودين بالاقتراح نفسه
+  onInsertTest?: (test: { testName: string; category: 'lab' | 'radiology' }) => void
   isAr: boolean
 }
 
 // ✅ اقتراح أثناء الكتابة — يقترح تشخيصات مطابقة من قائمة العيادة الخاصة
 // (يبنيها الطبيب بنفسه من صفحة الإعدادات)، وعند اختيار واحد يعرض أدويته
 // المقترحة كأزرار إدراج بالوصفة — مافي شي يُفرض تلقائياً، كل شي قابل للتعديل
-export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, onInsertTestText, isAr }: DiagnosisAutocompleteProps) {
+export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, onInsertTest, isAr }: DiagnosisAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [medications, setMedications] = useState<Medication[]>([])
@@ -92,7 +93,7 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
   }
 
   const insertOneTest = (x: SuggestedTest) => {
-    onInsertTestText?.(x.testName)
+    onInsertTest?.({ testName: x.testName, category: x.category })
   }
 
   const insertAllTests = () => {
@@ -155,7 +156,7 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
         </div>
       )}
 
-      {onInsertTestText && tests.length > 0 && (
+      {onInsertTest && tests.length > 0 && (
         <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
           <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
             🧪 {isAr ? 'تحاليل وأشعة مقترحة:' : 'Suggested tests & radiology:'}

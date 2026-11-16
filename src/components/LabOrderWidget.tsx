@@ -8,6 +8,9 @@ interface LabOrderWidgetProps {
   queueEntryId?: string
   lang: 'ar' | 'en'
   category?: 'lab' | 'radiology'
+  // ✅ اختياري — غيّر قيمته (مثلاً عدّاد) لإجبار إعادة جلب القائمة من مكوّن
+  // خارجي بعد ما يُنشئ طلب تحليل/أشعة من مصدر تاني (مثلاً اقتراحات التشخيص)
+  refreshTrigger?: number
 }
 
 interface LabOrderItem {
@@ -46,7 +49,7 @@ const T = {
 // ✅ يُستخدم بزيارة موعد عادي أو طوارئ (appointmentId/queueEntryId) — نفس مبدأ
 // ProceduresPicker: مكوّن مستقل يجلب ويعرض ويضيف بحاله، بدون اعتماد على صفحة الأب.
 // category يفرّق بين طلب مختبر وطلب أشعة (نفس الكيان بالباك اند، LabOrder.Category)
-export default function LabOrderWidget({ patientId, appointmentId, queueEntryId, lang, category = 'lab' }: LabOrderWidgetProps) {
+export default function LabOrderWidget({ patientId, appointmentId, queueEntryId, lang, category = 'lab', refreshTrigger }: LabOrderWidgetProps) {
   const t = T[lang]
   const c = COPY[category][lang]
   const isAr = lang === 'ar'
@@ -64,7 +67,7 @@ export default function LabOrderWidget({ patientId, appointmentId, queueEntryId,
       .catch(() => {})
   }
 
-  useEffect(() => { fetchItems() }, [patientId, appointmentId, queueEntryId, category]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchItems() }, [patientId, appointmentId, queueEntryId, category, refreshTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOrder = async () => {
     if (!testName.trim()) return
