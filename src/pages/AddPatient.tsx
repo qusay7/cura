@@ -40,6 +40,7 @@ const T = {
   ar: {
     title:'إضافة مريض جديد', back:'رجوع', basicInfo:'البيانات الأساسية',
     additionalInfo:'معلومات إضافية', notes:'ملاحظات',
+    patientNumber:'رقم المريض', patientNumberPlaceholder:'مثال: 1000001',
     fullName:'الاسم الكامل', fullNamePlaceholder:'أدخل الاسم الكامل للمريض',
     phone:'الهاتف', phonePlaceholder:'05xxxxxxxx',
     phone2:'هاتف 2', phone2Placeholder:'05xxxxxxxx',
@@ -79,6 +80,7 @@ const T = {
   en: {
     title:'Add New Patient', back:'Back', basicInfo:'Basic Information',
     additionalInfo:'Additional Information', notes:'Notes',
+    patientNumber:'Patient Number', patientNumberPlaceholder:'e.g. 1000001',
     fullName:'Full Name', fullNamePlaceholder:"Enter patient's full name",
     phone:'Phone', phonePlaceholder:'05xxxxxxxx',
     phone2:'Phone 2', phone2Placeholder:'05xxxxxxxx',
@@ -215,7 +217,7 @@ export default function AddPatient() {
   })
 
   const [form, setForm] = useState({
-    fullName:'', phone:'', phone2:'', gender:'', dateOfBirth:'',
+    patientNumber:'', fullName:'', phone:'', phone2:'', gender:'', dateOfBirth:'',
     nationalId:'', bloodType:'', address:'', email:'',
     emergencyContact:'', emergencyPhone:'', allergies:'',
     chronicDiseases:'', occupation:'', maritalStatus:'', notes:'',
@@ -232,6 +234,10 @@ export default function AddPatient() {
     window.addEventListener('cura-lang-change', handleLangChange)
     // جلب شركات التأمين مسبقاً
     api.get('/insurance/companies').then(r=>setCompanies(r.data)).catch(()=>{})
+    // ✅ الرقم المقترح تلقائياً — يُعرض كقيمة افتراضية قابلة للتعديل قبل الحفظ
+    api.get('/patients/next-number').then(r => {
+      setForm(prev => prev.patientNumber ? prev : { ...prev, patientNumber: String(r.data.nextNumber) })
+    }).catch(()=>{})
     return () => window.removeEventListener('cura-lang-change', handleLangChange)
   }, [])
 
@@ -244,6 +250,11 @@ export default function AddPatient() {
   const validateForm = (): boolean => {
     const errors: Record<string,string> = {}
     const t = T[lang]
+    const patientNumberValue = Number(form.patientNumber)
+    if (!form.patientNumber.trim()) errors.patientNumber = t.required
+    else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0) {
+      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً أكبر من صفر' : 'Patient number must be a whole number greater than zero'
+    }
     if (!form.fullName.trim()) errors.fullName = t.required
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = t.emailInvalid
     if (form.phone && !/^[\d\s\+-]{8,}$/.test(form.phone.replace(/\s/g,''))) errors.phone = t.phoneInvalid
@@ -253,10 +264,16 @@ export default function AddPatient() {
 
   const handleSubmit = async (e:React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm()) return
+    if (!validateForm()) {
+      // ✅ التحقق الأحمر تحت الحقل ممكن ما يُلاحظ لو الحقل برا الشاشة المرئية
+      showMessageBox(isAr ? 'يرجى تعبئة الخانات الإجبارية المطلوبة' : 'Please fill in the required fields', 'error')
+      return
+    }
     setLoading(true)
     try {
-      const payload = Object.fromEntries(Object.entries(form).filter(([_,v])=>v!==''))
+      const payload: Record<string, unknown> = Object.fromEntries(Object.entries(form).filter(([_,v])=>v!==''))
+      // ✅ الباك اند يتوقع رقم صحيح (int)، مو نص — الحقل مربوط بـ input نصي كبقية الحقول
+      if (payload.patientNumber !== undefined) payload.patientNumber = Number(payload.patientNumber)
       const res = await api.post('/patients', payload)
       setSavedPatientId(res.data.id || res.data.Id)
       setStep('insurance')  // ✅ انتقل لخطوة التأمين
@@ -380,6 +397,9 @@ export default function AddPatient() {
         <form onSubmit={handleSubmit}>
           <div className="form-grid" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:24}}>
             <FormSection title={t.basicInfo}>
+              <FormField label={t.patientNumber} required error={validationErrors.patientNumber}>
+                <input type="number" name="patientNumber" value={form.patientNumber} onChange={handleChange} placeholder={t.patientNumberPlaceholder} className="form-input" style={inputStyle(isAr)} />
+              </FormField>
               <FormField label={t.fullName} required error={validationErrors.fullName}>
                 <input name="fullName" value={form.fullName} onChange={handleChange} placeholder={t.fullNamePlaceholder} className="form-input" style={inputStyle(isAr)} />
               </FormField>

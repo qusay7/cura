@@ -35,7 +35,11 @@ describe('AddPatient', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    mockedApi.get.mockResolvedValue({ data: [] })
+    mockedApi.get.mockImplementation((url: string) =>
+      url === '/patients/next-number'
+        ? Promise.resolve({ data: { nextNumber: 1000001 } })
+        : Promise.resolve({ data: [] })
+    )
   })
 
   it('associates the Full Name field with its label', async () => {
@@ -99,6 +103,38 @@ describe('AddPatient', () => {
     expect(await screen.findByText(/patient saved successfully/i)).toBeInTheDocument()
   })
 
+  it('pre-fills the suggested patient number, allows editing it, and sends it as a plain number', async () => {
+    mockedApi.post.mockResolvedValueOnce({ data: { id: 'pat-1' } })
+    const user = userEvent.setup()
+    renderAddPatient()
+
+    const numberInput = await screen.findByDisplayValue('1000001')
+    await user.clear(numberInput)
+    await user.type(numberInput, '1000042')
+    await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await user.click(screen.getByRole('button', { name: /save patient/i }))
+
+    await waitFor(() =>
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/patients',
+        expect.objectContaining({ patientNumber: 1000042 })
+      )
+    )
+  })
+
+  it('requires the patient number before submitting', async () => {
+    const user = userEvent.setup()
+    renderAddPatient()
+    const numberInput = await screen.findByDisplayValue('1000001')
+
+    await user.clear(numberInput)
+    await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await user.click(screen.getByRole('button', { name: /save patient/i }))
+
+    expect(await screen.findByText('This field is required')).toBeInTheDocument()
+    expect(mockedApi.post).not.toHaveBeenCalled()
+  })
+
   it('shows the server error message when creating the patient fails', async () => {
     mockedApi.post.mockRejectedValueOnce({ response: { data: 'Duplicate national ID' } })
     const user = userEvent.setup()
@@ -125,7 +161,11 @@ describe('AddPatient', () => {
   })
 
   it('disables Add Insurance Now until the required fields are filled, then saves it', async () => {
-    mockedApi.get.mockResolvedValue({ data: [{ id: 'ins-1', name: 'Bupa', coverageRate: 80 }] })
+    mockedApi.get.mockImplementation((url: string) =>
+      url === '/patients/next-number'
+        ? Promise.resolve({ data: { nextNumber: 1000001 } })
+        : Promise.resolve({ data: [{ id: 'ins-1', name: 'Bupa', coverageRate: 80 }] })
+    )
     mockedApi.post.mockImplementation((url: string) => {
       if (url === '/patients') return Promise.resolve({ data: { id: 'pat-1' } })
       return Promise.resolve({ data: {} })
