@@ -16,10 +16,13 @@ let cachedClinic: ClinicLetterhead | null = null
 
 // ✅ نفس منطق PrintHeader.tsx بالضبط — نحوّل الشعار لـ Base64 مضمّن عشان يطبع
 // صحيح بمعزل عن أي تبعية Cross-Origin أو Cache، بس هون داخل نافذة طباعة جديدة
-const fetchClinicLetterhead = async (clinicId: string): Promise<ClinicLetterhead> => {
+const fetchClinicLetterhead = async (): Promise<ClinicLetterhead> => {
   if (cachedClinic) return cachedClinic
   try {
-    const res = await api.get(`/clinics/${clinicId}`)
+    // ✅ نقطة مخصّصة متاحة لأي دور (طبيب، استقبال...) — GET /clinics/{id}
+    // محصورة بـ SuperAdmin/ClinicStaff/ClinicAdmin وكانت بترجع 403 لباقي
+    // الأدوار، فتطبع فورمات الوصفة/التحاليل بدون شعار ولا اسم عيادة
+    const res = await api.get('/clinics/letterhead')
     const logo = res.data.logo || null
     let logoDataUrl: string | null = null
     if (logo) {
@@ -52,7 +55,7 @@ export const printSection = async (opts: {
   bodyHtml: string
   doctorName?: string | null
 }) => {
-  const clinic = await fetchClinicLetterhead(opts.clinicId)
+  const clinic = await fetchClinicLetterhead()
   const logoDataUrl = clinic.logoDataUrl
 
   const win = window.open('', '_blank')
