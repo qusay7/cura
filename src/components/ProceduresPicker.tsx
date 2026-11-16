@@ -3,6 +3,7 @@ import api from '../api/axios'
 import SearchableSelect from './SearchableSelect'
 import { getCurrencySymbol } from '../utils/i18n'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { printSection, escapeHtml } from '../utils/printSection'
 
 interface ProceduresPickerProps {
   parentType: 'appointment' | 'queue'
@@ -106,9 +107,28 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
   const formatTime = (iso: string) =>
     new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).toLocaleString(isAr ? 'ar-SA' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
 
+  // ✅ طباعة قائمة الإجراءات المضافة لهذي الزيارة بمعزل عن باقي الصفحة —
+  // نفس آلية طباعة التشخيص/الوصفة بـ VisitWorkspace
+  const handlePrint = () => {
+    if (items.length === 0) return
+    let clinicId = ''
+    try { clinicId = JSON.parse(localStorage.getItem('user') || '{}').clinicId || '' } catch { /* ignore */ }
+    if (!clinicId) return
+    const bodyHtml = `<ul style="padding-inline-start:18px;margin:0;">${items.map(i =>
+      `<li style="margin-bottom:6px;">${escapeHtml(i.name)}${i.price != null ? ` — ${i.price} ${getCurrencySymbol(lang)}` : ''}</li>`
+    ).join('')}</ul><p style="margin-top:14px;font-weight:700;">${t.total}: ${total} ${getCurrencySymbol(lang)}</p>`
+    printSection({ clinicId, title: t.title, isAr, bodyHtml })
+  }
+
   return (
     <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{t.title}</label>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{t.title}</label>
+        {!hideItemsList && items.length > 0 && (
+          <button type="button" onClick={handlePrint} title={t.title}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>🖨️</button>
+        )}
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 10, marginBottom: 12 }}>
         <SearchableSelect isRtl={isAr} value={selectedProcedureId} onChange={handlePick}

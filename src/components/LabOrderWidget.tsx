@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api/axios'
 import { PRIMARY, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
+import { printSection, escapeHtml } from '../utils/printSection'
 
 interface LabOrderWidgetProps {
   patientId: string
@@ -83,19 +84,40 @@ export default function LabOrderWidget({ patientId, appointmentId, queueEntryId,
     }
   }
 
+  const statusMap = {
+    ordered: { bg: '#FFF8E1', fg: '#B8892A', label: t.statusOrdered },
+    in_progress: { bg: '#EBF4FF', fg: '#3B82F6', label: t.statusInProgress },
+    completed: { bg: '#E8F5E9', fg: '#22C55E', label: t.statusCompleted },
+    cancelled: { bg: '#F3F4F6', fg: '#6B7280', label: t.statusCancelled },
+  }
+
   const statusBadge = (s: LabOrderItem['status']) => {
-    const map = {
-      ordered: { bg: '#FFF8E1', fg: '#B8892A', label: t.statusOrdered },
-      in_progress: { bg: '#EBF4FF', fg: '#3B82F6', label: t.statusInProgress },
-      completed: { bg: '#E8F5E9', fg: '#22C55E', label: t.statusCompleted },
-      cancelled: { bg: '#F3F4F6', fg: '#6B7280', label: t.statusCancelled },
-    }[s]
+    const map = statusMap[s]
     return <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 100, background: map.bg, color: map.fg }}>{map.label}</span>
+  }
+
+  // ✅ طباعة منفصلة لهذا القسم بس (مختبر أو أشعة حسب category) — نفس آلية
+  // طباعة التشخيص/الوصفة بـ VisitWorkspace، بس القائمة هون جوّا المكوّن نفسه
+  const handlePrint = () => {
+    if (items.length === 0) return
+    let clinicId = ''
+    try { clinicId = JSON.parse(localStorage.getItem('user') || '{}').clinicId || '' } catch { /* ignore */ }
+    if (!clinicId) return
+    const bodyHtml = `<ul style="padding-inline-start:18px;margin:0;">${items.map(i =>
+      `<li style="margin-bottom:6px;">${escapeHtml(i.testName)} — ${statusMap[i.status].label}</li>`
+    ).join('')}</ul>`
+    printSection({ clinicId, title: c.title, isAr, bodyHtml })
   }
 
   return (
     <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED, marginBottom: 10 }}>{c.title}</label>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_MUTED }}>{c.title}</label>
+        {items.length > 0 && (
+          <button type="button" onClick={handlePrint} title={c.title}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>🖨️</button>
+        )}
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginBottom: 12 }}>
         <input value={testName} onChange={e => setTestName(e.target.value)} placeholder={c.placeholder}
