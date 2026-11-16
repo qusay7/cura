@@ -18,6 +18,9 @@ interface ProceduresPickerProps {
   /** ✅ لو الصفحة الأم حذفت إجراء بنفسها (بدل زر الحذف هون)، تزيد هذا الرقم
    * عشان يعيد الجلب ويبقى متزامن مع حالة هذا المكوّن الداخلية */
   refreshTrigger?: number
+  // ✅ طبيب الزيارة/الحالة الحالية — يُطبع بتذييل الصفحة عند الطباعة (غير
+  // مرتبط بـ AddedItem.doctorName اللي يحدد مين أضاف كل إجراء بالذات)
+  doctorName?: string | null
 }
 
 interface CatalogItem { id: string; name: string; nameEn: string | null; defaultPrice: number | null }
@@ -37,7 +40,7 @@ const T = {
 // ✅ يُستخدم بزيارة موعد عادي أو حالة طوارئ (parentType يحدد مسار الـ API) —
 // سعر كل إجراء يبدأ بالسعر الافتراضي من الكتالوج، والطبيب يعدّله أو يصفّره
 // بحرية قبل الإضافة؛ الإزالة بعد الإضافة متاحة دايماً
-export default function ProceduresPicker({ parentType, parentId, lang, onTotalChange, onItemsChange, hideItemsList, refreshTrigger }: ProceduresPickerProps) {
+export default function ProceduresPicker({ parentType, parentId, lang, onTotalChange, onItemsChange, hideItemsList, refreshTrigger, doctorName }: ProceduresPickerProps) {
   const t = T[lang]
   const isAr = lang === 'ar'
   const basePath = parentType === 'appointment' ? `/appointments/${parentId}` : `/queue/${parentId}`
@@ -117,7 +120,7 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
     const bodyHtml = `<ul style="padding-inline-start:18px;margin:0;">${items.map(i =>
       `<li style="margin-bottom:6px;">${escapeHtml(i.name)}${i.price != null ? ` — ${i.price} ${getCurrencySymbol(lang)}` : ''}</li>`
     ).join('')}</ul><p style="margin-top:14px;font-weight:700;">${t.total}: ${total} ${getCurrencySymbol(lang)}</p>`
-    printSection({ clinicId, title: t.title, isAr, bodyHtml })
+    printSection({ clinicId, title: t.title, isAr, bodyHtml, doctorName })
   }
 
   return (

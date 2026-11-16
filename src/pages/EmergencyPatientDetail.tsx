@@ -424,9 +424,9 @@ export default function EmergencyPatientDetail() {
             </div>
 
             {/* 💉 الإجراءات — تتكرر بأي وقت، كل واحد موثّق بوقته وطبيبه */}
-            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} onItemsChange={setProcedureItems} onTotalChange={handleProceduresTotalChange} />
-            <LabOrderWidget patientId={entry.patientId} queueEntryId={entry.id} lang={lang} />
-            <LabOrderWidget patientId={entry.patientId} queueEntryId={entry.id} lang={lang} category="radiology" />
+            <ProceduresPicker parentType="queue" parentId={entry.id} lang={lang} onItemsChange={setProcedureItems} onTotalChange={handleProceduresTotalChange} doctorName={entry.doctorName} />
+            <LabOrderWidget patientId={entry.patientId} queueEntryId={entry.id} lang={lang} doctorName={entry.doctorName} />
+            <LabOrderWidget patientId={entry.patientId} queueEntryId={entry.id} lang={lang} category="radiology" doctorName={entry.doctorName} />
 
             {/* 🩺 التشخيص والوصفة — بالنهاية، كل واحد بزر طباعة مستقل */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14, marginTop: 16 }}>

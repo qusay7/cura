@@ -535,9 +535,9 @@ export default function VisitWorkspace() {
               <VoiceRecorder patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="report-audio" />
             </div>
 
-            {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} />}
-            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} refreshTrigger={labRefreshTick} />}
-            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="radiology" refreshTrigger={labRefreshTick} />}
+            {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} doctorName={appointment?.doctorName} />}
+            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} refreshTrigger={labRefreshTick} doctorName={appointment?.doctorName} />}
+            {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="radiology" refreshTrigger={labRefreshTick} doctorName={appointment?.doctorName} />}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={() => handleSave(false)} disabled={saving || !appointment?.checkInTime}

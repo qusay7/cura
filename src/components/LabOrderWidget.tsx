@@ -12,6 +12,8 @@ interface LabOrderWidgetProps {
   // ✅ اختياري — غيّر قيمته (مثلاً عدّاد) لإجبار إعادة جلب القائمة من مكوّن
   // خارجي بعد ما يُنشئ طلب تحليل/أشعة من مصدر تاني (مثلاً اقتراحات التشخيص)
   refreshTrigger?: number
+  // ✅ طبيب الزيارة/الحالة الحالية — يُطبع بتذييل الصفحة عند الطباعة
+  doctorName?: string | null
 }
 
 interface LabOrderItem {
@@ -50,7 +52,7 @@ const T = {
 // ✅ يُستخدم بزيارة موعد عادي أو طوارئ (appointmentId/queueEntryId) — نفس مبدأ
 // ProceduresPicker: مكوّن مستقل يجلب ويعرض ويضيف بحاله، بدون اعتماد على صفحة الأب.
 // category يفرّق بين طلب مختبر وطلب أشعة (نفس الكيان بالباك اند، LabOrder.Category)
-export default function LabOrderWidget({ patientId, appointmentId, queueEntryId, lang, category = 'lab', refreshTrigger }: LabOrderWidgetProps) {
+export default function LabOrderWidget({ patientId, appointmentId, queueEntryId, lang, category = 'lab', refreshTrigger, doctorName }: LabOrderWidgetProps) {
   const t = T[lang]
   const c = COPY[category][lang]
   const isAr = lang === 'ar'
@@ -106,7 +108,7 @@ export default function LabOrderWidget({ patientId, appointmentId, queueEntryId,
     const bodyHtml = `<ul style="padding-inline-start:18px;margin:0;">${items.map(i =>
       `<li style="margin-bottom:6px;">${escapeHtml(i.testName)} — ${statusMap[i.status].label}</li>`
     ).join('')}</ul>`
-    printSection({ clinicId, title: c.title, isAr, bodyHtml })
+    printSection({ clinicId, title: c.title, isAr, bodyHtml, doctorName })
   }
 
   return (
