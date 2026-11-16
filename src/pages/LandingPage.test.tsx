@@ -20,6 +20,7 @@ function renderLandingPage() {
 
 describe('LandingPage', () => {
   beforeEach(() => {
+    localStorage.clear()
     window.open = vi.fn()
     window.scrollTo = vi.fn()
   })

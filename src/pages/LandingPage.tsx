@@ -10,7 +10,10 @@ import { usePageMeta } from '../hooks/usePageMeta'
 export default function LandingPage() {
   useLandingStyles()
   const navigate  = useNavigate()
-  const [lang, setLang] = useState<Lang>('en')
+  // ✅ نقرأ من نفس مفتاح localStorage اللي يستخدمه باقي التطبيق (Layout.tsx) —
+  // بدونها، اختيار اللغة كان يُعاد تلقائياً لكل صفحة تسويقية بكل تنقّل
+  const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem('cura-lang') as Lang) || 'en')
+  const setLang = (l: Lang) => { localStorage.setItem('cura-lang', l); setLangState(l) }
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   const t    = T[lang]

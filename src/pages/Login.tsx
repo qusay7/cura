@@ -260,7 +260,10 @@ export default function Login() {
   const { subdomain: subdomainParam } = useParams<{ subdomain?: string }>()
 
   const [apiCommit, setApiCommit] = useState('')
-  const [lang, setLang]         = useState<Lang>('en')
+  // ✅ نقرأ/نكتب نفس مفتاح localStorage اللي يستخدمه باقي التطبيق، عشان اللغة
+  // تبقى نفسها بالتنقّل بين الصفحات بدل ما ترجع للافتراضي بكل مرة
+  const [lang, setLangState]    = useState<Lang>(() => (localStorage.getItem('cura-lang') as Lang) || 'en')
+  const setLang = (l: Lang) => { localStorage.setItem('cura-lang', l); setLangState(l) }
   const [step, setStep]         = useState<'subdomain'|'login'>('subdomain')
   const [subdomain, setSubdomain] = useState('')
   const [clinicInfo, setClinicInfo] = useState<{ name:string; logo?:string; isAdmin:boolean } | null>(null)

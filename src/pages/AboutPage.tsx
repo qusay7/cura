@@ -57,7 +57,10 @@ const COPY = {
 
 export default function AboutPage() {
   useLandingStyles()
-  const [lang, setLang] = useState<Lang>('en')
+  // ✅ نقرأ/نكتب نفس مفتاح localStorage اللي يستخدمه باقي التطبيق، عشان اللغة
+  // تبقى نفسها بالتنقّل بين الصفحات بدل ما ترجع للافتراضي بكل مرة
+  const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem('cura-lang') as Lang) || 'en')
+  const setLang = (l: Lang) => { localStorage.setItem('cura-lang', l); setLangState(l) }
   const t = T[lang]
   const c = COPY[lang]
   const isAr = lang === 'ar'

@@ -39,6 +39,7 @@ function renderPricingPage() {
 
 describe('PricingPage', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.clearAllMocks()
     window.open = vi.fn()
   })
