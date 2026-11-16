@@ -24,6 +24,7 @@ const QuickVisit          = lazy(() => import('./pages/QuickVisit'))
 const Schedules           = lazy(() => import('./pages/Schedules'))
 const Settings            = lazy(() => import('./pages/Settings'))
 const AddUser             = lazy(() => import('./pages/AddUser'))
+const EditUser             = lazy(() => import('./pages/EditUser'))
 const Users               = lazy(() => import('./pages/Users'))
 const Departments         = lazy(() => import('./pages/Departments'))
 const TreatmentTemplates  = lazy(() => import('./pages/TreatmentTemplates'))
@@ -208,6 +209,11 @@ function App() {
         <Route path="/users/add" element={
           <ProtectedRoute permission="users.create">
             <Layout><AddUser /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/users/edit/:id" element={
+          <ProtectedRoute permission="users.create">
+            <Layout><EditUser /></Layout>
           </ProtectedRoute>
         } />
 

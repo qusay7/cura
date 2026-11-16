@@ -489,6 +489,17 @@ export default function Users() {
                     ),
                     actions: (
                       <div className="no-print" style={{ display: 'flex', gap: 8 }}>
+                        {hasPermission('users.create') && u.role !== 'SuperAdmin' && (
+                          <button
+                            onClick={() => navigate(`/users/edit/${u.id}`)}
+                            style={{
+                              background: PRIMARY_SOFT, border: 'none', borderRadius: 8,
+                              padding: '6px 12px', fontSize: 12, color: PRIMARY, cursor: 'pointer',
+                            }}
+                          >
+                            ✏️ {isAr ? 'تعديل' : 'Edit'}
+                          </button>
+                        )}
                         {hasPermission('users.toggle') && ['SuperAdmin', 'ClinicStaff', 'ClinicAdmin'].includes(user.role) && (
                           <button
                             onClick={() => handleToggle(u.id)}
