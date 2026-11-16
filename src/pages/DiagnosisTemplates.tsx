@@ -27,6 +27,9 @@ const T = {
     name: 'اسم التشخيص', medications: 'الأدوية المقترحة',
     drugName: 'اسم الدواء', instructions: 'الجرعة/التعليمات (اختياري)',
     addMedication: '+ إضافة دواء', removeMedication: 'حذف',
+    tests: 'التحاليل والأشعة المقترحة', testName: 'اسم التحليل/الأشعة', category: 'النوع',
+    lab: 'تحليل مخبري', radiology: 'أشعة', addTest: '+ إضافة تحليل/أشعة',
+    noTests: 'بدون تحاليل أو أشعة مقترحة',
     save: 'حفظ', cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
     edit: 'تعديل', delete: 'حذف', noTemplates: 'لا توجد تشخيصات محفوظة — اضغط "إضافة تشخيص" للبدء',
     loading: 'جاري التحميل...', confirmDelete: 'متأكد تبي تحذف هذا التشخيص؟',
@@ -41,6 +44,9 @@ const T = {
     name: 'Diagnosis Name', medications: 'Suggested Medications',
     drugName: 'Drug Name', instructions: 'Dosage/Instructions (optional)',
     addMedication: '+ Add Medication', removeMedication: 'Remove',
+    tests: 'Suggested Tests & Radiology', testName: 'Test/Radiology Name', category: 'Type',
+    lab: 'Lab Test', radiology: 'Radiology', addTest: '+ Add Test/Radiology',
+    noTests: 'No suggested tests or radiology',
     save: 'Save', cancel: 'Cancel', saving: 'Saving...',
     edit: 'Edit', delete: 'Delete', noTemplates: 'No diagnoses saved yet — click "Add Diagnosis" to start',
     loading: 'Loading...', confirmDelete: 'Are you sure you want to delete this diagnosis?',
@@ -51,9 +57,14 @@ const T = {
 }
 
 interface Medication { id?: string; drugName: string; instructions: string }
-interface Template { id: string; name: string; medications: Medication[] }
+interface Test { id?: string; testName: string; category: 'lab' | 'radiology' }
+interface Template { id: string; name: string; medications: Medication[]; tests: Test[] }
 
-const emptyForm = { name: '', medications: [{ drugName: '', instructions: '' }] as Medication[] }
+const emptyForm = {
+  name: '',
+  medications: [{ drugName: '', instructions: '' }] as Medication[],
+  tests: [{ testName: '', category: 'lab' }] as Test[],
+}
 
 export default function DiagnosisTemplates() {
   const navigate = useNavigate()
@@ -109,6 +120,9 @@ export default function DiagnosisTemplates() {
       medications: tpl.medications.length > 0
         ? tpl.medications.map(m => ({ drugName: m.drugName, instructions: m.instructions || '' }))
         : [{ drugName: '', instructions: '' }],
+      tests: tpl.tests.length > 0
+        ? tpl.tests.map(x => ({ testName: x.testName, category: x.category }))
+        : [{ testName: '', category: 'lab' }],
     })
     setShowForm(true)
   }
@@ -119,6 +133,13 @@ export default function DiagnosisTemplates() {
 
   const addMedicationRow = () => setForm(f => ({ ...f, medications: [...f.medications, { drugName: '', instructions: '' }] }))
   const removeMedicationRow = (idx: number) => setForm(f => ({ ...f, medications: f.medications.filter((_, i) => i !== idx) }))
+
+  const updateTest = (idx: number, field: 'testName' | 'category', value: string) => {
+    setForm(f => ({ ...f, tests: f.tests.map((x, i) => i === idx ? { ...x, [field]: value } : x) }))
+  }
+
+  const addTestRow = () => setForm(f => ({ ...f, tests: [...f.tests, { testName: '', category: 'lab' }] }))
+  const removeTestRow = (idx: number) => setForm(f => ({ ...f, tests: f.tests.filter((_, i) => i !== idx) }))
 
   const handleSave = async () => {
     if (!form.name.trim()) {
@@ -132,6 +153,9 @@ export default function DiagnosisTemplates() {
         medications: form.medications
           .filter(m => m.drugName.trim())
           .map(m => ({ drugName: m.drugName.trim(), instructions: m.instructions.trim() || null })),
+        tests: form.tests
+          .filter(x => x.testName.trim())
+          .map(x => ({ testName: x.testName.trim(), category: x.category })),
       }
 
       if (editId) {
@@ -237,6 +261,37 @@ export default function DiagnosisTemplates() {
               </button>
             </div>
 
+            <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, marginBottom: 12 }}>{t.tests}</p>
+
+              {form.tests.map((x, idx) => (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'end' }}>
+                  <div>
+                    {idx === 0 && <label style={{ display: 'block', fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>{t.testName}</label>}
+                    <input value={x.testName} onChange={e => updateTest(idx, 'testName', e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG }} />
+                  </div>
+                  <div>
+                    {idx === 0 && <label style={{ display: 'block', fontSize: 11, color: TEXT_MUTED, marginBottom: 4 }}>{t.category}</label>}
+                    <select value={x.category} onChange={e => updateTest(idx, 'category', e.target.value)}
+                      style={{ padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG, cursor: 'pointer' }}>
+                      <option value="lab">🧪 {t.lab}</option>
+                      <option value="radiology">☢️ {t.radiology}</option>
+                    </select>
+                  </div>
+                  <button type="button" onClick={() => removeTestRow(idx)}
+                    style={{ background: ERROR_BG, color: ERROR_TEXT, border: 'none', borderRadius: 9, padding: '8px 12px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
+                    🗑️
+                  </button>
+                </div>
+              ))}
+
+              <button type="button" onClick={addTestRow}
+                style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 4 }}>
+                {t.addTest}
+              </button>
+            </div>
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleSave} disabled={saving}
                 style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
@@ -288,6 +343,18 @@ export default function DiagnosisTemplates() {
                     {tpl.medications.map((m, i) => (
                       <span key={i} style={{ fontSize: 11.5, background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 9px', color: TEXT_DARK }}>
                         💊 <strong>{m.drugName}</strong>{m.instructions ? ` — ${m.instructions}` : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {tpl.tests.length === 0 ? (
+                  <p style={{ fontSize: 11.5, color: '#79674D', fontStyle: 'italic', marginBottom: 8 }}>{t.noTests}</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                    {tpl.tests.map((x, i) => (
+                      <span key={i} style={{ fontSize: 11.5, background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 9px', color: TEXT_DARK }}>
+                        {x.category === 'radiology' ? '☢️' : '🧪'} <strong>{x.testName}</strong>
                       </span>
                     ))}
                   </div>

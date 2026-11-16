@@ -13,20 +13,30 @@ interface Medication {
   instructions: string | null
 }
 
+interface SuggestedTest {
+  id: string
+  testName: string
+  category: 'lab' | 'radiology'
+}
+
 interface DiagnosisAutocompleteProps {
   value: string
   onChange: (value: string) => void
   onInsertPrescriptionText: (text: string) => void
+  // ✅ اختياري — بدونه (مثلاً صفحات لسا ما ربطت حقل الفحوصات) الزر البسيط
+  // يختفي بس باقي الميزات (الأدوية) تشتغل عادي
+  onInsertTestText?: (text: string) => void
   isAr: boolean
 }
 
 // ✅ اقتراح أثناء الكتابة — يقترح تشخيصات مطابقة من قائمة العيادة الخاصة
 // (يبنيها الطبيب بنفسه من صفحة الإعدادات)، وعند اختيار واحد يعرض أدويته
 // المقترحة كأزرار إدراج بالوصفة — مافي شي يُفرض تلقائياً، كل شي قابل للتعديل
-export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, isAr }: DiagnosisAutocompleteProps) {
+export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, onInsertTestText, isAr }: DiagnosisAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [medications, setMedications] = useState<Medication[]>([])
+  const [tests, setTests] = useState<SuggestedTest[]>([])
   const [matchedName, setMatchedName] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -65,8 +75,10 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     try {
       const res = await api.get(`/diagnosistemplates/${s.id}`)
       setMedications(res.data?.medications || [])
+      setTests(res.data?.tests || [])
     } catch {
       setMedications([])
+      setTests([])
     }
   }
 
@@ -79,10 +91,19 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     medications.forEach(insertOne)
   }
 
-  // ✅ إذا المستخدم عدّل النص بعد اختيار اقتراح، ما نضل نعرض أدوية تشخيص تاني عن قصد
+  const insertOneTest = (x: SuggestedTest) => {
+    onInsertTestText?.(x.testName)
+  }
+
+  const insertAllTests = () => {
+    tests.forEach(insertOneTest)
+  }
+
+  // ✅ إذا المستخدم عدّل النص بعد اختيار اقتراح، ما نضل نعرض أدوية/تحاليل تشخيص تاني عن قصد
   useEffect(() => {
     if (matchedName && value !== matchedName) {
       setMedications([])
+      setTests([])
       setMatchedName(null)
     }
   }, [value, matchedName])
@@ -127,6 +148,26 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
           ))}
           {medications.length > 1 && (
             <button type="button" onClick={insertAll}
+              style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              {isAr ? 'إدراج الكل' : 'Insert all'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {onInsertTestText && tests.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
+            🧪 {isAr ? 'تحاليل وأشعة مقترحة:' : 'Suggested tests & radiology:'}
+          </span>
+          {tests.map(x => (
+            <button key={x.id} type="button" onClick={() => insertOneTest(x)}
+              style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              + {x.category === 'radiology' ? '☢️' : '🧪'} {x.testName}
+            </button>
+          ))}
+          {tests.length > 1 && (
+            <button type="button" onClick={insertAllTests}
               style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
               {isAr ? 'إدراج الكل' : 'Insert all'}
             </button>

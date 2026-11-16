@@ -442,6 +442,7 @@ export default function VisitWorkspace() {
                   value={form.diagnosis}
                   onChange={v => setForm({ ...form, diagnosis: v })}
                   onInsertPrescriptionText={text => setForm(f => ({ ...f, prescription: f.prescription ? `${f.prescription}\n${text}` : text }))}
+                  onInsertTestText={text => setForm(f => ({ ...f, tests: f.tests ? `${f.tests}, ${text}` : text }))}
                   isAr={isAr}
                 />
               </div>
