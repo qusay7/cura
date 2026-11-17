@@ -5,7 +5,9 @@ import { hasPermission } from '../utils/permissions'
 import { COUNTRIES, getCountryByCode, formatDateTime } from '../utils/i18n'
 import { showMessageBox } from '../utils/messageBox'
 
-// ✅ غيّر getImageUrl مع debugging:
+// ✅ الشعار مخزّن كـ /logos/xxx.png — جذر الباك اند نفسه، مش جذر الفرونت اند
+// (دومين/منفذ منفصل بالإنتاج، وريفيرس بروكسي السيرفر بيمرّر بس /api). نمرّ
+// عبر baseURL (/api) عشان يوصل فعلاً عبر نفس مسار البروكسي الشغّال أصلاً
 const getImageUrl = (path?: string | null) => {
   if (!path) return ''
 
@@ -15,7 +17,7 @@ const getImageUrl = (path?: string | null) => {
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
 
-  return `${window.location.origin}${normalizedPath}`
+  return `${api.defaults.baseURL || ''}${normalizedPath}`
 }
  
 const getStoredLang = (): 'ar' | 'en' =>

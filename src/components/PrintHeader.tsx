@@ -16,35 +16,35 @@ export default function PrintHeader({ reportTitle, lang }: { reportTitle: string
   const isAr = lang === 'ar'
 
   useEffect(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      if (user.clinicId) {
-        api.get(`/clinics/${user.clinicId}`)
-          .then(async res => {
-            const logo = res.data.logo || null
-            if (!logo) { setClinic({ name: res.data.name, logoDataUrl: null }); return }
+    // ✅ GET /clinics/{id} محصورة بـ SuperAdmin/ClinicStaff/ClinicAdmin — أي
+    // دور تاني (طبيب، استقبال...) كان ياخذ 403 صامت فيطلع الرأس بدون شعار ولا
+    // اسم عيادة. /clinics/letterhead متاحة لأي مستخدم مسجّل بالعيادة
+    api.get('/clinics/letterhead')
+      .then(async res => {
+        const logo = res.data.logo || null
+        if (!logo) { setClinic({ name: res.data.name, logoDataUrl: null }); return }
 
-            const apiOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '')
-            try {
-              // ✅ نجيب الصورة كـ Blob ونحوّلها لبيانات Base64 مضمّنة بالصفحة —
-              // يلغي الاعتماد على رابط خارجي (Cross-Origin) وقت الطباعة نهائياً،
-              // بدل الاعتماد بس على Cache المتصفح اللي بعض محركات الطباعة تتجاهله
-              const imgRes = await fetch(`${apiOrigin}${logo}`)
-              const blob = await imgRes.blob()
-              const dataUrl = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onload = () => resolve(reader.result as string)
-                reader.onerror = reject
-                reader.readAsDataURL(blob)
-              })
-              setClinic({ name: res.data.name, logoDataUrl: dataUrl })
-            } catch {
-              setClinic({ name: res.data.name, logoDataUrl: null })
-            }
+        try {
+          // ✅ نجيب الصورة كـ Blob ونحوّلها لبيانات Base64 مضمّنة بالصفحة —
+          // يلغي الاعتماد على رابط خارجي (Cross-Origin) وقت الطباعة نهائياً،
+          // بدل الاعتماد بس على Cache المتصفح اللي بعض محركات الطباعة تتجاهله.
+          // الشعار مخزّن كـ /logos/xxx.png (جذر الباك اند) — نمرّ عبر baseURL
+          // (/api) عشان يوصل عبر نفس مسار الريفيرس بروكسي الشغّال أصلاً
+          const imgRes = await fetch(`${api.defaults.baseURL || ''}${logo}`)
+          if (!imgRes.ok) throw new Error('logo fetch failed')
+          const blob = await imgRes.blob()
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(blob)
           })
-          .catch(() => {})
-      }
-    } catch { /* تجاهل */ }
+          setClinic({ name: res.data.name, logoDataUrl: dataUrl })
+        } catch {
+          setClinic({ name: res.data.name, logoDataUrl: null })
+        }
+      })
+      .catch(() => {})
   }, [])
 
   if (!clinic) return null

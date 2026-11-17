@@ -27,8 +27,11 @@ const fetchClinicLetterhead = async (): Promise<ClinicLetterhead> => {
     let logoDataUrl: string | null = null
     if (logo) {
       try {
-        const apiOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '')
-        const imgRes = await fetch(`${apiOrigin}${logo}`)
+        // ✅ الشعار مخزّن كـ /logos/xxx.png — جذر الباك اند نفسه، مش الفرونت اند.
+        // نمرّ عبر baseURL (/api) بدل جذر الفرونت اند عشان يوصل فعلاً عبر نفس
+        // مسار الريفيرس بروكسي الشغّال أصلاً (الباك اند يعرض نفس المجلد تحت /api/logos كمان)
+        const imgRes = await fetch(`${api.defaults.baseURL || ''}${logo}`)
+        if (!imgRes.ok) throw new Error('logo fetch failed')
         const blob = await imgRes.blob()
         logoDataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()

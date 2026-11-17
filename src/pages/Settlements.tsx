@@ -113,20 +113,15 @@ export default function Settlements() {
     const onLang = (e: Event) => setLang((e as CustomEvent).detail)
     window.addEventListener('cura-lang-change', onLang)
 
-    // ✅ نجيب اسم العيادة وشعارها — يُستخدمان برأس الطباعة بس (ما نعرضهم بالشاشة العادية)
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      if (user.clinicId) {
-        api.get(`/clinics/${user.clinicId}`)
-          .then(res => setClinic({ name: res.data.name, logo: res.data.logo || null }))
-          .catch(() => {})
-      }
-    } catch { /* تجاهل */ }
+    // ✅ نجيب اسم العيادة وشعارها — يُستخدمان برأس الطباعة بس (ما نعرضهم بالشاشة
+    // العادية). /clinics/letterhead متاحة لأي مستخدم مسجّل بالعيادة، بعكس
+    // /clinics/{id} المحصورة بـ SuperAdmin/ClinicStaff/ClinicAdmin
+    api.get('/clinics/letterhead')
+      .then(res => setClinic({ name: res.data.name, logo: res.data.logo || null }))
+      .catch(() => {})
 
     return () => window.removeEventListener('cura-lang-change', onLang)
   }, [])
-
-  const apiOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '')
 
   return (
     <div className="settle-shell" style={{ fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif", direction: isAr ? 'rtl' : 'ltr', background: '#F8FAFA', minHeight: '100vh', padding: 24 }}>
@@ -139,7 +134,7 @@ export default function Settlements() {
               <p style={{ fontSize: 16, fontWeight: 700, color: TEXT_DARK, margin: 0 }}>{clinic.name}</p>
               <p style={{ fontSize: 11, color: TEXT_MUTED, margin: '2px 0 0' }}>{t.title}</p>
             </div>
-            {clinic.logo && <img src={`${apiOrigin}${clinic.logo}`} alt="logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />}
+            {clinic.logo && <img src={`${api.defaults.baseURL || ''}${clinic.logo}`} alt="logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />}
           </div>
         )}
 
