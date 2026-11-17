@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { hasPermission } from '../utils/permissions'
+import SearchableSelect from '../components/SearchableSelect'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../styles/theme'
 import { showMessageBox } from '../utils/messageBox'
 
@@ -30,6 +31,8 @@ const T = {
     tests: 'التحاليل والأشعة المقترحة', testName: 'اسم التحليل/الأشعة', category: 'النوع',
     lab: 'تحليل مخبري', radiology: 'أشعة', addTest: '+ إضافة تحليل/أشعة',
     noTests: 'بدون تحاليل أو أشعة مقترحة',
+    procedures: 'الإجراءات المقترحة', pickProcedure: 'اختر إجراء...', needsNursingLabel: '🩺 يحتاج تنفيذ تمريض',
+    addProcedure: '+ إضافة إجراء', noProcedures: 'بدون إجراءات مقترحة',
     save: 'حفظ', cancel: 'إلغاء', saving: 'جارٍ الحفظ...',
     edit: 'تعديل', delete: 'حذف', noTemplates: 'لا توجد تشخيصات محفوظة — اضغط "إضافة تشخيص" للبدء',
     loading: 'جاري التحميل...', confirmDelete: 'متأكد تبي تحذف هذا التشخيص؟',
@@ -47,6 +50,8 @@ const T = {
     tests: 'Suggested Tests & Radiology', testName: 'Test/Radiology Name', category: 'Type',
     lab: 'Lab Test', radiology: 'Radiology', addTest: '+ Add Test/Radiology',
     noTests: 'No suggested tests or radiology',
+    procedures: 'Suggested Procedures', pickProcedure: 'Pick a procedure...', needsNursingLabel: '🩺 Needs nursing to perform',
+    addProcedure: '+ Add Procedure', noProcedures: 'No suggested procedures',
     save: 'Save', cancel: 'Cancel', saving: 'Saving...',
     edit: 'Edit', delete: 'Delete', noTemplates: 'No diagnoses saved yet — click "Add Diagnosis" to start',
     loading: 'Loading...', confirmDelete: 'Are you sure you want to delete this diagnosis?',
@@ -58,18 +63,22 @@ const T = {
 
 interface Medication { id?: string; drugName: string; instructions: string }
 interface Test { id?: string; testName: string; category: 'lab' | 'radiology' }
-interface Template { id: string; name: string; medications: Medication[]; tests: Test[] }
+interface TemplateProcedure { id?: string; procedureId: string; name?: string; nameEn?: string | null; defaultPrice?: number | null; needsNursing: boolean }
+interface Template { id: string; name: string; medications: Medication[]; tests: Test[]; procedures: TemplateProcedure[] }
+interface CatalogProcedure { id: string; name: string; nameEn: string | null }
 
 const emptyForm = {
   name: '',
   medications: [{ drugName: '', instructions: '' }] as Medication[],
   tests: [{ testName: '', category: 'lab' }] as Test[],
+  procedures: [{ procedureId: '', needsNursing: false }] as TemplateProcedure[],
 }
 
 export default function DiagnosisTemplates() {
   const navigate = useNavigate()
   const [lang, setLang] = useState<'ar' | 'en'>(getStoredLang())
   const [templates, setTemplates] = useState<Template[]>([])
+  const [catalog, setCatalog] = useState<CatalogProcedure[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -107,6 +116,10 @@ export default function DiagnosisTemplates() {
 
   useEffect(() => { fetchAll() }, [])
 
+  useEffect(() => {
+    api.get('/procedures').then(res => setCatalog(res.data)).catch(() => {})
+  }, [])
+
   const openAdd = () => {
     setEditId(null)
     setForm(emptyForm)
@@ -123,6 +136,9 @@ export default function DiagnosisTemplates() {
       tests: tpl.tests.length > 0
         ? tpl.tests.map(x => ({ testName: x.testName, category: x.category }))
         : [{ testName: '', category: 'lab' }],
+      procedures: tpl.procedures.length > 0
+        ? tpl.procedures.map(p => ({ procedureId: p.procedureId, needsNursing: p.needsNursing }))
+        : [{ procedureId: '', needsNursing: false }],
     })
     setShowForm(true)
   }
@@ -141,6 +157,13 @@ export default function DiagnosisTemplates() {
   const addTestRow = () => setForm(f => ({ ...f, tests: [...f.tests, { testName: '', category: 'lab' }] }))
   const removeTestRow = (idx: number) => setForm(f => ({ ...f, tests: f.tests.filter((_, i) => i !== idx) }))
 
+  const updateProcedure = (idx: number, field: 'procedureId' | 'needsNursing', value: string | boolean) => {
+    setForm(f => ({ ...f, procedures: f.procedures.map((p, i) => i === idx ? { ...p, [field]: value } : p) }))
+  }
+
+  const addProcedureRow = () => setForm(f => ({ ...f, procedures: [...f.procedures, { procedureId: '', needsNursing: false }] }))
+  const removeProcedureRow = (idx: number) => setForm(f => ({ ...f, procedures: f.procedures.filter((_, i) => i !== idx) }))
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       showMessageBox(t.nameRequired, 'warning')
@@ -156,6 +179,9 @@ export default function DiagnosisTemplates() {
         tests: form.tests
           .filter(x => x.testName.trim())
           .map(x => ({ testName: x.testName.trim(), category: x.category })),
+        procedures: form.procedures
+          .filter(p => p.procedureId)
+          .map(p => ({ procedureId: p.procedureId, needsNursing: p.needsNursing })),
       }
 
       if (editId) {
@@ -292,6 +318,33 @@ export default function DiagnosisTemplates() {
               </button>
             </div>
 
+            <div style={{ background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, marginBottom: 12 }}>💉 {t.procedures}</p>
+
+              {form.procedures.map((p, idx) => (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'end' }}>
+                  <div>
+                    <SearchableSelect isRtl={isAr} value={p.procedureId} onChange={v => updateProcedure(idx, 'procedureId', v)}
+                      placeholder={t.pickProcedure}
+                      options={catalog.map(c => ({ value: c.id, label: isAr ? c.name : (c.nameEn || c.name) }))} />
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: TEXT_MUTED, cursor: 'pointer', whiteSpace: 'nowrap', paddingBottom: 8 }}>
+                    <input type="checkbox" checked={p.needsNursing} onChange={e => updateProcedure(idx, 'needsNursing', e.target.checked)} />
+                    {t.needsNursingLabel}
+                  </label>
+                  <button type="button" onClick={() => removeProcedureRow(idx)}
+                    style={{ background: ERROR_BG, color: ERROR_TEXT, border: 'none', borderRadius: 9, padding: '8px 12px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
+                    🗑️
+                  </button>
+                </div>
+              ))}
+
+              <button type="button" onClick={addProcedureRow}
+                style={{ background: PRIMARY_SOFT, color: PRIMARY, border: 'none', borderRadius: 9, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 4 }}>
+                {t.addProcedure}
+              </button>
+            </div>
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleSave} disabled={saving}
                 style={{ background: PRIMARY, color: '#FFF', border: 'none', borderRadius: 12, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
@@ -355,6 +408,18 @@ export default function DiagnosisTemplates() {
                     {tpl.tests.map((x, i) => (
                       <span key={i} style={{ fontSize: 11.5, background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 9px', color: TEXT_DARK }}>
                         {x.category === 'radiology' ? '☢️' : '🧪'} <strong>{x.testName}</strong>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {tpl.procedures.length === 0 ? (
+                  <p style={{ fontSize: 11.5, color: '#79674D', fontStyle: 'italic', marginBottom: 8 }}>{t.noProcedures}</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                    {tpl.procedures.map((p, i) => (
+                      <span key={i} style={{ fontSize: 11.5, background: '#F8FAFA', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 9px', color: TEXT_DARK }}>
+                        💉 <strong>{isAr ? p.name : (p.nameEn || p.name)}</strong>{p.needsNursing ? ' · 🩺' : ''}
                       </span>
                     ))}
                   </div>

@@ -100,6 +100,7 @@ export default function VisitWorkspace() {
 
   const [form, setForm] = useState({ diagnosis: '', prescription: '', notes: '', nextVisitDate: '', bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '', reportNotes: '' })
   const [labRefreshTick, setLabRefreshTick] = useState(0)
+  const [procedureRefreshTick, setProcedureRefreshTick] = useState(0)
   const [showSickLeave, setShowSickLeave] = useState(false)
   const [templates, setTemplates] = useState<VisitTemplate[]>([])
   const [templateId, setTemplateId] = useState('')
@@ -247,6 +248,22 @@ export default function VisitWorkspace() {
       setLabRefreshTick(n => n + 1)
     } catch {
       showMessageBox(isAr ? 'فشل طلب التحليل' : 'Failed to order the test', 'error')
+    }
+  }
+
+  // ✅ اقتراح إجراء من قائمة التشخيص — ينشئ VisitProcedureItem فعلي بسعره من
+  // الكتالوج، ويحدّث قائمة 💉 الإجراءات تحت مباشرة عبر procedureRefreshTick
+  const insertSuggestedProcedure = async (proc: { procedureId: string; price: number | null; needsNursing: boolean }) => {
+    if (!appointmentId) return
+    try {
+      await api.post(`/appointments/${appointmentId}/procedures`, {
+        procedureId: proc.procedureId,
+        price: proc.price,
+        needsNursing: proc.needsNursing,
+      })
+      setProcedureRefreshTick(n => n + 1)
+    } catch {
+      showMessageBox(isAr ? 'فشلت إضافة الإجراء' : 'Failed to add the procedure', 'error')
     }
   }
 
@@ -458,6 +475,7 @@ export default function VisitWorkspace() {
                   onChange={v => setForm({ ...form, diagnosis: v })}
                   onInsertPrescriptionText={text => setForm(f => ({ ...f, prescription: f.prescription ? `${f.prescription}\n${text}` : text }))}
                   onInsertTest={insertSuggestedTest}
+                  onInsertProcedure={insertSuggestedProcedure}
                   isAr={isAr}
                 />
               </div>
@@ -535,7 +553,7 @@ export default function VisitWorkspace() {
               <VoiceRecorder patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="report-audio" />
             </div>
 
-            {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} doctorName={appointment?.doctorName} />}
+            {appointmentId && <ProceduresPicker parentType="appointment" parentId={appointmentId} lang={lang} doctorName={appointment?.doctorName} refreshTrigger={procedureRefreshTick} />}
             {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} refreshTrigger={labRefreshTick} doctorName={appointment?.doctorName} />}
             {appointmentId && appointment && <LabOrderWidget patientId={appointment.patientId} appointmentId={appointmentId} lang={lang} category="radiology" refreshTrigger={labRefreshTick} doctorName={appointment?.doctorName} />}
 

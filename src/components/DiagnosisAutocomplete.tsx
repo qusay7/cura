@@ -19,6 +19,15 @@ interface SuggestedTest {
   category: 'lab' | 'radiology'
 }
 
+interface SuggestedProcedure {
+  id: string
+  procedureId: string
+  name: string
+  nameEn: string | null
+  defaultPrice: number | null
+  needsNursing: boolean
+}
+
 interface DiagnosisAutocompleteProps {
   value: string
   onChange: (value: string) => void
@@ -27,17 +36,22 @@ interface DiagnosisAutocompleteProps {
   // الاقتراحات يختفي بس باقي الميزات (الأدوية) تشتغل عادي. ينشئ طلب تحليل/أشعة
   // حقيقي (مش نص) — السبب والفئة (lab/radiology) موجودين بالاقتراح نفسه
   onInsertTest?: (test: { testName: string; category: 'lab' | 'radiology' }) => void
+  // ✅ اختياري — نفس مبدأ onInsertTest، بس ينشئ إجراء حقيقي (VisitProcedureItem)
+  // بسعره من الكتالوج، مع needsNursing المُعدّ مسبقاً بالقالب (قابل للتعديل لاحقاً
+  // من صفحة الإجراءات نفسها، مش هون)
+  onInsertProcedure?: (proc: { procedureId: string; price: number | null; needsNursing: boolean }) => void
   isAr: boolean
 }
 
 // ✅ اقتراح أثناء الكتابة — يقترح تشخيصات مطابقة من قائمة العيادة الخاصة
 // (يبنيها الطبيب بنفسه من صفحة الإعدادات)، وعند اختيار واحد يعرض أدويته
 // المقترحة كأزرار إدراج بالوصفة — مافي شي يُفرض تلقائياً، كل شي قابل للتعديل
-export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, onInsertTest, isAr }: DiagnosisAutocompleteProps) {
+export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, onInsertTest, onInsertProcedure, isAr }: DiagnosisAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [medications, setMedications] = useState<Medication[]>([])
   const [tests, setTests] = useState<SuggestedTest[]>([])
+  const [procedures, setProcedures] = useState<SuggestedProcedure[]>([])
   const [matchedName, setMatchedName] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -77,9 +91,11 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
       const res = await api.get(`/diagnosistemplates/${s.id}`)
       setMedications(res.data?.medications || [])
       setTests(res.data?.tests || [])
+      setProcedures(res.data?.procedures || [])
     } catch {
       setMedications([])
       setTests([])
+      setProcedures([])
     }
   }
 
@@ -100,11 +116,20 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     tests.forEach(insertOneTest)
   }
 
-  // ✅ إذا المستخدم عدّل النص بعد اختيار اقتراح، ما نضل نعرض أدوية/تحاليل تشخيص تاني عن قصد
+  const insertOneProcedure = (p: SuggestedProcedure) => {
+    onInsertProcedure?.({ procedureId: p.procedureId, price: p.defaultPrice, needsNursing: p.needsNursing })
+  }
+
+  const insertAllProcedures = () => {
+    procedures.forEach(insertOneProcedure)
+  }
+
+  // ✅ إذا المستخدم عدّل النص بعد اختيار اقتراح، ما نضل نعرض أدوية/تحاليل/إجراءات تشخيص تاني عن قصد
   useEffect(() => {
     if (matchedName && value !== matchedName) {
       setMedications([])
       setTests([])
+      setProcedures([])
       setMatchedName(null)
     }
   }, [value, matchedName])
@@ -169,6 +194,26 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
           ))}
           {tests.length > 1 && (
             <button type="button" onClick={insertAllTests}
+              style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              {isAr ? 'إدراج الكل' : 'Insert all'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {onInsertProcedure && procedures.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
+            💉 {isAr ? 'إجراءات مقترحة:' : 'Suggested procedures:'}
+          </span>
+          {procedures.map(p => (
+            <button key={p.id} type="button" onClick={() => insertOneProcedure(p)}
+              style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              + 💉 {isAr ? p.name : (p.nameEn || p.name)}{p.needsNursing ? ' 🩺' : ''}
+            </button>
+          ))}
+          {procedures.length > 1 && (
+            <button type="button" onClick={insertAllProcedures}
               style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
               {isAr ? 'إدراج الكل' : 'Insert all'}
             </button>
