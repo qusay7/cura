@@ -28,6 +28,16 @@ interface SuggestedProcedure {
   needsNursing: boolean
 }
 
+// ✅ تشخيص واحد من بين أكثر من تشخيص مكتوبين بنفس الحقل (مثلاً "التهاب حلق
+// وحرارة") — كل واحد له اقتراحاته المستقلة
+interface MatchedTemplate {
+  id: string
+  name: string
+  medications: Medication[]
+  tests: SuggestedTest[]
+  procedures: SuggestedProcedure[]
+}
+
 interface DiagnosisAutocompleteProps {
   value: string
   onChange: (value: string) => void
@@ -43,34 +53,87 @@ interface DiagnosisAutocompleteProps {
   isAr: boolean
 }
 
+// ✅ آخر "قطعة" بالنص الحالي (بعد آخر فاصلة/سطر جديد) — تُستخدم لاقتراح
+// التشخيص اللحظي وقت الكتابة بدون ما يفسدها وجود تشخيص سابق بنفس الحقل
+const lastSegment = (text: string) => {
+  const parts = text.split(/[,،\n;]/)
+  return parts[parts.length - 1].trim()
+}
+
 // ✅ اقتراح أثناء الكتابة — يقترح تشخيصات مطابقة من قائمة العيادة الخاصة
-// (يبنيها الطبيب بنفسه من صفحة الإعدادات)، وعند اختيار واحد يعرض أدويته
-// المقترحة كأزرار إدراج بالوصفة — مافي شي يُفرض تلقائياً، كل شي قابل للتعديل
+// (يبنيها الطبيب بنفسه من صفحة الإعدادات). الحقل يدعم كتابة أكثر من تشخيص
+// بنفس الوقت (مفصولين بفاصلة مثلاً) — وتُعرض اقتراحات الأدوية/التحاليل/
+// الإجراءات لكل تشخيص مطابق منهم كلهم معاً، كل واحد بقسمه الخاص. مافي شي
+// يُفرض تلقائياً، كل شي قابل للتعديل
 export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescriptionText, onInsertTest, onInsertProcedure, isAr }: DiagnosisAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
-  const [medications, setMedications] = useState<Medication[]>([])
-  const [tests, setTests] = useState<SuggestedTest[]>([])
-  const [procedures, setProcedures] = useState<SuggestedProcedure[]>([])
-  const [matchedName, setMatchedName] = useState<string | null>(null)
+  const [matches, setMatches] = useState<MatchedTemplate[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const matchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const detailCacheRef = useRef<Map<string, MatchedTemplate>>(new Map())
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // ✅ اقتراح لحظي أثناء الكتابة — على آخر قطعة بالنص فقط، مش كامل الحقل
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
-    if (!value || value.trim().length < 2) {
+    const segment = lastSegment(value)
+    if (segment.length < 2) {
       setSuggestions([])
       return
     }
 
     debounceRef.current = setTimeout(() => {
-      api.get('/diagnosistemplates/search', { params: { q: value.trim() } })
+      api.get('/diagnosistemplates/search', { params: { q: segment } })
         .then(res => setSuggestions(res.data || []))
         .catch(() => setSuggestions([]))
     }, 300)
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [value])
+
+  // ✅ كشف كل التشخيصات المطابقة ضمن النص الكامل (بغض النظر عن كيف انكتبت —
+  // اختيار من القائمة أو كتابة حرة) وجلب اقتراحات كل واحد منها
+  useEffect(() => {
+    if (matchDebounceRef.current) clearTimeout(matchDebounceRef.current)
+
+    if (!value || value.trim().length < 2) {
+      setMatches([])
+      return
+    }
+
+    matchDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get('/diagnosistemplates/matchall', { params: { text: value } })
+        const found: { id: string; name: string }[] = res.data || []
+
+        const detailed = await Promise.all(found.map(async f => {
+          const cached = detailCacheRef.current.get(f.id)
+          if (cached) return cached
+          try {
+            const d = await api.get(`/diagnosistemplates/${f.id}`)
+            const built: MatchedTemplate = {
+              id: f.id,
+              name: f.name,
+              medications: d.data?.medications || [],
+              tests: d.data?.tests || [],
+              procedures: d.data?.procedures || [],
+            }
+            detailCacheRef.current.set(f.id, built)
+            return built
+          } catch {
+            return null
+          }
+        }))
+
+        setMatches(detailed.filter((m): m is MatchedTemplate => m !== null))
+      } catch {
+        setMatches([])
+      }
+    }, 400)
+
+    return () => { if (matchDebounceRef.current) clearTimeout(matchDebounceRef.current) }
   }, [value])
 
   useEffect(() => {
@@ -83,20 +146,13 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const pickSuggestion = async (s: Suggestion) => {
-    onChange(s.name)
+  // ✅ يستبدل فقط آخر قطعة بالنص (يلي كان ينكتب) بالاسم المختار، ويحافظ على
+  // أي تشخيص سابق قبلها بنفس الحقل
+  const pickSuggestion = (s: Suggestion) => {
+    const idx = Math.max(value.lastIndexOf(','), value.lastIndexOf('،'), value.lastIndexOf('\n'), value.lastIndexOf(';'))
+    const prefix = idx >= 0 ? value.slice(0, idx + 1) + ' ' : ''
+    onChange(prefix + s.name)
     setShowDropdown(false)
-    setMatchedName(s.name)
-    try {
-      const res = await api.get(`/diagnosistemplates/${s.id}`)
-      setMedications(res.data?.medications || [])
-      setTests(res.data?.tests || [])
-      setProcedures(res.data?.procedures || [])
-    } catch {
-      setMedications([])
-      setTests([])
-      setProcedures([])
-    }
   }
 
   const insertOne = (m: Medication) => {
@@ -104,35 +160,13 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     onInsertPrescriptionText(text)
   }
 
-  const insertAll = () => {
-    medications.forEach(insertOne)
-  }
-
   const insertOneTest = (x: SuggestedTest) => {
     onInsertTest?.({ testName: x.testName, category: x.category })
-  }
-
-  const insertAllTests = () => {
-    tests.forEach(insertOneTest)
   }
 
   const insertOneProcedure = (p: SuggestedProcedure) => {
     onInsertProcedure?.({ procedureId: p.procedureId, price: p.defaultPrice, needsNursing: p.needsNursing })
   }
-
-  const insertAllProcedures = () => {
-    procedures.forEach(insertOneProcedure)
-  }
-
-  // ✅ إذا المستخدم عدّل النص بعد اختيار اقتراح، ما نضل نعرض أدوية/تحاليل/إجراءات تشخيص تاني عن قصد
-  useEffect(() => {
-    if (matchedName && value !== matchedName) {
-      setMedications([])
-      setTests([])
-      setProcedures([])
-      setMatchedName(null)
-    }
-  }, [value, matchedName])
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -161,65 +195,73 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
         </div>
       )}
 
-      {medications.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
-            💊 {isAr ? 'أدوية مقترحة:' : 'Suggested medications:'}
-          </span>
-          {medications.map(m => (
-            <button key={m.id} type="button" onClick={() => insertOne(m)}
-              style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              + {m.drugName}
-            </button>
-          ))}
-          {medications.length > 1 && (
-            <button type="button" onClick={insertAll}
-              style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              {isAr ? 'إدراج الكل' : 'Insert all'}
-            </button>
+      {matches.map(m => (
+        <div key={m.id} style={{ marginTop: 10, paddingTop: 8, borderTop: `1px dashed ${BORDER}` }}>
+          {matches.length > 1 && (
+            <p style={{ fontSize: 10.5, fontWeight: 700, color: TEXT_DARK, margin: '0 0 6px' }}>🔹 {m.name}</p>
           )}
-        </div>
-      )}
 
-      {onInsertTest && tests.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
-            🧪 {isAr ? 'تحاليل وأشعة مقترحة:' : 'Suggested tests & radiology:'}
-          </span>
-          {tests.map(x => (
-            <button key={x.id} type="button" onClick={() => insertOneTest(x)}
-              style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              + {x.category === 'radiology' ? '☢️' : '🧪'} {x.testName}
-            </button>
-          ))}
-          {tests.length > 1 && (
-            <button type="button" onClick={insertAllTests}
-              style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              {isAr ? 'إدراج الكل' : 'Insert all'}
-            </button>
+          {m.medications.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
+                💊 {isAr ? 'أدوية مقترحة:' : 'Suggested medications:'}
+              </span>
+              {m.medications.map(med => (
+                <button key={med.id} type="button" onClick={() => insertOne(med)}
+                  style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  + {med.drugName}
+                </button>
+              ))}
+              {m.medications.length > 1 && (
+                <button type="button" onClick={() => m.medications.forEach(insertOne)}
+                  style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  {isAr ? 'إدراج الكل' : 'Insert all'}
+                </button>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {onInsertProcedure && procedures.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
-            💉 {isAr ? 'إجراءات مقترحة:' : 'Suggested procedures:'}
-          </span>
-          {procedures.map(p => (
-            <button key={p.id} type="button" onClick={() => insertOneProcedure(p)}
-              style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              + 💉 {isAr ? p.name : (p.nameEn || p.name)}{p.needsNursing ? ' 🩺' : ''}
-            </button>
-          ))}
-          {procedures.length > 1 && (
-            <button type="button" onClick={insertAllProcedures}
-              style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              {isAr ? 'إدراج الكل' : 'Insert all'}
-            </button>
+          {onInsertTest && m.tests.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
+                🧪 {isAr ? 'تحاليل وأشعة مقترحة:' : 'Suggested tests & radiology:'}
+              </span>
+              {m.tests.map(x => (
+                <button key={x.id} type="button" onClick={() => insertOneTest(x)}
+                  style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  + {x.category === 'radiology' ? '☢️' : '🧪'} {x.testName}
+                </button>
+              ))}
+              {m.tests.length > 1 && (
+                <button type="button" onClick={() => m.tests.forEach(insertOneTest)}
+                  style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  {isAr ? 'إدراج الكل' : 'Insert all'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {onInsertProcedure && m.procedures.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
+                💉 {isAr ? 'إجراءات مقترحة:' : 'Suggested procedures:'}
+              </span>
+              {m.procedures.map(p => (
+                <button key={p.id} type="button" onClick={() => insertOneProcedure(p)}
+                  style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  + 💉 {isAr ? p.name : (p.nameEn || p.name)}{p.needsNursing ? ' 🩺' : ''}
+                </button>
+              ))}
+              {m.procedures.length > 1 && (
+                <button type="button" onClick={() => m.procedures.forEach(insertOneProcedure)}
+                  style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  {isAr ? 'إدراج الكل' : 'Insert all'}
+                </button>
+              )}
+            </div>
           )}
         </div>
-      )}
+      ))}
     </div>
   )
 }
