@@ -24,16 +24,21 @@ interface ProceduresPickerProps {
 }
 
 interface CatalogItem { id: string; name: string; nameEn: string | null; defaultPrice: number | null }
-interface AddedItem { id: string; procedureId: string | null; name: string; price: number | null; createdAt: string; doctorName?: string | null }
+interface AddedItem {
+  id: string; procedureId: string | null; name: string; price: number | null; createdAt: string; doctorName?: string | null
+  needsNursing?: boolean; nursingDone?: boolean
+}
 
 const T = {
   ar: {
     title: '💉 الإجراءات', add: 'إضافة', pickPlaceholder: 'اختر إجراء...',
     price: 'السعر', total: 'الإجمالي', remove: 'حذف', noItems: 'لا توجد إجراءات مضافة لهذي الزيارة',
+    needsNursing: '🩺 يحتاج تنفيذ تمريض', pendingNursing: '🩺 بانتظار التمريض', nursingDone: '🩺 نفّذته التمريض ✅',
   },
   en: {
     title: '💉 Procedures', add: 'Add', pickPlaceholder: 'Pick a procedure...',
     price: 'Price', total: 'Total', remove: 'Remove', noItems: 'No procedures added to this visit',
+    needsNursing: '🩺 Needs nursing to perform', pendingNursing: '🩺 Awaiting nursing', nursingDone: '🩺 Done by nursing ✅',
   },
 }
 
@@ -49,6 +54,7 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
   const [items, setItems] = useState<AddedItem[]>([])
   const [selectedProcedureId, setSelectedProcedureId] = useState('')
   const [price, setPrice] = useState('')
+  const [needsNursing, setNeedsNursing] = useState(false)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
@@ -75,9 +81,11 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
       await api.post(`${basePath}/procedures`, {
         procedureId: selectedProcedureId,
         price: price ? parseFloat(price) : null,
+        needsNursing,
       })
       setSelectedProcedureId('')
       setPrice('')
+      setNeedsNursing(false)
       fetchItems()
     } catch {
       setError(isAr ? 'فشلت إضافة الإجراء' : 'Failed to add the procedure')
@@ -133,7 +141,7 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 10, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 10, marginBottom: 10 }}>
         <SearchableSelect isRtl={isAr} value={selectedProcedureId} onChange={handlePick}
           placeholder={t.pickPlaceholder}
           options={catalog.map(c => ({ value: c.id, label: isAr ? c.name : (c.nameEn || c.name) }))} />
@@ -144,6 +152,11 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
           + {t.add}
         </button>
       </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: TEXT_MUTED, marginBottom: 12, cursor: 'pointer', width: 'fit-content' }}>
+        <input type="checkbox" checked={needsNursing} onChange={e => setNeedsNursing(e.target.checked)} />
+        {t.needsNursing}
+      </label>
 
       {error && <p style={{ fontSize: 11, color: '#EF4444', margin: '0 0 10px' }}>⚠️ {error}</p>}
 
@@ -158,6 +171,11 @@ export default function ProceduresPicker({ parentType, parentId, lang, onTotalCh
                 <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>
                   🕒 {formatTime(item.createdAt)}{item.doctorName ? ` · 👨‍⚕️ ${item.doctorName}` : ''}
                 </div>
+                {item.needsNursing && (
+                  <div style={{ fontSize: 10.5, marginTop: 3, fontWeight: 600, color: item.nursingDone ? '#22C55E' : '#B8892A' }}>
+                    {item.nursingDone ? t.nursingDone : t.pendingNursing}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: PRIMARY, fontFamily: "'Inter',sans-serif" }}>

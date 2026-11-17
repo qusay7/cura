@@ -6,6 +6,8 @@ import { showMessageBox } from '../utils/messageBox'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
+interface PendingProcedure { id: string; name: string }
+
 interface NursingItem {
   type: 'appointment' | 'emergency'
   id: string
@@ -18,6 +20,7 @@ interface NursingItem {
   bloodSugar: number | null
   heartRate: number | null
   respiratoryRate: number | null
+  pendingProcedures: PendingProcedure[]
 }
 
 const T = {
@@ -30,6 +33,7 @@ const T = {
     bloodSugar: 'سكر الدم', heartRate: 'النبض', respiratoryRate: 'التنفس',
     save: '✅ حفظ', saving: 'جارٍ الحفظ...', edit: '✏️ تعديل', vitalsRecorded: 'تم أخذ العلامات الحيوية',
     errorOccurred: 'حدث خطأ',
+    proceduresToPerform: '💉 إجراءات بانتظار التنفيذ', markDone: '✅ تم',
   },
   en: {
     title: '🩺 Nursing Queue', subtitle: "Today's appointments and active ER cases — record vitals before the doctor sees the patient",
@@ -40,6 +44,7 @@ const T = {
     bloodSugar: 'Blood Sugar', heartRate: 'Heart Rate', respiratoryRate: 'Resp. Rate',
     save: '✅ Save', saving: 'Saving...', edit: '✏️ Edit', vitalsRecorded: 'Vitals recorded',
     errorOccurred: 'An error occurred',
+    proceduresToPerform: '💉 Procedures awaiting execution', markDone: '✅ Done',
   },
 }
 
@@ -53,6 +58,7 @@ export default function NursingQueue() {
   const [openFormId, setOpenFormId] = useState<string | null>(null)
   const [form, setForm] = useState({ bloodPressure: '', bloodSugar: '', heartRate: '', respiratoryRate: '' })
   const [saving, setSaving] = useState(false)
+  const [markingDoneId, setMarkingDoneId] = useState<string | null>(null)
 
   useEffect(() => {
     const handleLangChange = (e: Event) => setLang((e as CustomEvent).detail)
@@ -108,6 +114,18 @@ export default function NursingQueue() {
     }
   }
 
+  const handleMarkProcedureDone = async (procedureId: string) => {
+    setMarkingDoneId(procedureId)
+    try {
+      await api.put(`/visitnotes/procedures/${procedureId}/nursing-done`)
+      fetchItems()
+    } catch (err: any) {
+      showMessageBox(err.response?.data || t.errorOccurred, 'error')
+    } finally {
+      setMarkingDoneId(null)
+    }
+  }
+
   const inputStyle: React.CSSProperties = { padding: '8px 10px', border: `1px solid ${BORDER}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: TEXT_DARK, background: CARD_BG }
 
   return (
@@ -142,6 +160,22 @@ export default function NursingQueue() {
                           {item.bloodSugar != null && <span>🍬 {item.bloodSugar}</span>}
                           {item.heartRate != null && <span>❤️ {item.heartRate}</span>}
                           {item.respiratoryRate != null && <span>🌬️ {item.respiratoryRate}</span>}
+                        </div>
+                      )}
+                      {item.pendingProcedures.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#B8892A', marginBottom: 4 }}>{t.proceduresToPerform}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {item.pendingProcedures.map(p => (
+                              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 12, color: TEXT_DARK }}>💉 {p.name}</span>
+                                <button onClick={() => handleMarkProcedureDone(p.id)} disabled={markingDoneId === p.id}
+                                  style={{ background: '#F0F8F0', color: '#22C55E', border: 'none', borderRadius: 7, padding: '3px 9px', fontSize: 11, fontWeight: 700, cursor: markingDoneId === p.id ? 'not-allowed' : 'pointer', opacity: markingDoneId === p.id ? 0.6 : 1 }}>
+                                  {t.markDone}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
