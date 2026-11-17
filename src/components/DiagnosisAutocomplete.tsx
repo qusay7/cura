@@ -69,6 +69,9 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [matches, setMatches] = useState<MatchedTemplate[]>([])
+  // ✅ تمنع إدراج نفس الاقتراح (تحت نفس التشخيص) أكثر من مرة لو ضغط عليه
+  // الطبيب غلط بالخطأ مرتين — بعد أول إدراج يصير الزر معطّل ويتحول لعلامة ✓
+  const [insertedKeys, setInsertedKeys] = useState<Set<string>>(new Set())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const matchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const detailCacheRef = useRef<Map<string, MatchedTemplate>>(new Map())
@@ -155,17 +158,25 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     setShowDropdown(false)
   }
 
-  const insertOne = (m: Medication) => {
+  const markInserted = (key: string) => setInsertedKeys(prev => new Set(prev).add(key))
+
+  const insertOne = (key: string, m: Medication) => {
+    if (insertedKeys.has(key)) return
     const text = m.instructions ? `${m.drugName} — ${m.instructions}` : m.drugName
     onInsertPrescriptionText(text)
+    markInserted(key)
   }
 
-  const insertOneTest = (x: SuggestedTest) => {
+  const insertOneTest = (key: string, x: SuggestedTest) => {
+    if (insertedKeys.has(key)) return
     onInsertTest?.({ testName: x.testName, category: x.category })
+    markInserted(key)
   }
 
-  const insertOneProcedure = (p: SuggestedProcedure) => {
+  const insertOneProcedure = (key: string, p: SuggestedProcedure) => {
+    if (insertedKeys.has(key)) return
     onInsertProcedure?.({ procedureId: p.procedureId, price: p.defaultPrice, needsNursing: p.needsNursing })
+    markInserted(key)
   }
 
   return (
@@ -206,14 +217,18 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
               <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
                 💊 {isAr ? 'أدوية مقترحة:' : 'Suggested medications:'}
               </span>
-              {m.medications.map(med => (
-                <button key={med.id} type="button" onClick={() => insertOne(med)}
-                  style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                  + {med.drugName}
-                </button>
-              ))}
+              {m.medications.map(med => {
+                const key = `${m.id}:med:${med.id}`
+                const done = insertedKeys.has(key)
+                return (
+                  <button key={med.id} type="button" disabled={done} onClick={() => insertOne(key, med)}
+                    style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: done ? CARD_BG : PRIMARY_SOFT, color: done ? TEXT_MUTED : PRIMARY, fontSize: 11, fontWeight: 600, cursor: done ? 'default' : 'pointer', opacity: done ? 0.6 : 1 }}>
+                    {done ? '✓' : '+'} {med.drugName}
+                  </button>
+                )
+              })}
               {m.medications.length > 1 && (
-                <button type="button" onClick={() => m.medications.forEach(insertOne)}
+                <button type="button" onClick={() => m.medications.forEach(med => insertOne(`${m.id}:med:${med.id}`, med))}
                   style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                   {isAr ? 'إدراج الكل' : 'Insert all'}
                 </button>
@@ -226,14 +241,18 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
               <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
                 🧪 {isAr ? 'تحاليل وأشعة مقترحة:' : 'Suggested tests & radiology:'}
               </span>
-              {m.tests.map(x => (
-                <button key={x.id} type="button" onClick={() => insertOneTest(x)}
-                  style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                  + {x.category === 'radiology' ? '☢️' : '🧪'} {x.testName}
-                </button>
-              ))}
+              {m.tests.map(x => {
+                const key = `${m.id}:test:${x.id}`
+                const done = insertedKeys.has(key)
+                return (
+                  <button key={x.id} type="button" disabled={done} onClick={() => insertOneTest(key, x)}
+                    style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: done ? CARD_BG : PRIMARY_SOFT, color: done ? TEXT_MUTED : PRIMARY, fontSize: 11, fontWeight: 600, cursor: done ? 'default' : 'pointer', opacity: done ? 0.6 : 1 }}>
+                    {done ? '✓' : '+'} {x.category === 'radiology' ? '☢️' : '🧪'} {x.testName}
+                  </button>
+                )
+              })}
               {m.tests.length > 1 && (
-                <button type="button" onClick={() => m.tests.forEach(insertOneTest)}
+                <button type="button" onClick={() => m.tests.forEach(x => insertOneTest(`${m.id}:test:${x.id}`, x))}
                   style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                   {isAr ? 'إدراج الكل' : 'Insert all'}
                 </button>
@@ -246,14 +265,18 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
               <span style={{ fontSize: 10.5, color: TEXT_MUTED }}>
                 💉 {isAr ? 'إجراءات مقترحة:' : 'Suggested procedures:'}
               </span>
-              {m.procedures.map(p => (
-                <button key={p.id} type="button" onClick={() => insertOneProcedure(p)}
-                  style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: PRIMARY_SOFT, color: PRIMARY, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                  + 💉 {isAr ? p.name : (p.nameEn || p.name)}{p.needsNursing ? ' 🩺' : ''}
-                </button>
-              ))}
+              {m.procedures.map(p => {
+                const key = `${m.id}:proc:${p.id}`
+                const done = insertedKeys.has(key)
+                return (
+                  <button key={p.id} type="button" disabled={done} onClick={() => insertOneProcedure(key, p)}
+                    style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${BORDER}`, background: done ? CARD_BG : PRIMARY_SOFT, color: done ? TEXT_MUTED : PRIMARY, fontSize: 11, fontWeight: 600, cursor: done ? 'default' : 'pointer', opacity: done ? 0.6 : 1 }}>
+                    {done ? '✓' : '+'} 💉 {isAr ? p.name : (p.nameEn || p.name)}{p.needsNursing ? ' 🩺' : ''}
+                  </button>
+                )
+              })}
               {m.procedures.length > 1 && (
-                <button type="button" onClick={() => m.procedures.forEach(insertOneProcedure)}
+                <button type="button" onClick={() => m.procedures.forEach(p => insertOneProcedure(`${m.id}:proc:${p.id}`, p))}
                   style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                   {isAr ? 'إدراج الكل' : 'Insert all'}
                 </button>
