@@ -330,6 +330,21 @@ export default function SuperAdminClinics() {
     }
   }
 
+  // ✅ حذف نهائي للعيادة وكل بياناتها — لا يوجد تراجع، فنؤكد بوضوح قبل الإرسال
+  const handleDelete = async (id: string, name: string) => {
+    const warning = isAr
+      ? `هل أنت متأكد من حذف عيادة "${name}" نهائياً؟\nسيتم حذف كل بياناتها (المرضى، المواعيد، الفواتير، المستخدمون...) بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.`
+      : `Are you sure you want to permanently delete "${name}"?\nAll its data (patients, appointments, invoices, users...) will be permanently deleted and this action cannot be undone.`
+    if (!window.confirm(warning)) return
+    try {
+      await api.delete(`/clinics/${id}`)
+      setClinics(prev => prev.filter(c => c.id !== id))
+      showMessageBox(isAr ? 'تم حذف العيادة وكل بياناتها نهائياً' : 'The clinic and all its data were permanently deleted', 'success')
+    } catch (err: any) {
+      showMessageBox(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر حذف العيادة' : 'Failed to delete clinic'), 'error')
+    }
+  }
+
   // ✅ يهيّئ جدول الصلاحيات العام (Permissions) — خطوة تُسوّى مرة واحدة بس
   // لكل نشر جديد للنظام، قبل أول عيادة. تكرارها آمن (idempotent) ولا تكرر الصلاحيات.
   const handleSeedPermissions = async () => {
@@ -823,6 +838,14 @@ export default function SuperAdminClinics() {
                         </button>
                         <button onClick={() => handleToggle(clinic.id)} className={`btn-toggle ${clinic.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}>
                           {clinic.isActive ? `🔴 ${t.deactivate}` : `🟢 ${t.activate}`}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(clinic.id, clinic.name)}
+                          className="btn-toggle"
+                          style={{ background: 'rgba(220,38,38,0.12)', color: '#DC2626' }}
+                          title={isAr ? 'حذف نهائي للعيادة وكل بياناتها — لا يمكن التراجع' : 'Permanently delete the clinic and all its data — cannot be undone'}
+                        >
+                          🗑️ {isAr ? 'حذف نهائي' : 'Delete Permanently'}
                         </button>
                       </div>
                     </td>
