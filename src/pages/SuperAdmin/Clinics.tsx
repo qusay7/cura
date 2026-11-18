@@ -139,8 +139,11 @@ export default function SuperAdminClinics() {
   const [selectedPlan, setSelectedPlan] = useState('')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [permsSeeding, setPermsSeeding] = useState(false)
-  const [generatedCreds, setGeneratedCreds] = useState<{ username: string; password: string } | null>(null)
+  const [generatedCreds, setGeneratedCreds] = useState<{ role: string; username: string; password: string }[]>([])
   const [credsCopied, setCredsCopied] = useState(false)
+  // ✅ توزيع المستخدمين الإضافيين (غير المدير الرئيسي) على الأدوار — حسب حد
+  // المستخدمين بالخطة المختارة
+  const [extraUsers, setExtraUsers] = useState({ doctor: 0, nurse: 0, receptionist: 0 })
 
   const emptyForm = {
     name: '', subDomain: '', phone: '', email: '',
@@ -220,13 +223,21 @@ export default function SuperAdminClinics() {
       return
     }
 
+    const plan = plans.find(p => p.id === selectedPlan)
+    const remaining = plan && plan.maxUsers !== -1 ? Math.max(0, plan.maxUsers - 1) : Infinity
+    const totalExtra = extraUsers.doctor + extraUsers.nurse + extraUsers.receptionist
+    if (totalExtra > remaining) {
+      showMessageBox(t.tooManyUsers, 'warning')
+      return
+    }
+
     setSaving(true)
     try {
       // 1 — إنشاء العيادة
       const clinicRes = await api.post('/clinics', form)
       const clinic = clinicRes.data
 
-      // 2 — إنشاء ClinicAdmin
+      // 2 — إنشاء ClinicAdmin (المستخدم الأساسي دائماً)
       await api.post('/users', {
         fullName: form.name,
         username: form.subDomain,
@@ -236,8 +247,37 @@ export default function SuperAdminClinics() {
         clinicId: clinic.id,
       })
 
+      const createdCreds = [{ role: t.mainAdmin, username: form.subDomain, password: `${form.subDomain}@123` }]
+
+      // ✅ 2.ب — إنشاء الحسابات الإضافية الموزّعة على الأدوار (اختياري). الأدوار
+      // لسه غير مُنشأة بقاعدة البيانات بهذي اللحظة (تُنشأ بالخطوة 4)، لكن هذا
+      // طبيعي ومتوقّع — RoleSeedingService.LinkUsersToRole تربط كل هذي
+      // الحسابات بـ RoleId الصحيح تلقائياً بعد إنشاء الأدوار، بالضبط كما يحصل
+      // مع ClinicAdmin أعلاه
+      const roleSlots: { role: string; count: number; labelAr: string; labelEn: string }[] = [
+        { role: 'Doctor', count: extraUsers.doctor, labelAr: 'طبيب', labelEn: 'Doctor' },
+        { role: 'Nurse', count: extraUsers.nurse, labelAr: 'ممرض', labelEn: 'Nurse' },
+        { role: 'Receptionist', count: extraUsers.receptionist, labelAr: 'استقبال', labelEn: 'Receptionist' },
+      ]
+
+      for (const slot of roleSlots) {
+        for (let i = 1; i <= slot.count; i++) {
+          const fullName = isAr ? `${slot.labelAr} ${i}` : `${slot.labelEn} ${i}`
+          const username = `${form.subDomain}-${slot.role.toLowerCase()}${i}`
+          const password = `${username}@123`
+          await api.post('/users', {
+            fullName,
+            username,
+            email: `${username}@CURA.com`,
+            password,
+            role: slot.role,
+            clinicId: clinic.id,
+          })
+          createdCreds.push({ role: fullName, username, password })
+        }
+      }
+
       // 3 — إنشاء الاشتراك
-      const plan = plans.find(p => p.id === selectedPlan)
       const price = billingCycle === 'monthly' ? plan?.monthlyPrice : plan?.yearlyPrice
       const endDate = new Date()
       endDate.setMonth(endDate.getMonth() + (billingCycle === 'monthly' ? 1 : 12))
@@ -260,12 +300,13 @@ export default function SuperAdminClinics() {
       // ✅ 6 — إنشاء قوالب الزيارة الافتراضية (كشف/مراجعة/استشارة/متابعة)
       await api.post(`/treatmentplans/templates/seed-defaults/${clinic.id}`)
 
-      setGeneratedCreds({ username: form.subDomain, password: `${form.subDomain}@123` })
+      setGeneratedCreds(createdCreds)
       setCredsCopied(false)
       setShowForm(false)
       setForm(emptyForm)
       setSelectedPlan('')
       setBillingCycle('monthly')
+      setExtraUsers({ doctor: 0, nurse: 0, receptionist: 0 })
       fetchClinics()
       fetchSubscriptions()
     } catch (err: any) {
@@ -386,6 +427,20 @@ export default function SuperAdminClinics() {
     expired:      lang === 'ar' ? 'منتهي'             : 'Expired',
     cancelled:    lang === 'ar' ? 'ملغي'              : 'Cancelled',
     dayLeft:      lang === 'ar' ? 'يوم متبقٍ'         : 'days left',
+    autoUsersTitle:   lang === 'ar' ? '👥 إنشاء حسابات تلقائية (اختياري)' : '👥 Auto-create accounts (optional)',
+    autoUsersHint:    lang === 'ar'
+      ? 'مستخدم واحد دائماً هو حساب المدير الرئيسي (أعلاه). وزّع باقي مستخدمي الخطة على الأدوار التالية — تُنشأ الحسابات تلقائياً وتُربط بأدوارها.'
+      : 'One user is always the main admin account (above). Distribute the plan\'s remaining users across the roles below — accounts are created automatically and linked to their roles.',
+    remainingSlots:   lang === 'ar' ? 'المتبقي من الخطة' : 'Remaining in plan',
+    unlimitedSlots:   lang === 'ar' ? 'غير محدود' : 'Unlimited',
+    doctorCount:      lang === 'ar' ? '🩺 أطباء' : '🩺 Doctors',
+    nurseCount:       lang === 'ar' ? '💉 ممرضون' : '💉 Nurses',
+    receptionistCount:lang === 'ar' ? '🗂️ استقبال' : '🗂️ Receptionists',
+    tooManyUsers:     lang === 'ar' ? 'عدد الحسابات الموزّعة أكبر من المتبقي بالخطة' : 'Distributed accounts exceed what\'s left in the plan',
+    allAccountsCreated: lang === 'ar' ? 'تم إنشاء العيادة وكل الحسابات والاشتراك والأدوار بنجاح!' : 'Clinic, all accounts, subscription and roles created!',
+    copyAllCreds:     lang === 'ar' ? '📋 نسخ الكل' : '📋 Copy all',
+    allCopied:        lang === 'ar' ? '✓ تم نسخ الكل' : '✓ All copied',
+    mainAdmin:        lang === 'ar' ? 'المدير الرئيسي' : 'Main Admin',
   }
 
   const isAr = lang === 'ar'
@@ -436,25 +491,28 @@ export default function SuperAdminClinics() {
             <button onClick={() => setSuccess('')} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
           </div>
         )}
-        {generatedCreds && (
+        {generatedCreds.length > 0 && (
           <div className="alert-success" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <span>✅ {isAr ? 'تم إنشاء العيادة والمدير والاشتراك والأدوار بنجاح!' : 'Clinic, admin, subscription and roles created!'}</span>
-              <button onClick={() => setGeneratedCreds(null)} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
+              <span>✅ {t.allAccountsCreated}</span>
+              <button onClick={() => setGeneratedCreds([])} title={isAr?'إغلاق':'Dismiss'} aria-label={isAr?'إغلاق':'Dismiss'} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', flexShrink: 0 }}>✕</button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontFamily: "'Inter',monospace", fontSize: 13, background: '#FFFFFF', border: '1px solid #DCE5E5', borderRadius: 10, padding: '10px 14px' }}>
-              <span>👤 {generatedCreds.username}</span>
-              <span>🔑 {generatedCreds.password}</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(`Username: ${generatedCreds.username}\nPassword: ${generatedCreds.password}`)
-                  setCredsCopied(true)
-                  setTimeout(() => setCredsCopied(false), 2000)
-                }}
-                style={{ marginInlineStart: 'auto', background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                {credsCopied ? (isAr ? '✓ تم النسخ' : '✓ Copied') : (isAr ? '📋 نسخ' : '📋 Copy')}
-              </button>
-            </div>
+            {generatedCreds.map((c, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontFamily: "'Inter',monospace", fontSize: 13, background: '#FFFFFF', border: '1px solid #DCE5E5', borderRadius: 10, padding: '10px 14px' }}>
+                <span style={{ fontWeight: 700, fontFamily: isAr ? "'Cairo',sans-serif" : "'Inter',sans-serif" }}>{c.role}</span>
+                <span>👤 {c.username}</span>
+                <span>🔑 {c.password}</span>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(generatedCreds.map(c => `${c.role} — Username: ${c.username} / Password: ${c.password}`).join('\n'))
+                setCredsCopied(true)
+                setTimeout(() => setCredsCopied(false), 2000)
+              }}
+              style={{ alignSelf: 'flex-start', background: PRIMARY, color: '#FFFFFF', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              {credsCopied ? t.allCopied : t.copyAllCreds}
+            </button>
           </div>
         )}
 
@@ -549,7 +607,7 @@ export default function SuperAdminClinics() {
                       return (
                         <div
                           key={plan.id}
-                          onClick={() => setSelectedPlan(plan.id)}
+                          onClick={() => { setSelectedPlan(plan.id); setExtraUsers({ doctor: 0, nurse: 0, receptionist: 0 }) }}
                           style={{
                             padding: '16px', borderRadius: 14, cursor: 'pointer',
                             border: `2px solid ${isSelected ? PRIMARY : BORDER}`,
@@ -583,12 +641,52 @@ export default function SuperAdminClinics() {
                 )}
               </div>
 
+              {/* ✅ قسم إنشاء الحسابات التلقائية — يظهر فقط بعد اختيار خطة فيها
+                  أكثر من مستخدم واحد (مستخدم واحد دايماً هو المدير الرئيسي) */}
+              {(() => {
+                const plan = plans.find(p => p.id === selectedPlan)
+                if (!plan) return null
+                const remaining = plan.maxUsers === -1 ? Infinity : Math.max(0, plan.maxUsers - 1)
+                if (remaining <= 0) return null
+                const totalExtra = extraUsers.doctor + extraUsers.nurse + extraUsers.receptionist
+                const overLimit = totalExtra > remaining
+                const roleFields: { key: keyof typeof extraUsers; label: string }[] = [
+                  { key: 'doctor', label: t.doctorCount },
+                  { key: 'nurse', label: t.nurseCount },
+                  { key: 'receptionist', label: t.receptionistCount },
+                ]
+                return (
+                  <div style={{ marginTop: 20, padding: '20px 24px', background: PRIMARY_SOFT, borderRadius: 16, border: `1px solid ${BORDER}` }}>
+                    <h4 style={{ fontSize: 15, fontWeight: 600, color: TEXT_DARK, marginBottom: 6 }}>{t.autoUsersTitle}</h4>
+                    <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16, lineHeight: 1.6 }}>{t.autoUsersHint}</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 12 }}>
+                      {roleFields.map(f => (
+                        <div key={f.key} className="form-field">
+                          <label className="form-label">{f.label}</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={extraUsers[f.key]}
+                            onChange={e => setExtraUsers({ ...extraUsers, [f.key]: Math.max(0, parseInt(e.target.value) || 0) })}
+                            className="form-input"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: overLimit ? DANGER : TEXT_MUTED }}>
+                      {totalExtra} / {remaining === Infinity ? t.unlimitedSlots : remaining} — {t.remainingSlots}
+                      {overLimit ? ` ⚠️ ${t.tooManyUsers}` : ''}
+                    </p>
+                  </div>
+                )
+              })()}
+
               {/* Buttons */}
               <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
                 <button type="submit" disabled={saving || !selectedPlan} className="btn-primary">
                   {saving ? `⏳ ${t.saving}` : `💾 ${t.save}`}
                 </button>
-                <button type="button" onClick={() => { setShowForm(false); setSelectedPlan(''); setBillingCycle('monthly') }} className="btn-secondary">
+                <button type="button" onClick={() => { setShowForm(false); setSelectedPlan(''); setBillingCycle('monthly'); setExtraUsers({ doctor: 0, nurse: 0, receptionist: 0 }) }} className="btn-secondary">
                   {t.cancel}
                 </button>
               </div>
