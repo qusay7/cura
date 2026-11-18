@@ -45,11 +45,11 @@ interface DiagnosisAutocompleteProps {
   // ✅ اختياري — بدونه (مثلاً صفحات لسا ما ربطت طلبات التحاليل/الأشعة) قسم
   // الاقتراحات يختفي بس باقي الميزات (الأدوية) تشتغل عادي. ينشئ طلب تحليل/أشعة
   // حقيقي (مش نص) — السبب والفئة (lab/radiology) موجودين بالاقتراح نفسه
-  onInsertTest?: (test: { testName: string; category: 'lab' | 'radiology' }) => void
+  onInsertTest?: (test: { testName: string; category: 'lab' | 'radiology' }) => void | Promise<void>
   // ✅ اختياري — نفس مبدأ onInsertTest، بس ينشئ إجراء حقيقي (VisitProcedureItem)
   // بسعره من الكتالوج، مع needsNursing المُعدّ مسبقاً بالقالب (قابل للتعديل لاحقاً
   // من صفحة الإجراءات نفسها، مش هون)
-  onInsertProcedure?: (proc: { procedureId: string; price: number | null; needsNursing: boolean }) => void
+  onInsertProcedure?: (proc: { procedureId: string; price: number | null; needsNursing: boolean }) => void | Promise<void>
   isAr: boolean
 }
 
@@ -167,15 +167,19 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
     markInserted(key)
   }
 
-  const insertOneTest = (key: string, x: SuggestedTest) => {
+  const insertOneTest = async (key: string, x: SuggestedTest) => {
     if (insertedKeys.has(key)) return
-    onInsertTest?.({ testName: x.testName, category: x.category })
+    await onInsertTest?.({ testName: x.testName, category: x.category })
     markInserted(key)
   }
 
-  const insertOneProcedure = (key: string, p: SuggestedProcedure) => {
+  // ✅ async ومتسلسل (await) — عدة طلبات POST متوازية لنفس الموعد تتسابق على
+  // تحديث appointment.Price (له RowVersion للتحكم بالتزامن)، فتفشل بـ
+  // DbUpdateConcurrencyException. "إدراج الكل" يستدعي هذي بالتسلسل (for...of)
+  // بدل forEach عشان كل طلب ينتهي قبل ما يبدأ التالي
+  const insertOneProcedure = async (key: string, p: SuggestedProcedure) => {
     if (insertedKeys.has(key)) return
-    onInsertProcedure?.({ procedureId: p.procedureId, price: p.defaultPrice, needsNursing: p.needsNursing })
+    await onInsertProcedure?.({ procedureId: p.procedureId, price: p.defaultPrice, needsNursing: p.needsNursing })
     markInserted(key)
   }
 
@@ -252,7 +256,7 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
                 )
               })}
               {m.tests.length > 1 && (
-                <button type="button" onClick={() => m.tests.forEach(x => insertOneTest(`${m.id}:test:${x.id}`, x))}
+                <button type="button" onClick={async () => { for (const x of m.tests) await insertOneTest(`${m.id}:test:${x.id}`, x) }}
                   style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                   {isAr ? 'إدراج الكل' : 'Insert all'}
                 </button>
@@ -276,7 +280,7 @@ export default function DiagnosisAutocomplete({ value, onChange, onInsertPrescri
                 )
               })}
               {m.procedures.length > 1 && (
-                <button type="button" onClick={() => m.procedures.forEach(p => insertOneProcedure(`${m.id}:proc:${p.id}`, p))}
+                <button type="button" onClick={async () => { for (const p of m.procedures) await insertOneProcedure(`${m.id}:proc:${p.id}`, p) }}
                   style={{ padding: '4px 10px', borderRadius: 100, border: 'none', background: PRIMARY, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                   {isAr ? 'إدراج الكل' : 'Insert all'}
                 </button>
