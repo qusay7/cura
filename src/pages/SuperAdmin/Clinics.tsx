@@ -94,6 +94,7 @@ interface SubscriptionRow {
   startDate: string
   endDate: string
   isActive: boolean
+  extraUserAllowance: number
 }
 
 const daysLeft = (endDate: string) =>
@@ -144,6 +145,8 @@ export default function SuperAdminClinics() {
   // ✅ توزيع المستخدمين الإضافيين (غير المدير الرئيسي) على الأدوار — حسب حد
   // المستخدمين بالخطة المختارة
   const [extraUsers, setExtraUsers] = useState({ doctor: 0, nurse: 0, receptionist: 0 })
+  // ✅ استثناء مقاعد إضافية فوق حد الخطة — SuperAdmin فقط (هذي الصفحة بالكامل SuperAdmin)
+  const [extraSeats, setExtraSeats] = useState(0)
 
   const emptyForm = {
     name: '', subDomain: '', phone: '', email: '',
@@ -224,7 +227,7 @@ export default function SuperAdminClinics() {
     }
 
     const plan = plans.find(p => p.id === selectedPlan)
-    const remaining = plan && plan.maxUsers !== -1 ? Math.max(0, plan.maxUsers - 1) : Infinity
+    const remaining = plan && plan.maxUsers !== -1 ? Math.max(0, plan.maxUsers + extraSeats - 1) : Infinity
     const totalExtra = extraUsers.doctor + extraUsers.nurse + extraUsers.receptionist
     if (totalExtra > remaining) {
       showMessageBox(t.tooManyUsers, 'warning')
@@ -289,6 +292,7 @@ export default function SuperAdminClinics() {
         pricePaid: price,
         startDate: new Date().toISOString(),
         endDate: endDate.toISOString(),
+        extraUserAllowance: extraSeats,
       })
 
       // ✅ 4 — إنشاء الأدوار الأساسية
@@ -307,6 +311,7 @@ export default function SuperAdminClinics() {
       setSelectedPlan('')
       setBillingCycle('monthly')
       setExtraUsers({ doctor: 0, nurse: 0, receptionist: 0 })
+      setExtraSeats(0)
       fetchClinics()
       fetchSubscriptions()
     } catch (err: any) {
@@ -361,11 +366,14 @@ export default function SuperAdminClinics() {
   const [renewPlanId, setRenewPlanId] = useState('')
   const [renewCycle, setRenewCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [renewSaving, setRenewSaving] = useState(false)
+  const [renewExtraSeats, setRenewExtraSeats] = useState(0)
 
   const openRenewModal = (clinic: Clinic) => {
     setRenewClinic(clinic)
     setRenewPlanId('')
     setRenewCycle('monthly')
+    // ✅ يحافظ على الاستثناء الحالي (لو موجود) بدل ما يصفّره التجديد بالصمت
+    setRenewExtraSeats(subs[clinic.id]?.extraUserAllowance ?? 0)
   }
 
   const submitRenew = async () => {
@@ -375,6 +383,7 @@ export default function SuperAdminClinics() {
       const res = await api.post(`/subscriptions/${renewClinic.id}/renew`, {
         planId: renewPlanId,
         billingCycle: renewCycle,
+        extraUserAllowance: renewExtraSeats,
       })
       setSuccess(isAr
         ? `✅ تم تجديد اشتراك "${renewClinic.name}" — ساري حتى ${new Date(res.data.endDate).toLocaleDateString('ar-EG')}`
@@ -441,6 +450,10 @@ export default function SuperAdminClinics() {
     copyAllCreds:     lang === 'ar' ? '📋 نسخ الكل' : '📋 Copy all',
     allCopied:        lang === 'ar' ? '✓ تم نسخ الكل' : '✓ All copied',
     mainAdmin:        lang === 'ar' ? 'المدير الرئيسي' : 'Main Admin',
+    extraSeatsLabel:  lang === 'ar' ? '🎁 مقاعد إضافية (استثناء)' : '🎁 Extra seats (exception)',
+    extraSeatsHint:   lang === 'ar'
+      ? 'فوق حد الخطة لهذي العيادة بالذات فقط — اتركه 0 إذا ما في استثناء'
+      : 'On top of the plan limit, for this clinic only — leave 0 if there\'s no exception',
   }
 
   const isAr = lang === 'ar'
@@ -641,12 +654,29 @@ export default function SuperAdminClinics() {
                 )}
               </div>
 
+              {/* ✅ استثناء مقاعد إضافية فوق حد الخطة — SuperAdmin فقط (مقصود
+                  ومحدود لهذي العيادة بالذات، مش تعديل عام على الخطة) */}
+              {selectedPlan && (
+                <div style={{ marginTop: 20, padding: '20px 24px', background: PRIMARY_SOFT, borderRadius: 16, border: `1px solid ${BORDER}` }}>
+                  <label className="form-label">{t.extraSeatsLabel}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={extraSeats}
+                    onChange={e => setExtraSeats(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="form-input"
+                    style={{ maxWidth: 160, marginTop: 6 }}
+                  />
+                  <p style={{ fontSize: 11.5, color: TEXT_MUTED, marginTop: 6, lineHeight: 1.6 }}>{t.extraSeatsHint}</p>
+                </div>
+              )}
+
               {/* ✅ قسم إنشاء الحسابات التلقائية — يظهر فقط بعد اختيار خطة فيها
                   أكثر من مستخدم واحد (مستخدم واحد دايماً هو المدير الرئيسي) */}
               {(() => {
                 const plan = plans.find(p => p.id === selectedPlan)
                 if (!plan) return null
-                const remaining = plan.maxUsers === -1 ? Infinity : Math.max(0, plan.maxUsers - 1)
+                const remaining = plan.maxUsers === -1 ? Infinity : Math.max(0, plan.maxUsers + extraSeats - 1)
                 if (remaining <= 0) return null
                 const totalExtra = extraUsers.doctor + extraUsers.nurse + extraUsers.receptionist
                 const overLimit = totalExtra > remaining
@@ -686,7 +716,7 @@ export default function SuperAdminClinics() {
                 <button type="submit" disabled={saving || !selectedPlan} className="btn-primary">
                   {saving ? `⏳ ${t.saving}` : `💾 ${t.save}`}
                 </button>
-                <button type="button" onClick={() => { setShowForm(false); setSelectedPlan(''); setBillingCycle('monthly'); setExtraUsers({ doctor: 0, nurse: 0, receptionist: 0 }) }} className="btn-secondary">
+                <button type="button" onClick={() => { setShowForm(false); setSelectedPlan(''); setBillingCycle('monthly'); setExtraUsers({ doctor: 0, nurse: 0, receptionist: 0 }); setExtraSeats(0) }} className="btn-secondary">
                   {t.cancel}
                 </button>
               </div>
@@ -844,6 +874,19 @@ export default function SuperAdminClinics() {
                   </div>
                 )
               })}
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label className="form-label">{t.extraSeatsLabel}</label>
+              <input
+                type="number"
+                min={0}
+                value={renewExtraSeats}
+                onChange={e => setRenewExtraSeats(Math.max(0, parseInt(e.target.value) || 0))}
+                className="form-input"
+                style={{ maxWidth: 160, marginTop: 6 }}
+              />
+              <p style={{ fontSize: 11.5, color: TEXT_MUTED, marginTop: 6, lineHeight: 1.6 }}>{t.extraSeatsHint}</p>
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
