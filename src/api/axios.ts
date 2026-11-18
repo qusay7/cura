@@ -110,10 +110,15 @@ initializeTokens()
 // ═══════════════════════════════════════════════════════════════════════════
 
 const PUBLIC_GET_ENDPOINTS = ['/plans', '/clinics/by-subdomain']
+// ✅ /plans/admin يحتاج توكن SuperAdmin رغم إنه يبدأ بـ /plans — لازم يُستثنى
+// صريح، وإلا المطابقة بـ includes() تعتبره "عام" وتوقف إرفاق Authorization
+const PUBLIC_GET_OVERRIDES = ['/plans/admin']
 
 function isPublicGetRequest(url: string, method?: string) {
   const isGet = (method || 'get').toLowerCase() === 'get'
-  return isGet && PUBLIC_GET_ENDPOINTS.some(p => url.includes(p))
+  if (!isGet) return false
+  if (PUBLIC_GET_OVERRIDES.some(p => url.includes(p))) return false
+  return PUBLIC_GET_ENDPOINTS.some(p => url.includes(p))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
