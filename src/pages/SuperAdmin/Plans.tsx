@@ -521,6 +521,7 @@ interface Plan {
   createdAt: string
   hasElectronicInvoicing: boolean
   hasMultipleDepartments: boolean
+  showOnPricingPage: boolean
 }
 
 const defaultPlans = [
@@ -605,6 +606,7 @@ export default function SuperAdminPlans() {
     maxUsers: '', maxDoctors: '', maxPatients: '', maxDailyMessages: '',
     featuresText: '', featuresTextEn: '', isFeatured: false,
     hasElectronicInvoicing: false, hasMultipleDepartments: false,
+    showOnPricingPage: true,
   }
   const [form, setForm] = useState(emptyForm)
 
@@ -627,7 +629,9 @@ export default function SuperAdminPlans() {
 
   const fetchPlans = async () => {
     try {
-      const res = await api.get('/plans')
+      // ✅ /plans/admin ترجع كل الخطط بدون فلترة (حتى الموقوفة وغير المعروضة
+      // بصفحة الأسعار العامة) — عكس /plans العام اللي يفلتر لصفحة الأسعار
+      const res = await api.get('/plans/admin')
       setPlans(res.data)
     } catch {
       navigate('/login')
@@ -674,6 +678,7 @@ export default function SuperAdminPlans() {
       isFeatured: plan.isFeatured,
       hasElectronicInvoicing: plan.hasElectronicInvoicing,
       hasMultipleDepartments: plan.hasMultipleDepartments,
+      showOnPricingPage: plan.showOnPricingPage,
     })
     setShowForm(true)
   }
@@ -698,6 +703,7 @@ export default function SuperAdminPlans() {
         isFeatured: form.isFeatured,
         hasElectronicInvoicing: form.hasElectronicInvoicing,
         hasMultipleDepartments: form.hasMultipleDepartments,
+        showOnPricingPage: form.showOnPricingPage,
         isActive: true,
       }
 
@@ -782,6 +788,12 @@ export default function SuperAdminPlans() {
     multipleDepartmentsLabel: lang === 'ar' ? 'أقسام متعددة 🏢' : 'Multiple Departments 🏢',
     multipleDepartmentsHint: lang === 'ar' ? 'بدونها، العيادة مقيّدة بقسم واحد فقط' : 'Without it, the clinic is limited to a single department',
     noFeatures: lang === 'ar' ? 'لم تُضف أي مميزات لهذه الخطة بعد' : 'No features added to this plan yet',
+    showOnPricingLabel: lang === 'ar' ? 'عرض بصفحة الأسعار العامة 👁️' : 'Show on public pricing page 👁️',
+    showOnPricingHint: lang === 'ar'
+      ? 'لو عطّلتها، الخطة تبقى قابلة لربطها بعيادة من هنا، بس لا تظهر لزوّار /pricing'
+      : 'If disabled, the plan can still be assigned to a clinic here, but won\'t appear to visitors on /pricing',
+    shown: lang === 'ar' ? 'معروضة' : 'Shown',
+    hidden: lang === 'ar' ? 'مخفية' : 'Hidden',
   }
 
   const isAr = lang === 'ar'
@@ -945,6 +957,26 @@ export default function SuperAdminPlans() {
                     </button>
                   </div>
                 </div>
+
+                {/* Show on public pricing page toggle */}
+                <div className="form-field form-field-full">
+                  <div className="featured-toggle-row">
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_DARK, marginBottom: 3 }}>{t.showOnPricingLabel}</div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, lineHeight: 1.5 }}>{t.showOnPricingHint}</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.showOnPricingPage}
+                      onClick={() => setForm({ ...form, showOnPricingPage: !form.showOnPricingPage })}
+                      className="toggle-switch"
+                      style={{ background: form.showOnPricingPage ? PRIMARY : '#DCE5E5' }}
+                    >
+                      <span className="toggle-knob" style={{ [isAr ? 'right' : 'left']: form.showOnPricingPage ? 21 : 3 } as React.CSSProperties} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <p style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 20, marginTop: 12 }}>
@@ -996,6 +1028,9 @@ export default function SuperAdminPlans() {
                     {plan.isFeatured && (
                       <span className="plan-badge featured">⭐ {t.featured}</span>
                     )}
+                    <span className={`plan-badge ${plan.showOnPricingPage ? 'active' : 'inactive'}`}>
+                      {plan.showOnPricingPage ? `👁️ ${t.shown}` : `🙈 ${t.hidden}`}
+                    </span>
                   </div>
                 </div>
 

@@ -233,7 +233,7 @@ const SuperAdminDashboard = ({ lang, navigate }: { lang: 'ar' | 'en'; navigate: 
   const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
 
   useEffect(() => {
-    Promise.all([api.get('/clinics'), api.get('/plans')])
+    Promise.all([api.get('/clinics'), api.get('/plans/admin')])
       .then(([c, p]) => { setClinics(c.data); setPlans(p.data) })
       .catch(() => navigate('/login'))
       .finally(() => setLoading(false))

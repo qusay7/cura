@@ -183,7 +183,9 @@ export default function SuperAdminClinics() {
 
   const fetchPlans = async () => {
     try {
-      const res = await api.get('/plans')
+      // ✅ /plans/admin (مش /plans العام) — عشان تقدر تربط عيادة بخطة نشطة
+      // حتى لو كانت مخفية عن صفحة الأسعار العامة (مثلاً خطة مخصّصة بالتفاوض)
+      const res = await api.get('/plans/admin')
       setPlans(res.data.filter((p: Plan) => p.isActive))
     } catch {}
   }
