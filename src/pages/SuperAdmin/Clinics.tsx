@@ -252,11 +252,13 @@ export default function SuperAdminClinics() {
 
       const createdCreds = [{ role: t.mainAdmin, username: form.subDomain, password: `${form.subDomain}@123` }]
 
-      // ✅ 2.ب — إنشاء الحسابات الإضافية الموزّعة على الأدوار (اختياري). الأدوار
-      // لسه غير مُنشأة بقاعدة البيانات بهذي اللحظة (تُنشأ بالخطوة 4)، لكن هذا
-      // طبيعي ومتوقّع — RoleSeedingService.LinkUsersToRole تربط كل هذي
-      // الحسابات بـ RoleId الصحيح تلقائياً بعد إنشاء الأدوار، بالضبط كما يحصل
-      // مع ClinicAdmin أعلاه
+      // ✅ 2.ب — إنشاء الحسابات الإضافية الموزّعة على الأدوار (اختياري)، عبر /staff
+      // بدل /users مباشرة — عشان كل حساب يرتبط فعلياً ببطاقة "فريق العمل"،
+      // والأطباء تحديداً تُنشأ لهم بطاقة طبيب حقيقية (Doctor) قابلة للجدولة،
+      // لا مجرد حساب دخول بدون كيان سريري خلفه. الأدوار لسه غير مُنشأة
+      // بقاعدة البيانات بهذي اللحظة (تُنشأ بالخطوة 4)، لكن هذا طبيعي ومتوقّع —
+      // RoleSeedingService.LinkUsersToRole تربط كل هذي الحسابات بـ RoleId
+      // الصحيح تلقائياً بعد إنشاء الأدوار، بالضبط كما يحصل مع ClinicAdmin أعلاه
       const roleSlots: { role: string; count: number; labelAr: string; labelEn: string }[] = [
         { role: 'Doctor', count: extraUsers.doctor, labelAr: 'طبيب', labelEn: 'Doctor' },
         { role: 'Nurse', count: extraUsers.nurse, labelAr: 'ممرض', labelEn: 'Nurse' },
@@ -268,13 +270,17 @@ export default function SuperAdminClinics() {
           const fullName = isAr ? `${slot.labelAr} ${i}` : `${slot.labelEn} ${i}`
           const username = `${form.subDomain}-${slot.role.toLowerCase()}${i}`
           const password = `${username}@123`
-          await api.post('/users', {
-            fullName,
-            username,
-            email: `${username}@CURA.com`,
-            password,
-            role: slot.role,
+          await api.post('/staff', {
             clinicId: clinic.id,
+            fullName,
+            jobTitle: isAr ? slot.labelAr : slot.labelEn,
+            staffRole: slot.role,
+            isDoctor: slot.role === 'Doctor',
+            createLoginAccount: true,
+            loginEmail: `${username}@CURA.com`,
+            loginUsername: username,
+            loginPassword: password,
+            loginRole: slot.role,
           })
           createdCreds.push({ role: fullName, username, password })
         }
