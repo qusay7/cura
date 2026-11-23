@@ -63,11 +63,12 @@ export default function LandingPage() {
                 {t.hero.eyebrow}
               </div>
 
-              <h1 className="fu d1" style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(40px,5.5vw,70px)', color:C.dark, lineHeight:1.1, letterSpacing:'-0.6px', marginBottom:6 }}>
+              {/* ✅ H1 واحد فقط بالصفحة (كان مقسوماً على عنصرين <h1> منفصلين) — يحمل
+                  الكلمة المفتاحية الأساسية التي يبحث بها الناس فعلياً، والسطر
+                  الثاني الآن <span> ضمن نفس العنوان بدل عنوان H1 ثانٍ منافس له */}
+              <h1 className="fu d1" style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(40px,5.5vw,70px)', color:C.dark, lineHeight:1.1, letterSpacing:'-0.6px', marginBottom:28 }}>
                 {t.hero.h1}
-              </h1>
-              <h1 className="fu d1" style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(40px,5.5vw,70px)', color:C.teal, lineHeight:1.1, letterSpacing:'-0.6px', marginBottom:28 }}>
-                {t.hero.h1b}
+                <span style={{ display:'block', color:C.teal, marginTop:6 }}>{t.hero.h1b}</span>
               </h1>
 
               <p className="fu d2" style={{ fontSize:'clamp(15px,1.6vw,17.5px)', color:C.muted, lineHeight:1.75, maxWidth:520, marginBottom:40 }}>

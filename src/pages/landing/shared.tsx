@@ -266,8 +266,8 @@ export const T = {
     nav:{ features:'المميزات', pricing:'الأسعار', faq:'الأسئلة المتكررة', about:'من نحن', login:'تسجيل الدخول', cta:'ابدأ مجاناً' },
     hero:{
       eyebrow:'منصة إدارة العيادات الطبية',
-      h1:  'إدارة عيادة أكثر ذكاء.',
-      h1b: 'نتائج أفضل للمرضى.',
+      h1:  'برنامج إدارة العيادات في الأردن',
+      h1b: 'إدارة عيادة أكثر ذكاء، نتائج أفضل للمرضى.',
       sub:'Cura نظام إدارة عيادات متكامل يساعدك على تنظيم مواعيد المرضى، الفوترة الإلكترونية، وملفات الأطباء والمرضى — في واجهة واحدة سهلة الاستخدام، مصمّمة للعيادات في الأردن والعالم العربي.',
       cta1:'ابدأ أول شهر مجاناً ←',
       cta2:'استعرض المميزات',
@@ -363,8 +363,8 @@ export const T = {
     nav:{ features:'Features', pricing:'Pricing', faq:'FAQ', about:'About', login:'Sign In', cta:'Get Started' },
     hero:{
       eyebrow:'Clinic Management Platform',
-      h1:  'Smarter clinic management.',
-      h1b: 'Better patient outcomes.',
+      h1:  'Clinic Management Software in Jordan',
+      h1b: 'Smarter clinic management, better patient outcomes.',
       sub:'Cura is a clinic management system that brings patient records, appointment scheduling, e-invoicing, and revenue analytics together in one intuitive platform — built for doctors and clinics across Jordan and the Arab world.',
       cta1:'Start your free month →',
       cta2:'Explore features',
