@@ -6,6 +6,14 @@ import SiteNav from './landing/SiteNav'
 import SiteFooter from './landing/SiteFooter'
 import { usePageMeta } from '../hooks/usePageMeta'
 
+// ✅ مصدر وحيد لبيانات SEO لهذه الصفحة — يستخدمها usePageMeta بالمتصفح، وسكربت
+// ما قبل التصيير المسبق (scripts/prerender.mjs) أيضاً، بدل تكرار القيم بمكانين
+export const getPageMeta = (_isAr: boolean) => ({
+  title: 'برنامج إدارة العيادات الطبية | CURA',
+  description: 'نظّم مواعيد المرضى وملفاتهم وفواتير العيادة مع CURA، نظام إدارة عيادات بواجهة عربية وإنجليزية.',
+  canonical: 'https://cura100.com/',
+})
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   useLandingStyles()
@@ -19,11 +27,7 @@ export default function LandingPage() {
   const t    = T[lang]
   const isAr = lang === 'ar'
 
-  usePageMeta({
-    title: 'برنامج إدارة العيادات الطبية | CURA',
-    description: 'نظّم مواعيد المرضى وملفاتهم وفواتير العيادة مع CURA، نظام إدارة عيادات بواجهة عربية وإنجليزية.',
-    canonical: 'https://cura100.com/',
-  })
+  usePageMeta(getPageMeta(isAr))
 
   // ── إنشاء العيادة يتم عبر التواصل المباشر، لا بتسجيل ذاتي ──
   const WHATSAPP = 'https://wa.me/962796139705'

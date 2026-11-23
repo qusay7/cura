@@ -5,6 +5,16 @@ import SiteNav from './landing/SiteNav'
 import SiteFooter from './landing/SiteFooter'
 import { usePageMeta } from '../hooks/usePageMeta'
 
+// ✅ مصدر وحيد لبيانات SEO لهذه الصفحة — يستخدمها usePageMeta بالمتصفح، وسكربت
+// ما قبل التصيير المسبق (scripts/prerender.mjs) أيضاً، بدل تكرار القيم بمكانين
+export const getPageMeta = (isAr: boolean) => ({
+  title: isAr ? 'الأسئلة الشائعة — نظام Cura لإدارة العيادات' : 'Frequently Asked Questions — Cura',
+  description: isAr
+    ? 'إجابات عن أهم أسئلة عيادتك حول Cura: أمان بيانات المرضى، الفوترة الإلكترونية الأردنية، الدعم على الموبايل، تعدد الأقسام، والبدء السريع.'
+    : "Answers to your clinic's top questions about Cura: patient data security, Jordan e-invoicing, mobile support, multi-department setup, and getting started.",
+  canonical: 'https://cura100.com/faq',
+})
+
 export default function FaqPage() {
   useLandingStyles()
   // ✅ نقرأ/نكتب نفس مفتاح localStorage اللي يستخدمه باقي التطبيق، عشان اللغة
@@ -15,13 +25,7 @@ export default function FaqPage() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  usePageMeta({
-    title: isAr ? 'الأسئلة الشائعة — نظام Cura لإدارة العيادات' : 'Frequently Asked Questions — Cura',
-    description: isAr
-      ? 'إجابات عن أهم أسئلة عيادتك حول Cura: أمان بيانات المرضى، الفوترة الإلكترونية الأردنية، الدعم على الموبايل، تعدد الأقسام، والبدء السريع.'
-      : "Answers to your clinic's top questions about Cura: patient data security, Jordan e-invoicing, mobile support, multi-department setup, and getting started.",
-    canonical: 'https://cura100.com/faq',
-  })
+  usePageMeta(getPageMeta(isAr))
 
   return (
     <div dir={t.dir} style={{ fontFamily:t.font, background:C.cream, minHeight:'100vh', overflowX:'hidden' }}>

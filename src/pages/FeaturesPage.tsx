@@ -4,6 +4,16 @@ import SiteNav from './landing/SiteNav'
 import SiteFooter from './landing/SiteFooter'
 import { usePageMeta } from '../hooks/usePageMeta'
 
+// ✅ مصدر وحيد لبيانات SEO لهذه الصفحة — يستخدمها usePageMeta بالمتصفح، وسكربت
+// ما قبل التصيير المسبق (scripts/prerender.mjs) أيضاً، بدل تكرار القيم بمكانين
+export const getPageMeta = (isAr: boolean) => ({
+  title: isAr ? 'ميزات نظام Cura لإدارة العيادات' : 'Cura Clinic Management Features',
+  description: isAr
+    ? 'جدولة المواعيد، ملفات المرضى، ملاحظات الزيارة، قوائم الانتظار، الفواتير والفوترة الإلكترونية، التقارير، وتعدد الأقسام — كل ميزات Cura بالتفصيل.'
+    : 'Appointment scheduling, patient records, visit notes, queue management, billing with e-invoicing, analytics, and multi-department support — every Cura feature in detail.',
+  canonical: 'https://cura100.com/features',
+})
+
 export default function FeaturesPage() {
   useLandingStyles()
   // ✅ نقرأ/نكتب نفس مفتاح localStorage اللي يستخدمه باقي التطبيق، عشان اللغة
@@ -13,13 +23,7 @@ export default function FeaturesPage() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  usePageMeta({
-    title: isAr ? 'ميزات نظام Cura لإدارة العيادات' : 'Cura Clinic Management Features',
-    description: isAr
-      ? 'جدولة المواعيد، ملفات المرضى، ملاحظات الزيارة، قوائم الانتظار، الفواتير والفوترة الإلكترونية، التقارير، وتعدد الأقسام — كل ميزات Cura بالتفصيل.'
-      : 'Appointment scheduling, patient records, visit notes, queue management, billing with e-invoicing, analytics, and multi-department support — every Cura feature in detail.',
-    canonical: 'https://cura100.com/features',
-  })
+  usePageMeta(getPageMeta(isAr))
 
   return (
     <div dir={t.dir} style={{ fontFamily:t.font, background:C.cream, minHeight:'100vh', overflowX:'hidden' }}>

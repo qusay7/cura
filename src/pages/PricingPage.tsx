@@ -6,6 +6,16 @@ import SiteNav from './landing/SiteNav'
 import SiteFooter from './landing/SiteFooter'
 import { usePageMeta } from '../hooks/usePageMeta'
 
+// ✅ مصدر وحيد لبيانات SEO لهذه الصفحة — يستخدمها usePageMeta بالمتصفح، وسكربت
+// ما قبل التصيير المسبق (scripts/prerender.mjs) أيضاً، بدل تكرار القيم بمكانين
+export const getPageMeta = (isAr: boolean) => ({
+  title: isAr ? 'أسعار نظام Cura لإدارة العيادات' : 'Cura Clinic Management Pricing',
+  description: isAr
+    ? 'خطط اشتراك مرنة لنظام Cura لإدارة العيادات — بدون رسوم مخفية، مع دعم فني مجاني. اطلب تجربتك المجانية اليوم.'
+    : 'Flexible subscription plans for Cura clinic management — no hidden fees, free technical support included. Request your free trial today.',
+  canonical: 'https://cura100.com/pricing',
+})
+
 export default function PricingPage() {
   useLandingStyles()
   // ✅ نقرأ/نكتب نفس مفتاح localStorage اللي يستخدمه باقي التطبيق، عشان اللغة
@@ -19,13 +29,7 @@ export default function PricingPage() {
   const t = T[lang]
   const isAr = lang === 'ar'
 
-  usePageMeta({
-    title: isAr ? 'أسعار نظام Cura لإدارة العيادات' : 'Cura Clinic Management Pricing',
-    description: isAr
-      ? 'خطط اشتراك مرنة لنظام Cura لإدارة العيادات — بدون رسوم مخفية، مع دعم فني مجاني. اطلب تجربتك المجانية اليوم.'
-      : 'Flexible subscription plans for Cura clinic management — no hidden fees, free technical support included. Request your free trial today.',
-    canonical: 'https://cura100.com/pricing',
-  })
+  usePageMeta(getPageMeta(isAr))
 
   useEffect(() => {
     let cancelled = false

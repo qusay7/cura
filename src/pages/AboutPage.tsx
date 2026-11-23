@@ -55,6 +55,16 @@ const COPY = {
   },
 }
 
+// ✅ مصدر وحيد لبيانات SEO لهذه الصفحة — يستخدمها usePageMeta بالمتصفح، وسكربت
+// ما قبل التصيير المسبق (scripts/prerender.mjs) أيضاً، بدل تكرار القيم بمكانين
+export const getPageMeta = (isAr: boolean) => ({
+  title: isAr ? 'من نحن ومعلومات التواصل — CURA' : 'About Us & Contact Information — CURA',
+  description: isAr
+    ? 'تعرّف على Cura، منصة إدارة العيادات، ومعلومات التواصل والدعم الفني: الهاتف والبريد الإلكتروني وواتساب والموقع في عمّان، الأردن.'
+    : 'Learn about Cura, the clinic management platform, and our contact and support information: phone, email, WhatsApp, and our location in Amman, Jordan.',
+  canonical: 'https://cura100.com/about',
+})
+
 export default function AboutPage() {
   useLandingStyles()
   // ✅ نقرأ/نكتب نفس مفتاح localStorage اللي يستخدمه باقي التطبيق، عشان اللغة
@@ -65,13 +75,7 @@ export default function AboutPage() {
   const c = COPY[lang]
   const isAr = lang === 'ar'
 
-  usePageMeta({
-    title: isAr ? 'من نحن ومعلومات التواصل — CURA' : 'About Us & Contact Information — CURA',
-    description: isAr
-      ? 'تعرّف على Cura، منصة إدارة العيادات، ومعلومات التواصل والدعم الفني: الهاتف والبريد الإلكتروني وواتساب والموقع في عمّان، الأردن.'
-      : 'Learn about Cura, the clinic management platform, and our contact and support information: phone, email, WhatsApp, and our location in Amman, Jordan.',
-    canonical: 'https://cura100.com/about',
-  })
+  usePageMeta(getPageMeta(isAr))
 
   const rows = [
     { Icon: Phone, label: c.phone, value: CONTACT.phone, href: CONTACT.phoneHref },
