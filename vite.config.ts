@@ -26,6 +26,23 @@ function noCacheServiceWorker(): Plugin {
   }
 }
 
+// ✅ React Fast Refresh (vite-plugin-react) يحقن سكربت inline بالصفحة أثناء
+// "vite dev" فقط — وCSP الصارمة بـindex.html (مناسبة وصحيحة للإنتاج) كانت
+// تمنعه فتظهر مخالفة CSP بالكونسول محلياً. هذا التخفيف يطبّق فقط أثناء
+// "serve" (dev)، والبناء الفعلي للإنتاج يبقى بنفس الـCSP الصارمة بدون أي تغيير
+function devCspRelax(): Plugin {
+  return {
+    name: 'dev-csp-relax',
+    apply: 'serve',
+    transformIndexHtml(html) {
+      return html.replace(
+        "script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com;",
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com;"
+      )
+    },
+  }
+}
+
 // ✅ نأخذ رقم النسخة من الـ commit الحقيقي وقت البناء — مش رقم يدوي بينسى تحديثه،
 // هيك بنعرف بالضبط شو الكود المنشور فعلياً بأي بيئة (تفادياً لالتباس صار سابقاً)
 const commitHash = (() => {
@@ -48,6 +65,7 @@ export default defineConfig({
   plugins: [
     react(),
     noCacheServiceWorker(),
+    devCspRelax(),
 
     VitePWA({
       // ✅ 'prompt' (الافتراضي) — السيرفس وركر الجديد يبقى "بالانتظار" لحد ما
