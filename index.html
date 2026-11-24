@@ -25,17 +25,29 @@
   http-equiv="Content-Security-Policy"
   content="
     default-src 'self';
-    script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com;
+    script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://www.googletagmanager.com;
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
     img-src 'self' data: https: blob:;
     media-src 'self' blob:;
     font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:;
-    connect-src 'self' http://localhost:5192 https://cdn.jsdelivr.net https://cloudflareinsights.com;
+    connect-src 'self' http://localhost:5192 https://cdn.jsdelivr.net https://cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com;
     frame-src 'self' blob:;
     base-uri 'self';
     form-action 'self';
 "
 />
+
+    <!-- 📊 Google Analytics (GA4) — send_page_view:false لأن الموقع SPA: الصفحة
+         الأولى فقط تُحمَّل فعلياً من المتصفح، وباقي التنقل بين المسارات يحصل
+         بجافاسكربت بدون طلب HTML جديد؛ لذا نرسل page_view يدوياً عند كل تغيّر
+         مسار (src/App.tsx) بدل الاعتماد على الحدث التلقائي الوحيد عند التحميل -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9XCPE575CE"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-9XCPE575CE', { send_page_view: false });
+    </script>
 
     <!-- 🔐 أمان إضافي -->
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />

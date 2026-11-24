@@ -1,10 +1,11 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import UpdatePrompt from './components/UpdatePrompt'
 import { LoadingScreen } from './components/LoadingScreen'
+import { trackPageView } from './lib/analytics'
 
 // ✅ Code splitting — كل صفحة أصبحت ملفاً منفصلاً يُحمَّل فقط عند زيارتها فعلياً،
 // بدل تحميل كود كل صفحات النظام (30+ صفحة) دفعة واحدة حتى لزائر لم يسجّل دخول بعد
@@ -82,6 +83,8 @@ function RootRoute() {
 }
 
 function App() {
+  const location = useLocation()
+
   useEffect(() => {
     const stored = (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
     applyDocumentLang(stored)
@@ -90,6 +93,10 @@ function App() {
     window.addEventListener('cura-lang-change', onLangChange)
     return () => window.removeEventListener('cura-lang-change', onLangChange)
   }, [])
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search)
+  }, [location])
 
   return (
     <>
