@@ -42,12 +42,7 @@
          بجافاسكربت بدون طلب HTML جديد؛ لذا نرسل page_view يدوياً عند كل تغيّر
          مسار (src/App.tsx) بدل الاعتماد على الحدث التلقائي الوحيد عند التحميل -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-9XCPE575CE"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-9XCPE575CE', { send_page_view: false });
-    </script>
+    <script src="/gtag-init.js"></script>
 
     <!-- 🔐 أمان إضافي -->
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
