@@ -33,6 +33,22 @@ const patient = (overrides: Partial<Patient> = {}): Patient => ({
   ...overrides,
 })
 
+// ✅ Patients.tsx يعرض <PrintHeader> اللي يستدعي GET /clinics/letterhead
+// بشكل مستقل ومتزامن مع GET /patients — mockResolvedValueOnce لا يفرّق بين
+// الرابطين، فأي ترتيب تنفيذ غير متوقّع كان يُسقط /clinics/letterhead على
+// undefined ويُنهار PrintHeader. نفرّق بالرابط دائماً بدل الاعتماد على الترتيب.
+function mockPatientsGet(patientsResult: Patient[] | Error) {
+  mockedApi.get.mockImplementation((url: string) => {
+    if (url === '/clinics/letterhead') return Promise.resolve({ data: {} })
+    if (url === '/patients') {
+      return patientsResult instanceof Error
+        ? Promise.reject(patientsResult)
+        : Promise.resolve({ data: patientsResult })
+    }
+    return Promise.reject(new Error(`unexpected GET ${url}`))
+  })
+}
+
 function renderPatients() {
   render(
     <MemoryRouter initialEntries={['/patients']}>
@@ -53,7 +69,7 @@ describe('Patients', () => {
   })
 
   it('redirects to /login when the patients list fails to load', async () => {
-    mockedApi.get.mockRejectedValueOnce(new Error('unauthorized'))
+    mockPatientsGet(new Error('unauthorized'))
     renderPatients()
 
     expect(await screen.findByText('login page', undefined, LOADING_TIMEOUT)).toBeInTheDocument()
@@ -61,7 +77,7 @@ describe('Patients', () => {
 
   it('lists patients with their number, name and gender badge', async () => {
     localStorage.setItem('permissions', JSON.stringify([]))
-    mockedApi.get.mockResolvedValueOnce({ data: [patient()] })
+    mockPatientsGet([patient()])
     renderPatients()
 
     const name = await screen.findByText('Sara Ahmad', undefined, LOADING_TIMEOUT)
@@ -72,7 +88,7 @@ describe('Patients', () => {
 
   it('hides the Add Patient button when the user lacks permission', async () => {
     localStorage.setItem('permissions', JSON.stringify([]))
-    mockedApi.get.mockResolvedValueOnce({ data: [] })
+    mockPatientsGet([])
     renderPatients()
 
     await screen.findByText('No patients found', undefined, LOADING_TIMEOUT)
@@ -81,17 +97,17 @@ describe('Patients', () => {
 
   it('shows the Add Patient button when the user has permission', async () => {
     localStorage.setItem('permissions', JSON.stringify(['patients.create']))
-    mockedApi.get.mockResolvedValueOnce({ data: [] })
+    mockPatientsGet([])
     renderPatients()
 
     await screen.findByText('No patients found', undefined, LOADING_TIMEOUT)
-    expect(screen.getByRole('button', { name: /add patient/i })).toBeInTheDocument()
+    // ✅ زرّان بنفس الاسم يظهران معاً هنا فعلاً (بأعلى الصفحة وبحالة "لا يوجد
+    // مرضى" الفارغة) — getAllByRole بدل getByRole
+    expect(screen.getAllByRole('button', { name: /add patient/i }).length).toBeGreaterThan(0)
   })
 
   it('filters the list by name as the user types in the search box', async () => {
-    mockedApi.get.mockResolvedValueOnce({
-      data: [patient(), patient({ id: 'pat-2', patientNumber: 202, fullName: 'Omar Khalil' })],
-    })
+    mockPatientsGet([patient(), patient({ id: 'pat-2', patientNumber: 202, fullName: 'Omar Khalil' })])
     const user = userEvent.setup()
     renderPatients()
     await screen.findByText('Sara Ahmad', undefined, LOADING_TIMEOUT)
@@ -103,7 +119,7 @@ describe('Patients', () => {
   })
 
   it("navigates to the patient's detail page when a row is clicked", async () => {
-    mockedApi.get.mockResolvedValueOnce({ data: [patient()] })
+    mockPatientsGet([patient()])
     const user = userEvent.setup()
     renderPatients()
     await screen.findByText('Sara Ahmad', undefined, LOADING_TIMEOUT)
@@ -114,9 +130,7 @@ describe('Patients', () => {
   })
 
   it('updates the total-patient count in the header based on the loaded list', async () => {
-    mockedApi.get.mockResolvedValueOnce({
-      data: [patient(), patient({ id: 'pat-2', patientNumber: 202, fullName: 'Omar Khalil' })],
-    })
+    mockPatientsGet([patient(), patient({ id: 'pat-2', patientNumber: 202, fullName: 'Omar Khalil' })])
     renderPatients()
 
     expect(await screen.findByText(/2\s*Total Patients/i, undefined, LOADING_TIMEOUT)).toBeInTheDocument()
