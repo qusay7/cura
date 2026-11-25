@@ -406,7 +406,10 @@ export default function EditPatient() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target
-    const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+    // ✅ الباك اند يخزّن رقم المريض كـ int (32-bit)، فنمنع إدخال أكثر من 9 أرقام
+    // هنا بدل أن يظهر خطأ JSON غامض من السيرفر بعد الحفظ
+    const sanitizedValue = name === 'patientNumber' ? value.slice(0, 9) : value
+    const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : sanitizedValue
     setForm(prev => ({ ...prev, [name]: newValue }))
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: '' }))
@@ -424,8 +427,8 @@ export default function EditPatient() {
     const patientNumberValue = Number(form.patientNumber)
     if (!form.patientNumber.trim()) {
       errors.patientNumber = isAr ? 'رقم المريض مطلوب' : 'Patient number is required'
-    } else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0) {
-      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً أكبر من صفر' : 'Patient number must be a whole number greater than zero'
+    } else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0 || patientNumberValue > 999_999_999) {
+      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً بين 1 و 999999999' : 'Patient number must be a whole number between 1 and 999,999,999'
     }
 
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {

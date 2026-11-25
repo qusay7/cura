@@ -243,7 +243,10 @@ export default function AddPatient() {
 
   const handleChange = (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => {
     const {name,value} = e.target
-    setForm(prev=>({...prev,[name]:value}))
+    // ✅ الباك اند يخزّن رقم المريض كـ int (32-bit)، فنمنع إدخال أكثر من 9 أرقام
+    // هنا بدل أن يظهر خطأ JSON غامض من السيرفر بعد الحفظ
+    const sanitized = name === 'patientNumber' ? value.slice(0, 9) : value
+    setForm(prev=>({...prev,[name]:sanitized}))
     if (validationErrors[name]) setValidationErrors(prev=>({...prev,[name]:''}))
   }
 
@@ -252,8 +255,8 @@ export default function AddPatient() {
     const t = T[lang]
     const patientNumberValue = Number(form.patientNumber)
     if (!form.patientNumber.trim()) errors.patientNumber = t.required
-    else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0) {
-      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً أكبر من صفر' : 'Patient number must be a whole number greater than zero'
+    else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0 || patientNumberValue > 999_999_999) {
+      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً بين 1 و 999999999' : 'Patient number must be a whole number between 1 and 999,999,999'
     }
     if (!form.fullName.trim()) errors.fullName = t.required
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = t.emailInvalid
