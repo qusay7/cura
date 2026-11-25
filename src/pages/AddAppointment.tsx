@@ -681,7 +681,7 @@ export default function AddAppointment() {
                 value={form.patientId}
                 onChange={handlePatientSelect}
                 placeholder={isAr ? 'اختر مريضاً...' : 'Select a patient...'}
-                options={patients.map(p => ({ value: p.id, label: `#${p.patientNumber} — ${p.fullName}` }))}
+                options={patients.map(p => ({ value: p.id, label: `#${p.patientNumber} — ${p.fullName}`, keywords: [p.phone, p.nationalId].filter(Boolean).join(' ') }))}
               />
               <p style={{ fontSize:10, color:TEXT_MUTED, marginTop:4 }}>
                 {t.registeredPatients} {patients.length}

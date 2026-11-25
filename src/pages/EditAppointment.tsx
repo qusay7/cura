@@ -699,7 +699,7 @@ export default function EditAppointment() {
                 value={form.patientId}
                 onChange={handlePatientSelect}
                 placeholder={t.patientPlaceholder}
-                options={patients.map(p => ({ value: p.id, label: `#${p.patientNumber} — ${p.fullName}` }))}
+                options={patients.map(p => ({ value: p.id, label: `#${p.patientNumber} — ${p.fullName}`, keywords: [p.phone, p.nationalId].filter(Boolean).join(' ') }))}
               />
             </FormField>
 

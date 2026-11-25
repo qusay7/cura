@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import QuickVisit from './QuickVisit'
@@ -126,7 +126,7 @@ describe('QuickVisit', () => {
     const addButton = await screen.findByText('+ Add New Patient')
     await user.click(addButton)
 
-    expect(screen.getByPlaceholderText('Full Name')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Full Name *')).toBeInTheDocument()
   })
 
   it('shows the calendar once a doctor is selected and records the picked slot', async () => {
@@ -186,7 +186,12 @@ describe('QuickVisit', () => {
   })
 
   it('creates a new patient and books their first visit', async () => {
-    mockQuickVisitGets({ '/patients': [], '/doctors': [doctor()] })
+    // ✅ "/patients/next-number" يجب أن يُذكر قبل "/patients" — مطابقة startsWith
+    // بـ mockQuickVisitGets تتحقق بترتيب المفاتيح، و"/patients" يطابق كمقدّمة له
+    mockQuickVisitGets({
+      '/patients/next-number': { nextNumber: 200001 },
+      '/patients': [], '/doctors': [doctor()],
+    })
     mockedApi.post.mockImplementation((url: string) => {
       if (url === '/patients') return Promise.resolve({ data: { id: 'pat-new' } })
       if (url === '/appointments') return Promise.resolve({ data: { id: 'appt-new' } })
@@ -198,14 +203,24 @@ describe('QuickVisit', () => {
 
     await user.type(screen.getByPlaceholderText('Search by name or patient ID...'), 'Omar')
     await user.click(await screen.findByText('+ Add New Patient'))
-    await user.type(screen.getByPlaceholderText('Full Name'), 'Omar Khalil')
+    // ✅ رقم المريض معبّى تلقائياً بالرقم المقترح — الاسم والهاتف والجنس
+    // وتاريخ الميلاد أصبحت إجبارية الآن عند إضافة مريض بالزيارة السريعة أيضاً
+    await screen.findByDisplayValue('200001')
+    await user.type(screen.getByPlaceholderText('Full Name *'), 'Omar Khalil')
+    await user.type(screen.getByPlaceholderText('Phone *'), '0781234567')
+    await user.selectOptions(screen.getByDisplayValue('Gender *'), 'male')
+    const dobInput = container.querySelector('input[name="dateOfBirth"]') as HTMLInputElement
+    fireEvent.change(dobInput, { target: { value: '1990-01-01' } })
     await user.selectOptions(getDoctorSelect(container), 'doc-1')
     await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
 
     await user.click(screen.getByRole('button', { name: /save visit/i }))
 
     await waitFor(() =>
-      expect(mockedApi.post).toHaveBeenCalledWith('/patients', expect.objectContaining({ fullName: 'Omar Khalil' }))
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/patients',
+        expect.objectContaining({ fullName: 'Omar Khalil', patientNumber: 200001, phone: '0781234567', gender: 'male', dateOfBirth: '1990-01-01' })
+      )
     )
     await waitFor(() =>
       expect(mockedApi.post).toHaveBeenCalledWith(

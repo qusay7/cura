@@ -23,6 +23,7 @@ export interface Patient {
   phone: string | null
   gender: string | null
   dateOfBirth: string | null
+  nationalId?: string | null
   createdAt: string
 }
 

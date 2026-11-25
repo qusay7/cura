@@ -353,7 +353,9 @@ export default function Patients() {
   // Filter patients
   const filteredPatients = patients.filter(patient =>
     patient.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    patient.patientNumber.toString().includes(search)
+    patient.patientNumber.toString().includes(search) ||
+    (patient.phone && patient.phone.includes(search)) ||
+    (patient.nationalId && patient.nationalId.includes(search))
   )
 
   const t = T[lang]

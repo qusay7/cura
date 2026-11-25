@@ -24,13 +24,14 @@ interface QueueEntry {
   createdAt: string
 }
 
-interface Patient { 
-  id: string; 
-  fullName: string; 
-  patientNumber: number; 
-  phone?: string | null; 
-  gender?: string | null; 
-  dateOfBirth?: string | null 
+interface Patient {
+  id: string;
+  fullName: string;
+  patientNumber: number;
+  phone?: string | null;
+  gender?: string | null;
+  dateOfBirth?: string | null;
+  nationalId?: string | null;
 }
 
 interface Doctor { 
@@ -336,7 +337,8 @@ export default function Queue() {
     const results = patients.filter(patient =>
       patient.fullName.toLowerCase().includes(term) ||
       patient.patientNumber.toString().includes(term) ||
-      (patient.phone && patient.phone.toLowerCase().includes(term))
+      (patient.phone && patient.phone.toLowerCase().includes(term)) ||
+      (patient.nationalId && patient.nationalId.toLowerCase().includes(term))
     )
     setSearchResults(results)
     setSearching(false)

@@ -7,7 +7,7 @@ import { showMessageBox } from '../utils/messageBox'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
-interface Patient { id: string; fullName: string; patientNumber: number; phone?: string | null }
+interface Patient { id: string; fullName: string; patientNumber: number; phone?: string | null; nationalId?: string | null }
 interface Department { id: string; name: string; type: number; isActive: boolean }
 
 const T = {
@@ -96,7 +96,8 @@ export default function EmergencyCheckIn() {
     setSearchResults(patients.filter(p =>
       p.fullName.toLowerCase().includes(q) ||
       p.patientNumber.toString().includes(q) ||
-      (p.phone && p.phone.toLowerCase().includes(q))
+      (p.phone && p.phone.toLowerCase().includes(q)) ||
+      (p.nationalId && p.nationalId.toLowerCase().includes(q))
     ))
   }, [patients])
 

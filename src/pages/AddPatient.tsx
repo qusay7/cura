@@ -243,9 +243,8 @@ export default function AddPatient() {
 
   const handleChange = (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => {
     const {name,value} = e.target
-    // ✅ الباك اند يخزّن رقم المريض كـ int (32-bit)، فنمنع إدخال أكثر من 9 أرقام
-    // هنا بدل أن يظهر خطأ JSON غامض من السيرفر بعد الحفظ
-    const sanitized = name === 'patientNumber' ? value.slice(0, 9) : value
+    // ✅ الباك اند يخزّن رقم المريض كـ bigint، حتى 14 خانة
+    const sanitized = name === 'patientNumber' ? value.slice(0, 14) : value
     setForm(prev=>({...prev,[name]:sanitized}))
     if (validationErrors[name]) setValidationErrors(prev=>({...prev,[name]:''}))
   }
@@ -255,12 +254,16 @@ export default function AddPatient() {
     const t = T[lang]
     const patientNumberValue = Number(form.patientNumber)
     if (!form.patientNumber.trim()) errors.patientNumber = t.required
-    else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0 || patientNumberValue > 999_999_999) {
-      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً بين 1 و 999999999' : 'Patient number must be a whole number between 1 and 999,999,999'
+    else if (!Number.isInteger(patientNumberValue) || patientNumberValue <= 0 || patientNumberValue > 99_999_999_999_999) {
+      errors.patientNumber = isAr ? 'رقم المريض يجب أن يكون رقماً صحيحاً بحد أقصى 14 خانة' : 'Patient number must be a whole number of at most 14 digits'
     }
     if (!form.fullName.trim()) errors.fullName = t.required
+    // ✅ الحقول المهمة: رقم الهاتف، تاريخ الميلاد، والجنس إجبارية الآن عند الإضافة
+    if (!form.phone.trim()) errors.phone = t.required
+    else if (!/^[\d\s\+-]{8,}$/.test(form.phone.replace(/\s/g,''))) errors.phone = t.phoneInvalid
+    if (!form.dateOfBirth.trim()) errors.dateOfBirth = t.required
+    if (!form.gender.trim()) errors.gender = t.required
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = t.emailInvalid
-    if (form.phone && !/^[\d\s\+-]{8,}$/.test(form.phone.replace(/\s/g,''))) errors.phone = t.phoneInvalid
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -406,20 +409,20 @@ export default function AddPatient() {
               <FormField label={t.fullName} required error={validationErrors.fullName}>
                 <input name="fullName" value={form.fullName} onChange={handleChange} placeholder={t.fullNamePlaceholder} className="form-input" style={inputStyle(isAr)} />
               </FormField>
-              <FormField label={t.phone} error={validationErrors.phone}>
+              <FormField label={t.phone} required error={validationErrors.phone}>
                 <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder={t.phonePlaceholder} className="form-input" style={inputStyle(isAr)} />
               </FormField>
               <FormField label={t.phone2}>
                 <input type="tel" name="phone2" value={form.phone2} onChange={handleChange} placeholder={t.phone2Placeholder} className="form-input" style={inputStyle(isAr)} />
               </FormField>
-              <FormField label={t.gender}>
+              <FormField label={t.gender} required error={validationErrors.gender}>
                 <select name="gender" value={form.gender} onChange={handleChange} className="form-select" style={{...inputStyle(isAr),cursor:'pointer'}}>
                   <option value="">{t.genderPlaceholder}</option>
                   <option value="male">{t.male}</option>
                   <option value="female">{t.female}</option>
                 </select>
               </FormField>
-              <FormField label={t.dateOfBirth}>
+              <FormField label={t.dateOfBirth} required error={validationErrors.dateOfBirth}>
                 <DatePicker value={form.dateOfBirth} onChange={val=>setForm(prev=>({...prev,dateOfBirth:val}))} isAr={isAr} />
               </FormField>
               <FormField label={t.nationalId} error={validationErrors.nationalId}>

@@ -19,6 +19,18 @@ vi.mock('../components/ECGAnimation', () => ({
 
 const mockedApi = vi.mocked(api, true)
 
+// ✅ الهاتف والجنس وتاريخ الميلاد أصبحت حقولاً إجبارية عند إضافة مريض —
+// التاريخ عبارة عن 3 قوائم منسدلة (يوم/شهر/سنة) بدون ربط عبر label، فنستهدفها
+// بالقيمة الافتراضية المعروضة بدل getByLabelText
+async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
+  // (exact match needed — "Phone" with exact:false also matches the "Phone 2" field)
+  await user.type(screen.getByLabelText(/^phone \*/i), '0791234567')
+  await user.selectOptions(screen.getByLabelText('Gender', { exact: false }), 'male')
+  await user.selectOptions(screen.getByDisplayValue('Day'), '15')
+  await user.selectOptions(screen.getByDisplayValue('Month'), '06')
+  await user.selectOptions(screen.getByDisplayValue('Year'), '1996')
+}
+
 function renderAddPatient() {
   render(
     <MemoryRouter initialEntries={['/patients/add']}>
@@ -65,13 +77,15 @@ describe('AddPatient', () => {
     expect(event.defaultPrevented).toBe(true)
   })
 
-  it('requires a full name before submitting', async () => {
+  it('requires full name, phone, gender, and date of birth before submitting', async () => {
     const user = userEvent.setup()
     renderAddPatient()
 
     await user.click(screen.getByRole('button', { name: /save patient/i }))
 
-    expect(await screen.findByText('This field is required')).toBeInTheDocument()
+    // ✅ أربعة حقول إجبارية فاضية (رقم المريض معبّى مسبقاً بالرقم المقترح)، كلها
+    // تعرض نفس نص الخطأ العام
+    expect((await screen.findAllByText('This field is required')).length).toBeGreaterThanOrEqual(4)
     expect(mockedApi.post).not.toHaveBeenCalled()
   })
 
@@ -95,6 +109,7 @@ describe('AddPatient', () => {
     renderAddPatient()
 
     await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /save patient/i }))
 
     await waitFor(() =>
@@ -112,6 +127,7 @@ describe('AddPatient', () => {
     await user.clear(numberInput)
     await user.type(numberInput, '1000042')
     await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /save patient/i }))
 
     await waitFor(() =>
@@ -129,6 +145,7 @@ describe('AddPatient', () => {
 
     await user.clear(numberInput)
     await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /save patient/i }))
 
     expect(await screen.findByText('This field is required')).toBeInTheDocument()
@@ -141,6 +158,7 @@ describe('AddPatient', () => {
     renderAddPatient()
 
     await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /save patient/i }))
 
     expect(await screen.findByText('Duplicate national ID')).toBeInTheDocument()
@@ -151,6 +169,7 @@ describe('AddPatient', () => {
     const user = userEvent.setup()
     renderAddPatient()
     await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /save patient/i }))
     await screen.findByText(/patient saved successfully/i)
 
@@ -173,6 +192,7 @@ describe('AddPatient', () => {
     const user = userEvent.setup()
     renderAddPatient()
     await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /save patient/i }))
     await screen.findByText(/patient saved successfully/i)
 

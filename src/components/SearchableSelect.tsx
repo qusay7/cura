@@ -16,6 +16,8 @@ export interface SearchableSelectOption {
   label: string
   disabled?: boolean
   hint?: string   // نص إضافي يظهر جنب الخيار (مثلاً: "مرتبط بـ: أحمد")
+  // ✅ نص إضافي يُطابَق بالبحث لكن لا يظهر بالخيار (مثلاً هاتف/رقم وطني المريض)
+  keywords?: string
 }
 
 interface SearchableSelectProps {
@@ -121,7 +123,10 @@ export default function SearchableSelect({
 
   const selected = options.find(o => o.value === value)
   const filtered = query.trim()
-    ? options.filter(o => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    ? options.filter(o => {
+        const q = query.trim().toLowerCase()
+        return o.label.toLowerCase().includes(q) || (o.keywords?.toLowerCase().includes(q) ?? false)
+      })
     : options
 
   // ✅ يعيد ضبط عنصر التنقّل النشط كلما تغيّرت نتائج البحث أو فُتحت القائمة —

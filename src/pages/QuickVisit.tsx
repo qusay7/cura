@@ -329,6 +329,7 @@ const T = {
     male: 'ذكر',
     female: 'أنثى',
     dateOfBirth: 'تاريخ الميلاد',
+    nationalId: 'الرقم الوطني (اختياري)',
     selectPatient: 'اختر مريضاً...',
     loadingMessage: 'جاري تحميل البيانات',
     loadingSub: 'يرجى الانتظار...',
@@ -373,6 +374,7 @@ const T = {
     male: 'Male',
     female: 'Female',
     dateOfBirth: 'Date of Birth',
+    nationalId: 'National ID (optional)',
     selectPatient: 'Select a patient...',
     loadingMessage: 'Loading Data',
     loadingSub: 'Please wait...',
@@ -397,10 +399,12 @@ export default function QuickVisit() {
   const [isNewPatient, setIsNewPatient] = useState(false)
   
   const [newPatient, setNewPatient] = useState({
+    patientNumber: '',
     fullName: '',
     phone: '',
     gender: '',
     dateOfBirth: '',
+    nationalId: '',
   })
   
   const [visitForm, setVisitForm] = useState({
@@ -501,7 +505,8 @@ export default function QuickVisit() {
     const results = allPatients.filter(patient =>
       patient.fullName.toLowerCase().includes(term) ||
       patient.patientNumber.toString().includes(term) ||
-      (patient.phone && patient.phone.toLowerCase().includes(term))
+      (patient.phone && patient.phone.toLowerCase().includes(term)) ||
+      (patient.nationalId && patient.nationalId.toLowerCase().includes(term))
     )
     setSearchResults(results)
     setSearching(false)
@@ -531,15 +536,24 @@ export default function QuickVisit() {
     setSearchResults([])
     setSearchTerm('')
     setNewPatient({
+      patientNumber: '',
       fullName: '',
       phone: '',
       gender: '',
       dateOfBirth: '',
+      nationalId: '',
     })
+    // ✅ رقم مقترح تلقائياً — نفس اتفاقية صفحة إضافة مريض (AddPatient.tsx)
+    api.get('/patients/next-number').then(r => {
+      setNewPatient(prev => prev.patientNumber ? prev : { ...prev, patientNumber: String(r.data.nextNumber) })
+    }).catch(() => {})
   }
 
   const handleNewPatientChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setNewPatient({ ...newPatient, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+    // ✅ الباك اند يخزّن رقم المريض كـ bigint، حتى 14 خانة
+    const sanitized = name === 'patientNumber' ? value.slice(0, 14) : value
+    setNewPatient({ ...newPatient, [name]: sanitized })
   }
 
   const handleVisitChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -563,25 +577,29 @@ export default function QuickVisit() {
         patientId = selectedPatient.id
       }
       else if (isNewPatient) {
-        if (!newPatient.fullName.trim()) {
+        // ✅ الحقول المهمة إجبارية هنا أيضاً، بنفس معيار صفحة إضافة مريض
+        const pn = Number(newPatient.patientNumber)
+        if (
+          !newPatient.patientNumber.trim() || !Number.isInteger(pn) || pn <= 0 || pn > 99_999_999_999_999 ||
+          !newPatient.fullName.trim() || !newPatient.phone.trim() ||
+          !newPatient.gender.trim() || !newPatient.dateOfBirth.trim()
+        ) {
           showMessageBox(T[lang].required, 'warning')
           setLoading(false)
           return
         }
-        
+
         const patientPayload: Record<string, any> = {
-          fullName: newPatient.fullName.trim()
+          patientNumber: pn,
+          fullName: newPatient.fullName.trim(),
+          phone: newPatient.phone.trim(),
+          gender: newPatient.gender,
+          dateOfBirth: newPatient.dateOfBirth,
         }
-        if (newPatient.phone && newPatient.phone.trim()) {
-          patientPayload.phone = newPatient.phone.trim()
+        if (newPatient.nationalId && newPatient.nationalId.trim()) {
+          patientPayload.nationalId = newPatient.nationalId.trim()
         }
-        if (newPatient.gender && newPatient.gender.trim()) {
-          patientPayload.gender = newPatient.gender
-        }
-        if (newPatient.dateOfBirth && newPatient.dateOfBirth.trim()) {
-          patientPayload.dateOfBirth = newPatient.dateOfBirth
-        }
-        
+
         const patientResponse = await api.post('/patients', patientPayload)
         patientId = patientResponse.data.id
       } else {
@@ -862,38 +880,54 @@ export default function QuickVisit() {
                   </button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                  <input 
-                    name="fullName" 
-                    value={newPatient.fullName} 
-                    onChange={handleNewPatientChange} 
-                    placeholder={t.fullName} 
+                  <input
+                    name="patientNumber"
+                    value={newPatient.patientNumber}
+                    onChange={handleNewPatientChange}
+                    placeholder={`${t.patientNumber} *`}
                     className="form-input"
                     style={{ padding: '12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13 }}
                   />
-                  <input 
-                    name="phone" 
-                    value={newPatient.phone} 
-                    onChange={handleNewPatientChange} 
-                    placeholder={t.phone} 
+                  <input
+                    name="fullName"
+                    value={newPatient.fullName}
+                    onChange={handleNewPatientChange}
+                    placeholder={`${t.fullName} *`}
                     className="form-input"
                     style={{ padding: '12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13 }}
                   />
-                  <select 
-                    name="gender" 
-                    value={newPatient.gender} 
-                    onChange={handleNewPatientChange} 
+                  <input
+                    name="phone"
+                    value={newPatient.phone}
+                    onChange={handleNewPatientChange}
+                    placeholder={`${t.phone} *`}
+                    className="form-input"
+                    style={{ padding: '12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13 }}
+                  />
+                  <select
+                    name="gender"
+                    value={newPatient.gender}
+                    onChange={handleNewPatientChange}
                     className="form-select"
                     style={{ padding: '12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13, background: '#FFF' }}
                   >
-                    <option value="">{t.gender}</option>
+                    <option value="">{`${t.gender} *`}</option>
                     <option value="male">{t.male}</option>
                     <option value="female">{t.female}</option>
                   </select>
-                  <input 
-                    type="date" 
-                    name="dateOfBirth" 
-                    value={newPatient.dateOfBirth} 
-                    onChange={handleNewPatientChange} 
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={newPatient.dateOfBirth}
+                    onChange={handleNewPatientChange}
+                    className="form-input"
+                    style={{ padding: '12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13 }}
+                  />
+                  <input
+                    name="nationalId"
+                    value={newPatient.nationalId}
+                    onChange={handleNewPatientChange}
+                    placeholder={t.nationalId}
                     className="form-input"
                     style={{ padding: '12px', border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 13 }}
                   />
