@@ -4,6 +4,7 @@ import { Lock, Cloud, Wrench, Quote, ChevronDown } from 'lucide-react'
 import { C, T, type Lang, ECGLine, SHOW_TESTIMONIALS, useLandingStyles } from './landing/shared'
 import SiteNav from './landing/SiteNav'
 import SiteFooter from './landing/SiteFooter'
+import SignupModal from './landing/SignupModal'
 import { usePageMeta } from '../hooks/usePageMeta'
 
 // ✅ مصدر وحيد لبيانات SEO لهذه الصفحة — يستخدمها usePageMeta بالمتصفح، وسكربت
@@ -23,13 +24,16 @@ export default function LandingPage() {
   const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem('cura-lang') as Lang) || 'en')
   const setLang = (l: Lang) => { localStorage.setItem('cura-lang', l); setLangState(l) }
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const [signupOpen, setSignupOpen] = useState(false)
 
   const t    = T[lang]
   const isAr = lang === 'ar'
 
   usePageMeta(getPageMeta(isAr))
 
-  // ── إنشاء العيادة يتم عبر التواصل المباشر، لا بتسجيل ذاتي ──
+  // ── زر الهيرو الرئيسي يفتح نموذج "ابدأ مجاناً" (تسجيل ذاتي، تجربة 14 يوم)
+  // عبر PublicSignupController. الزر النهائي بأسفل الصفحة يبقى تواصلاً مباشراً
+  // (واتساب) عمداً — لعملاء يفضّلون التحدث مع فريق المبيعات قبل الالتزام ──
   const WHATSAPP = 'https://wa.me/962796139705'
 
   const contactSales = () => {
@@ -76,7 +80,7 @@ export default function LandingPage() {
               </p>
 
               <div className="fu d3" style={{ display:'flex', gap:14, flexWrap:'wrap', marginBottom:48 }}>
-                <button className="btn-primary" onClick={contactSales} style={{ fontSize:15, padding:'13px 28px' }}>{t.hero.cta1}</button>
+                <button className="btn-primary" onClick={() => setSignupOpen(true)} style={{ fontSize:15, padding:'13px 28px' }}>{t.hero.cta1}</button>
                 <button className="btn-ghost"   onClick={() => navigate('/features')} style={{ fontSize:15, padding:'13px 26px' }}>{t.hero.cta2}</button>
               </div>
 
@@ -343,6 +347,7 @@ export default function LandingPage() {
       </section>
 
       <SiteFooter lang={lang} />
+      <SignupModal open={signupOpen} onClose={() => setSignupOpen(false)} lang={lang} />
     </div>
   )
 }

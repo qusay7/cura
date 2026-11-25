@@ -45,16 +45,13 @@ describe('LandingPage', () => {
     expect((await screen.findAllByText('تسجيل الدخول')).length).toBeGreaterThan(0)
   })
 
-  it('opens WhatsApp with a prefilled message when contacting sales', async () => {
+  it('opens the free-trial signup form when "Get Started" is clicked', async () => {
     const user = userEvent.setup()
     renderLandingPage()
 
     await user.click(screen.getByRole('button', { name: /get started/i }))
 
-    expect(window.open).toHaveBeenCalledWith(
-      expect.stringContaining('https://wa.me/962796139705'),
-      '_blank'
-    )
+    expect(await screen.findByRole('button', { name: /create clinic/i })).toBeInTheDocument()
   })
 
   it('links the pricing teaser to the dedicated pricing page', async () => {

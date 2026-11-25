@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { C, T, type Lang } from './shared'
+import SignupModal from './SignupModal'
 
 // ✅ نفس الـ nav على الصفحات التسويقية الأربعة (الرئيسية + الميزات + الأسعار +
 // الأسئلة) — دائماً تنتقل بين المسارات (routes)، لا تمرير داخلي (scroll) أبداً،
@@ -12,6 +13,7 @@ export default function SiteNav({ lang, setLang }: { lang: Lang; setLang: (l: La
   const isAr = lang === 'ar'
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [signupOpen, setSignupOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -25,18 +27,9 @@ export default function SiteNav({ lang, setLang }: { lang: Lang; setLang: (l: La
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const WHATSAPP = 'https://wa.me/962796139705'
-  const contactSales = () => {
-    setMobileOpen(false)
-    window.open(
-      `${WHATSAPP}?text=${encodeURIComponent(
-        isAr ? 'مرحباً، أرغب بتجربة نظام Cura لعيادتي' : 'Hello, I would like to try Cura for my clinic'
-      )}`,
-      '_blank'
-    )
-  }
-
   const go = (path: string) => { setMobileOpen(false); navigate(path) }
+
+  const openSignup = () => { setMobileOpen(false); setSignupOpen(true) }
 
   const LangBtn = () => (
     <button onClick={() => setLang(isAr ? 'en' : 'ar')}
@@ -80,7 +73,7 @@ export default function SiteNav({ lang, setLang }: { lang: Lang; setLang: (l: La
             <LangBtn />
             <div style={{ width:1, height:20, background:C.border }} />
             <span className="nav-item" onClick={() => go('/login')}>{t.nav.login}</span>
-            <button className="btn-primary" onClick={contactSales} style={{ padding:'9px 22px', fontSize:13, borderRadius:10 }}>{t.nav.cta}</button>
+            <button className="btn-primary" onClick={openSignup} style={{ padding:'9px 22px', fontSize:13, borderRadius:10 }}>{t.nav.cta}</button>
           </div>
 
           {/* Mobile controls */}
@@ -128,13 +121,15 @@ export default function SiteNav({ lang, setLang }: { lang: Lang; setLang: (l: La
               {t.nav.login}
             </button>
 
-            <button className="btn-primary" onClick={contactSales}
+            <button className="btn-primary" onClick={openSignup}
               style={{ marginTop:12, justifyContent:'center' }}>
               {t.nav.cta}
             </button>
           </div>
         </div>
       )}
+
+      <SignupModal open={signupOpen} onClose={() => setSignupOpen(false)} lang={lang} />
     </nav>
   )
 }
