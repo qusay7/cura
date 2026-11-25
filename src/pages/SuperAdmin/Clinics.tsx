@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { PRIMARY, PRIMARY_SOFT, TEXT_DARK, TEXT_MUTED, BORDER, CARD_BG } from '../../styles/theme'
 import { showMessageBox } from '../../utils/messageBox'
+import { generateRandomPassword } from '../../utils/password'
 
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
@@ -241,16 +242,19 @@ export default function SuperAdminClinics() {
       const clinic = clinicRes.data
 
       // 2 — إنشاء ClinicAdmin (المستخدم الأساسي دائماً)
+      // ✅ كلمة مرور عشوائية حقيقية — غير قابلة للاستنتاج من النطاق الفرعي
+      // (العلني أصلاً)، بعكس النمط القديم {subDomain}@123
+      const adminPassword = generateRandomPassword()
       await api.post('/users', {
         fullName: form.name,
         username: form.subDomain,
         email: `${form.subDomain}@CURA.com`,
-        password: `${form.subDomain}@123`,
+        password: adminPassword,
         role: 'ClinicAdmin',
         clinicId: clinic.id,
       })
 
-      const createdCreds = [{ role: t.mainAdmin, username: form.subDomain, password: `${form.subDomain}@123` }]
+      const createdCreds = [{ role: t.mainAdmin, username: form.subDomain, password: adminPassword }]
 
       // ✅ 2.ب — إنشاء الحسابات الإضافية الموزّعة على الأدوار (اختياري)، عبر /staff
       // بدل /users مباشرة — عشان كل حساب يرتبط فعلياً ببطاقة "فريق العمل"،
@@ -269,7 +273,7 @@ export default function SuperAdminClinics() {
         for (let i = 1; i <= slot.count; i++) {
           const fullName = isAr ? `${slot.labelAr} ${i}` : `${slot.labelEn} ${i}`
           const username = `${form.subDomain}-${slot.role.toLowerCase()}${i}`
-          const password = `${username}@123`
+          const password = generateRandomPassword()
           await api.post('/staff', {
             clinicId: clinic.id,
             fullName,
@@ -379,6 +383,22 @@ export default function SuperAdminClinics() {
       setTimeout(() => setSuccess(''), 5000)
     } catch (err: any) {
       showMessageBox(err.response?.data?.message || err.response?.data || (isAr ? 'تعذّر التحديث' : 'Failed to refresh'), 'error')
+    }
+  }
+
+  // ✅ يولّد كلمة مرور عشوائية جديدة لحساب مدير العيادة (ClinicAdmin) ويعرضها
+  // لحظة التوليد فقط — لا يمكن "رؤية" كلمة المرور القديمة إطلاقاً (مخزّنة كـ hash
+  // باتجاه واحد)، فقط استبدالها بواحدة جديدة
+  const handleResetAdminPassword = async (clinicId: string, clinicName: string) => {
+    if (!window.confirm(isAr
+      ? `هل تريد توليد كلمة مرور جديدة لمدير عيادة "${clinicName}"؟ كلمة المرور القديمة لن تعمل بعد ذلك.`
+      : `Generate a new password for "${clinicName}"'s admin account? The old password will stop working.`)) return
+    try {
+      const res = await api.post(`/clinics/${clinicId}/reset-admin-password`)
+      setGeneratedCreds([{ role: t.mainAdmin, username: res.data.username, password: res.data.password }])
+      setCredsCopied(false)
+    } catch (err: any) {
+      showMessageBox(err.response?.data || (isAr ? 'تعذّر توليد كلمة مرور جديدة' : 'Failed to generate a new password'), 'error')
     }
   }
 
@@ -582,7 +602,7 @@ export default function SuperAdminClinics() {
                       <div style={{ marginTop: 6, padding: '8px 12px', background: '#F0F8F0', borderRadius: 8, fontSize: 11, color: '#4A7679', border: '1px solid #4A767940', lineHeight: 1.8 }}>
                         👤 Username: <strong>{form.subDomain}</strong><br />
                         📧 Email: <strong>{form.subDomain}@CURA.com</strong><br />
-                        🔑 Password: <strong>{form.subDomain}@123</strong>
+                        🔑 {isAr ? 'كلمة مرور عشوائية ستُولَّد وتُعرض بعد الإنشاء' : 'A random password will be generated and shown after creation'}
                       </div>
                     )}
                   </div>
@@ -841,6 +861,16 @@ export default function SuperAdminClinics() {
                         </button>
                         <button onClick={() => openRenewModal(clinic)} className="btn-details" style={{ color: '#16A34A', borderColor: '#16A34A40' }}>
                           💳 {isAr ? 'تجديد الاشتراك' : 'Renew Subscription'}
+                        </button>
+                        <button
+                          onClick={() => handleResetAdminPassword(clinic.id, clinic.name)}
+                          className="btn-details"
+                          style={{ color: '#B8860B', borderColor: '#B8860B40' }}
+                          title={isAr
+                            ? 'يولّد كلمة مرور عشوائية جديدة لحساب مدير هذه العيادة ويعرضها لمرة واحدة'
+                            : 'Generates a new random password for this clinic\'s admin account and shows it once'}
+                        >
+                          🔑 {isAr ? 'إعادة توليد كلمة المرور' : 'Reset Admin Password'}
                         </button>
                         <button onClick={() => handleToggle(clinic.id)} className={`btn-toggle ${clinic.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}>
                           {clinic.isActive ? `🔴 ${t.deactivate}` : `🟢 ${t.activate}`}

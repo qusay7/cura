@@ -22,6 +22,8 @@ const translations = {
     lPass: 'PASSWORD',
     pPh: '••••••••',
     forgot: 'Forgot password?',
+    forgotAdmin: "I'm the clinic admin — contact support",
+    forgotStaff: "I'm a clinic staff member — please contact your clinic admin to reset your password",
     btn: 'Sign In',
     ssl: 'SECURE CONNECTION',
     errEmpty: 'Please fill in all fields',
@@ -59,6 +61,8 @@ const translations = {
     lPass: 'كلمة المرور',
     pPh: '••••••••',
     forgot: 'نسيت كلمة المرور؟',
+    forgotAdmin: 'أنا مدير العيادة — تواصل مع الدعم الفني',
+    forgotStaff: 'أنا موظف بالعيادة — يرجى التواصل مع مدير العيادة لإعادة تعيين كلمة المرور',
     btn: 'تسجيل الدخول',
     ssl: 'اتصال آمن',
     errEmpty: 'يرجى تعبئة جميع الحقول',
@@ -126,6 +130,8 @@ input:focus { border-color:#5B8C8F !important; box-shadow:0 0 0 3px rgba(91,140,
   .cura-stats-grid{ display:none !important; }
 }
 `
+
+const WHATSAPP = 'https://wa.me/962796139705'
 
 const P  = '#5B8C8F'
 const PD = '#4A7679'
@@ -276,6 +282,7 @@ export default function Login() {
   const [loading, setLoading]   = useState(false)
   const [shakeForm, setShakeForm] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
 
   // Remembers the last subdomain we already resolved, so navigating to the
   // same "/login/:subdomain" we just set ourselves doesn't trigger a second,
@@ -662,10 +669,27 @@ if (data.role?.toLowerCase() === 'doctor') {
                   </div>
                 </div>
 
-                {/* Forgot — not implemented yet, so shown as inert rather than a dead link */}
-                <div style={{ textAlign:isAr?'right':'left', marginBottom:16 }}>
-                  <span aria-disabled="true" title={isAr ? 'غير متاح حالياً' : 'Not available yet'}
-                    style={{ fontSize:11, color:accent, opacity:0.5, cursor:'default' }}>{t.forgot}</span>
+                {/* Forgot password — self-select rather than an automatic lookup, so this
+                    never becomes a way to probe whether a given username is an admin
+                    account or not */}
+                <div style={{ textAlign:isAr?'right':'left', marginBottom:16, position:'relative' }}>
+                  <button type="button" onClick={() => setForgotOpen(v => !v)}
+                    style={{ fontSize:11, color:accent, background:'none', border:'none', padding:0, cursor:'pointer', fontFamily:t.font }}>
+                    {t.forgot}
+                  </button>
+                  {forgotOpen && (
+                    <div dir={t.dir} style={{ marginTop:8, padding:10, background:accentS, border:`1px solid ${accentBr}`, borderRadius:10, textAlign:isAr?'right':'left' }}>
+                      <button type="button"
+                        onClick={() => { window.open(`${WHATSAPP}?text=${encodeURIComponent(isAr ? 'نسيت كلمة مرور حساب مدير العيادة، أحتاج مساعدة' : 'I forgot my clinic admin password, I need help')}`, '_blank'); setForgotOpen(false) }}
+                        style={{ display:'block', width:'100%', textAlign:isAr?'right':'left', background:'none', border:'none', padding:'6px 0', cursor:'pointer', color:accent, fontWeight:600, fontSize:11.5, fontFamily:t.font }}>
+                        🛠️ {t.forgotAdmin}
+                      </button>
+                      <div style={{ height:1, background:accentBr, margin:'2px 0' }} />
+                      <p style={{ padding:'6px 0', margin:0, fontSize:11.5, color:TM, lineHeight:1.6 }}>
+                        👤 {t.forgotStaff}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit */}
