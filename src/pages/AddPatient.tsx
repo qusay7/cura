@@ -9,6 +9,11 @@ import { showMessageBox } from '../utils/messageBox'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
+// ✅ رسالة الباك اند الثابتة (بالعربي دائماً، بدون تمييز لغة بهذا الـ endpoint)
+// عند تعارض رقم المريض — نطابقها لنعرف متى نطلب رقماً جديداً تلقائياً
+const isDuplicatePatientNumberError = (errData: unknown) =>
+  typeof errData === 'string' && errData.includes('رقم المريض') && errData.includes('مستخدم مسبقاً')
+
 const globalCss = `
 .add-patient-shell { animation:fade-up 0.4s cubic-bezier(0.2,0.9,0.4,1.1) both; }
 .add-patient-shell * { box-sizing:border-box; }
@@ -223,6 +228,10 @@ export default function AddPatient() {
     chronicDiseases:'', occupation:'', maritalStatus:'', notes:'',
   })
   const [validationErrors, setValidationErrors] = useState<Record<string,string>>({})
+  // ✅ لو المستخدم لم يُعدّل الرقم المقترح يدوياً، وتبيّن عند الحفظ أنه أصبح
+  // مستخدَماً (عيادة بها أكثر من مستخدم قد يضيف مريضاً بالتوقيت نفسه)، نطلب
+  // رقماً جديداً ونعيد المحاولة تلقائياً بدل إظهار رسالة خطأ للمستخدم
+  const [patientNumberTouched, setPatientNumberTouched] = useState(false)
   useUnsavedChangesWarning(form)
 
   useEffect(() => {
@@ -245,6 +254,7 @@ export default function AddPatient() {
     const {name,value} = e.target
     // ✅ الباك اند يخزّن رقم المريض كـ bigint، حتى 14 خانة
     const sanitized = name === 'patientNumber' ? value.slice(0, 14) : value
+    if (name === 'patientNumber') setPatientNumberTouched(true)
     setForm(prev=>({...prev,[name]:sanitized}))
     if (validationErrors[name]) setValidationErrors(prev=>({...prev,[name]:''}))
   }
@@ -280,7 +290,22 @@ export default function AddPatient() {
       const payload: Record<string, unknown> = Object.fromEntries(Object.entries(form).filter(([_,v])=>v!==''))
       // ✅ الباك اند يتوقع رقم صحيح (int)، مو نص — الحقل مربوط بـ input نصي كبقية الحقول
       if (payload.patientNumber !== undefined) payload.patientNumber = Number(payload.patientNumber)
-      const res = await api.post('/patients', payload)
+      let res
+      try {
+        res = await api.post('/patients', payload)
+      } catch (err: any) {
+        // ✅ الرقم المقترح تلقائياً أصبح مستخدَماً بين لحظة اقتراحه وحفظ النموذج
+        // (مستخدم آخر بالعيادة أضاف مريضاً بالتوقيت نفسه) — نطلب رقماً جديداً
+        // ونعيد المحاولة مرة واحدة تلقائياً، بشرط أن المستخدم لم يُعدّله يدوياً
+        if (!patientNumberTouched && isDuplicatePatientNumberError(err.response?.data)) {
+          const fresh = await api.get('/patients/next-number')
+          payload.patientNumber = fresh.data.nextNumber
+          setForm(prev => ({ ...prev, patientNumber: String(fresh.data.nextNumber) }))
+          res = await api.post('/patients', payload)
+        } else {
+          throw err
+        }
+      }
       setSavedPatientId(res.data.id || res.data.Id)
       setStep('insurance')  // ✅ انتقل لخطوة التأمين
     } catch (err:any) {

@@ -230,6 +230,49 @@ describe('QuickVisit', () => {
     )
   })
 
+  it('silently retries with a fresh number if the suggested one was just taken (and the user never edited it)', async () => {
+    mockQuickVisitGets({
+      '/patients/next-number': { nextNumber: 200002 },
+      '/patients': [], '/doctors': [doctor()],
+    })
+    let patientPostAttempts = 0
+    mockedApi.post.mockImplementation((url: string) => {
+      if (url === '/patients') {
+        patientPostAttempts += 1
+        if (patientPostAttempts === 1) {
+          return Promise.reject({ response: { data: 'رقم المريض #200002 مستخدم مسبقاً لمريض آخر بهذي العيادة' } })
+        }
+        return Promise.resolve({ data: { id: 'pat-new' } })
+      }
+      if (url === '/appointments') return Promise.resolve({ data: { id: 'appt-new' } })
+      return Promise.reject(new Error(`unexpected POST ${url}`))
+    })
+    const user = userEvent.setup()
+    const { container } = renderQuickVisit()
+    await screen.findByText('Step 1: Search Patient')
+
+    await user.type(screen.getByPlaceholderText('Search by name or patient ID...'), 'Omar')
+    await user.click(await screen.findByText('+ Add New Patient'))
+    await screen.findByDisplayValue('200002')
+    await user.type(screen.getByPlaceholderText('Full Name *'), 'Omar Khalil')
+    await user.type(screen.getByPlaceholderText('Phone *'), '0781234567')
+    await user.selectOptions(screen.getByDisplayValue('Gender *'), 'male')
+    const dobInput = container.querySelector('input[name="dateOfBirth"]') as HTMLInputElement
+    fireEvent.change(dobInput, { target: { value: '1990-01-01' } })
+    await user.selectOptions(getDoctorSelect(container), 'doc-1')
+    await user.click(await screen.findByRole('button', { name: /pick mock slot/i }))
+
+    await user.click(screen.getByRole('button', { name: /save visit/i }))
+
+    await waitFor(() => expect(patientPostAttempts).toBe(2))
+    await waitFor(() =>
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/appointments',
+        expect.objectContaining({ patientId: 'pat-new', doctorId: 'doc-1' })
+      )
+    )
+  })
+
   it('shows a conflict error and does not submit when the doctor is unavailable', async () => {
     mockQuickVisitGets({
       '/patients': [patient()],

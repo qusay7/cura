@@ -11,6 +11,11 @@ import { showMessageBox } from '../utils/messageBox'
 const getStoredLang = (): 'ar' | 'en' =>
   (localStorage.getItem('cura-lang') as 'ar' | 'en') || 'en'
 
+// ✅ رسالة الباك اند الثابتة (بالعربي دائماً بهذا الـ endpoint) عند تعارض رقم
+// المريض — نطابقها لنعرف متى نطلب رقماً جديداً تلقائياً بدل إفشال الحفظ
+const isDuplicatePatientNumberError = (errData: unknown) =>
+  typeof errData === 'string' && errData.includes('رقم المريض') && errData.includes('مستخدم مسبقاً')
+
 // ─── Global CSS ──────────────────────────────────────────────────────────────
 const globalCss = `
 @keyframes fade-in {
@@ -406,7 +411,10 @@ export default function QuickVisit() {
     dateOfBirth: '',
     nationalId: '',
   })
-  
+  // ✅ لو المستخدم لم يُعدّل الرقم المقترح يدوياً ونفس اللحظة أصبح مستخدَماً
+  // (سباق بين مستخدمين)، نطلب رقماً جديداً ونعيد المحاولة تلقائياً
+  const [patientNumberTouched, setPatientNumberTouched] = useState(false)
+
   const [visitForm, setVisitForm] = useState({
     doctorId: '',
     appointmentDate: '',
@@ -535,6 +543,7 @@ export default function QuickVisit() {
     setSelectedPatient(null)
     setSearchResults([])
     setSearchTerm('')
+    setPatientNumberTouched(false)
     setNewPatient({
       patientNumber: '',
       fullName: '',
@@ -553,6 +562,7 @@ export default function QuickVisit() {
     const { name, value } = e.target
     // ✅ الباك اند يخزّن رقم المريض كـ bigint، حتى 14 خانة
     const sanitized = name === 'patientNumber' ? value.slice(0, 14) : value
+    if (name === 'patientNumber') setPatientNumberTouched(true)
     setNewPatient({ ...newPatient, [name]: sanitized })
   }
 
@@ -600,7 +610,23 @@ export default function QuickVisit() {
           patientPayload.nationalId = newPatient.nationalId.trim()
         }
 
-        const patientResponse = await api.post('/patients', patientPayload)
+        let patientResponse
+        try {
+          patientResponse = await api.post('/patients', patientPayload)
+        } catch (err: any) {
+          // ✅ الرقم المقترح تلقائياً أصبح مستخدَماً بين لحظة اقتراحه وحفظ
+          // النموذج (مستخدم آخر بالعيادة أضاف مريضاً بالتوقيت نفسه) — نطلب
+          // رقماً جديداً ونعيد المحاولة مرة واحدة تلقائياً، بشرط أن المستخدم
+          // لم يُعدّله يدوياً
+          if (!patientNumberTouched && isDuplicatePatientNumberError(err.response?.data)) {
+            const fresh = await api.get('/patients/next-number')
+            patientPayload.patientNumber = fresh.data.nextNumber
+            setNewPatient(prev => ({ ...prev, patientNumber: String(fresh.data.nextNumber) }))
+            patientResponse = await api.post('/patients', patientPayload)
+          } else {
+            throw err
+          }
+        }
         patientId = patientResponse.data.id
       } else {
         showMessageBox(T[lang].required, 'warning')
@@ -659,7 +685,10 @@ export default function QuickVisit() {
       navigate('/dashboard')
     } catch (err: any) {
       console.error('Error details:', err.response?.data)
-      const errorMessage = err.response?.data?.message || err.response?.data?.title || T[lang].error
+      // ✅ بعض الأخطاء (مثل تعارض رقم المريض) تُرجَع كنص خام، لا كـ {message}/{title} —
+      // كانت تُستبدَل برسالة عامة فتخفي السبب الحقيقي عن المستخدم
+      const data = err.response?.data
+      const errorMessage = typeof data === 'string' ? data : (data?.message || data?.title || T[lang].error)
       showMessageBox(typeof errorMessage === 'string' ? errorMessage : T[lang].error, 'error')
     } finally {
       setLoading(false)

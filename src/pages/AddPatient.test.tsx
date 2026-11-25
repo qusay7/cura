@@ -138,6 +138,28 @@ describe('AddPatient', () => {
     )
   })
 
+  it('silently retries with a fresh number if the suggested one was just taken (and the user never edited it)', async () => {
+    mockedApi.post
+      .mockRejectedValueOnce({ response: { data: 'رقم المريض #1000002 مستخدم مسبقاً لمريض آخر بهذي العيادة' } })
+      .mockResolvedValueOnce({ data: { id: 'pat-1' } })
+    mockedApi.get.mockImplementation((url: string) =>
+      url === '/patients/next-number'
+        ? Promise.resolve({ data: { nextNumber: 1000002 } })
+        : Promise.resolve({ data: [] })
+    )
+    const user = userEvent.setup()
+    renderAddPatient()
+
+    await screen.findByDisplayValue('1000002')
+    await user.type(screen.getByPlaceholderText(/enter patient's full name/i), 'Sara Ahmad')
+    await fillRequiredFields(user)
+    await user.click(screen.getByRole('button', { name: /save patient/i }))
+
+    await waitFor(() => expect(mockedApi.post).toHaveBeenCalledTimes(2))
+    expect(mockedApi.post).toHaveBeenLastCalledWith('/patients', expect.objectContaining({ patientNumber: 1000002 }))
+    expect(await screen.findByText(/patient saved successfully/i)).toBeInTheDocument()
+  })
+
   it('requires the patient number before submitting', async () => {
     const user = userEvent.setup()
     renderAddPatient()
