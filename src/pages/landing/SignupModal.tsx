@@ -25,6 +25,7 @@ interface SignupResult {
   username: string
   password: string
   trialEndsAt: string
+  extraAccounts?: { role: string; username: string; password: string }[]
 }
 
 const slugify = (s: string) =>
@@ -53,6 +54,7 @@ const text = {
     subdomainLabel: 'الرابط',
     usernameLabel: 'اسم المستخدم',
     passwordLabel: 'كلمة المرور',
+    extraAccountsTitle: 'حسابات جاهزة للعمل فوراً:',
     trialNote: (date: string) => `تجربتك المجانية فعّالة حتى ${date}`,
     goToDashboard: 'الدخول إلى لوحة التحكم ←',
     errGeneric: 'حدث خطأ، حاول مرة أخرى',
@@ -78,6 +80,7 @@ const text = {
     subdomainLabel: 'Link',
     usernameLabel: 'Username',
     passwordLabel: 'Password',
+    extraAccountsTitle: 'Also ready to use:',
     trialNote: (date: string) => `Your free trial is active until ${date}`,
     goToDashboard: 'Go to dashboard →',
     errGeneric: 'Something went wrong, please try again',
@@ -263,6 +266,19 @@ export default function SignupModal({ open, onClose, lang }: Props) {
                 </div>
               ))}
             </div>
+
+            {result.extraAccounts && result.extraAccounts.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>{t.extraAccountsTitle}</p>
+                {result.extraAccounts.map((acc) => (
+                  <div key={acc.role} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12.5 }}>
+                    <span style={{ fontWeight: 700, color: C.dark }}>{acc.role}</span>
+                    <span style={{ color: C.muted }}>👤 {acc.username}</span>
+                    <span style={{ color: C.muted, fontFamily: 'monospace' }}>🔑 {acc.password}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <p style={{ fontSize: 12, color: C.muted, marginBottom: 24 }}>
               {t.trialNote(new Date(result.trialEndsAt).toLocaleDateString(isAr ? 'ar' : 'en'))}
